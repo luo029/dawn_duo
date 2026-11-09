@@ -66,7 +66,6 @@ const DEFAULT_TEXTS_SERVICE = {
   dailyModeIcon: '💕', serviceModeIcon: '🐕'
 };
 
-// ================= 十二时辰养生数据 =================
 const SHICHEN_DATA = [
   { name: '子时', time: '23:00-01:00', organ: '胆', msg: '胆经当令，宜睡眠，养足胆气。' },
   { name: '丑时', time: '01:00-03:00', organ: '肝', msg: '肝经当令，熟睡养肝，排毒。' },
@@ -82,10 +81,9 @@ const SHICHEN_DATA = [
   { name: '亥时', time: '21:00-23:00', organ: '三焦', msg: '三焦经当令，准备入睡，泡脚助眠。' }
 ];
 
-// ================= 核心配置 =================
 const DEFAULT_CONFIGS = {
-  configVersion: 7,
-  mode: 'daily',
+  configVersion: 8,
+  mode: 'service',
   simpleMode: false,
   notifications: false,
   showPartnerCard: true,

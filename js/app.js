@@ -17,9 +17,11 @@ function deepMerge(base, override) {
 
 function migrateConfigs(raw) {
   if (!raw || typeof raw !== 'object') return {};
-  if (raw.configVersion >= 7) return raw;
+  if (raw.configVersion >= 8) return raw;
   const out = Object.assign({}, raw);
-  out.configVersion = 7;
+  out.configVersion = 8;
+  out.mode = 'service';
+
   if (out.timeZones && typeof out.timeZones.master === 'string') {
     out.timeZones = { master: { type: 'iana', value: out.timeZones.master }, doggy: { type: 'iana', value: out.timeZones.doggy } };
   }
@@ -45,7 +47,6 @@ function migrateConfigs(raw) {
 let savedConfigs = {};
 try { savedConfigs = migrateConfigs(JSON.parse(localStorage.getItem('dawn-duo-configs')) || {}); } catch (e) { savedConfigs = {}; }
 let configs = deepMerge(DEFAULT_CONFIGS, savedConfigs);
-if (configs.mode !== 'service') configs.mode = 'daily';
 if (!configs.profiles) configs.profiles = deepMerge(DEFAULT_CONFIGS.profiles, {});
 if (!configs.profiles.daily.notifyTexts) configs.profiles.daily.notifyTexts = Object.assign({}, DEFAULT_NOTIFY_TEXTS.daily);
 if (!configs.profiles.service.notifyTexts) configs.profiles.service.notifyTexts = Object.assign({}, DEFAULT_NOTIFY_TEXTS.service);
@@ -60,7 +61,6 @@ let identity = '';
 try { identity = localStorage.getItem(IDENTITY_KEY) || ''; } catch (e) { identity = ''; }
 if (['master', 'doggy', 'both'].indexOf(identity) === -1) identity = '';
 
-// ✅ 核心配置直接写死内置
 const CONFIG_KEY = 'dawn-duo-gh-config';
 let ghConfig = { 
   user: 'luo029', 
@@ -230,7 +230,6 @@ window.verifyAndUnlock = async function() {
         ghConfig.token = token;
         localStorage.setItem(CONFIG_KEY, JSON.stringify(ghConfig));
 
-        // ✅ 强制默认：小狗身份 + 主仆模式
         identity = 'doggy';
         localStorage.setItem('dawn-duo-identity', 'doggy');
         
@@ -238,22 +237,18 @@ window.verifyAndUnlock = async function() {
         localStorage.setItem('dawn-duo-configs', JSON.stringify(configs));
 
         setTimeout(() => {
-          // 1. 隐藏解锁层
           const setupOverlay = document.getElementById('setup-overlay');
           if (setupOverlay) {
             setupOverlay.classList.add('hide');
             setTimeout(() => { setupOverlay.style.display = 'none'; }, 500);
           }
           
-          // 2. 关键：隐藏身份选择层，否则会挡住主页面
           const identityModal = document.getElementById('identity-modal');
           if (identityModal) identityModal.classList.remove('show');
           document.body.style.overflow = '';
           
-          // 3. 显示主界面
           document.getElementById('main-wrap').style.display = 'block'; 
           
-          // 4. 重新刷新数据，渲染出今日打卡卡片
           applyConfigsToPage();
           updateModeCards();
           applyIdentity();
@@ -692,10 +687,9 @@ function updateClocks() {
     if(!container) return;
     container.className = 'grid-clocks'; 
     
-    const isMasterIdentity = (identity === 'master' || identity === 'both');
-    const isDoggyIdentity = (identity === 'doggy' || identity === 'both');
-    const showM = configs.showMasterClock && isMasterIdentity;
-    const showD = configs.showDoggyClock && isDoggyIdentity;
+    // ✅ 取消身份限制，直接由用户的设置开关决定
+    const showM = configs.showMasterClock;
+    const showD = configs.showDoggyClock;
     
     if (!showM && !showD) {
       container.style.display = 'none';
@@ -916,6 +910,18 @@ window.chooseIdentity = function(id) {
   if (['master', 'doggy', 'both'].indexOf(id) === -1) return;
   identity = id;
   try { localStorage.setItem(IDENTITY_KEY, id); } catch (e) {}
+  
+  // ✅ 根据身份，自动调整默认的时钟显示偏好
+  if (id === 'doggy') {
+    configs.showMasterClock = true;
+  } else if (id === 'master') {
+    configs.showDoggyClock = true;
+  } else if (id === 'both') {
+    configs.showMasterClock = true;
+    configs.showDoggyClock = true;
+  }
+  try { localStorage.setItem('dawn-duo-configs', JSON.stringify(configs)); } catch(e) {}
+
   document.documentElement.classList.remove('no-identity');
   const modal = document.getElementById('identity-modal');
   if (modal) modal.classList.remove('show');
@@ -936,17 +942,12 @@ window.chooseIdentity = function(id) {
 };
 
 function initIdentity() {
-  // ✅ 如果没有身份缓存，强制默认赋为小狗
+  // 如果之前没身份，强制默认赋为小狗
   if (!identity) {
     identity = 'doggy';
     try { localStorage.setItem(IDENTITY_KEY, 'doggy'); } catch(e) {}
   }
-  // ✅ 如果没设置过模式，强制默认赋为主仆
-  if (!configs.mode) {
-    configs.mode = 'service';
-    try { localStorage.setItem('dawn-duo-configs', JSON.stringify(configs)); } catch(e) {}
-  }
-
+  
   updateIdentityLabels(); updateIdentityCards();
   
   // 确保身份选择弹窗处于关闭状态
@@ -956,11 +957,10 @@ function initIdentity() {
 
   if (!ghConfig.token) {
     // 未填写 Token，显示项圈解锁层
-    const overlay = document.getElementById('setup-overlay');
-    if (overlay) overlay.style.display = 'flex';
+    document.getElementById('setup-overlay').classList.add('show');
     document.getElementById('main-wrap').style.display = 'none';
   } else {
-    // 已填写 Token，直接进主界面
+    // 一切就绪，直接进主界面
     const overlay = document.getElementById('setup-overlay');
     if (overlay) overlay.style.display = 'none';
     document.getElementById('main-wrap').style.display = 'block';
@@ -1269,7 +1269,6 @@ function applyColors() {
   document.documentElement.style.setProperty('--doggy-color', colors.doggy);
 }
 
-// 补卡自定义弹窗状态
 let currentFixTarget = null;
 
 window.openCustomTimeModal = function(user, type, label, dateStr, currentTime) {
@@ -1468,7 +1467,7 @@ window.saveSettings = function(skipSync) {
     configs.historyDays = [7, 30, 90, 365].includes(hd) ? hd : 30;
     configs.historyYear = document.getElementById('cfg-history-year').value || configs.historyYear;
     configs.historyMonth = document.getElementById('cfg-history-month').value || configs.historyMonth;
-    configs.configVersion = 7;
+    configs.configVersion = 8;
     try { localStorage.setItem('dawn-duo-configs', JSON.stringify(configs)); } catch (e) { showToast('保存失败', 'late'); }
 
     ghConfig.autoSync = document.getElementById('cfg-auto-sync').checked;
@@ -1513,7 +1512,7 @@ function applySyncData(payloadDB, payloadConfig) {
       configs.showMasterClock = localShowMasterClock; configs.showDoggyClock = localShowDoggyClock;
       configs.showSeconds = localShowSeconds; configs.showShichen = localShowShichen; configs.showWellness = localShowWellness;
       configs.showPartnerCard = localShowPartnerCard; configs.showPartnerStatus = localShowPartnerStatus;
-      configs.configVersion = 7;
+      configs.configVersion = 8;
       localStorage.setItem('dawn-duo-configs', JSON.stringify(configs));
     }
     render(); applyConfigsToPage(); updateModeCards(); updateClocks();
@@ -1529,7 +1528,6 @@ function getHash(str) {
   return hash.toString();
 }
 
-// ================= Diff 与同步核心逻辑 =================
 const CONFIG_KEY_MAP = {
   'texts.title': '主标题',
   'texts.subtitle': '副标题',
@@ -1569,7 +1567,6 @@ function calculateDiff(localData, remoteData, isUpload) {
   const dbDiff = [];
   const cfgDiff = [];
   
-  // 1. 打卡记录对比
   const users = ['master', 'doggy'];
   users.forEach(user => {
     const lUser = localData.db[user] || {};
@@ -1602,7 +1599,6 @@ function calculateDiff(localData, remoteData, isUpload) {
     });
   });
   
-  // 2. 配置对比
   const localCfg = localData.config;
   const remoteCfg = remoteData.config || {};
   
@@ -1612,7 +1608,6 @@ function calculateDiff(localData, remoteData, isUpload) {
       const lProf = localCfg.profiles[mode] || {};
       const rProf = remoteCfg.profiles?.[mode] || {};
       
-      // texts
       const lTexts = lProf.texts || {};
       const rTexts = rProf.texts || {};
       const textKeys = new Set([...Object.keys(lTexts), ...Object.keys(rTexts)]);
@@ -1627,7 +1622,6 @@ function calculateDiff(localData, remoteData, isUpload) {
         }
       });
       
-      // notifyTexts
       const lNt = lProf.notifyTexts || {};
       const rNt = rProf.notifyTexts || {};
       const ntKeys = new Set([...Object.keys(lNt), ...Object.keys(rNt)]);
@@ -1642,7 +1636,6 @@ function calculateDiff(localData, remoteData, isUpload) {
         }
       });
 
-      // msgPool
       const lMpStr = JSON.stringify(lProf.msgPool || {});
       const rMpStr = JSON.stringify(rProf.msgPool || {});
       if (lMpStr !== rMpStr) {

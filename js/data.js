@@ -53,7 +53,7 @@ const SHICHEN_DATA = [
 // ================= 核心配置 =================
 const DEFAULT_CONFIGS = {
   configVersion: 7,
-  mode: 'service', 
+  mode: 'daily', 
   simpleMode: false,
   notifications: false,
   showLogicalDate: true,

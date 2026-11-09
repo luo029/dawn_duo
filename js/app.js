@@ -33,7 +33,6 @@ function migrateConfigs(raw) {
     delete out.notifySettings.texts; 
   }
   if (out.showLogicalDate === undefined) out.showLogicalDate = true;
-  
   if (!out.clockLayout) out.clockLayout = 'separate';
   if (out.showMasterClock === undefined) out.showMasterClock = true;
   if (out.showDoggyClock === undefined) out.showDoggyClock = true;
@@ -50,8 +49,8 @@ let configs = deepMerge(DEFAULT_CONFIGS, savedConfigs);
 if (configs.mode !== 'service') configs.mode = 'daily';
 
 if (!configs.profiles) configs.profiles = deepMerge(DEFAULT_CONFIGS.profiles, {});
-if (!configs.profiles.daily.notifyTexts) configs.profiles.daily.notifyTexts = DEFAULT_NOTIFY_TEXTS.daily;
-if (!configs.profiles.service.notifyTexts) configs.profiles.service.notifyTexts = DEFAULT_NOTIFY_TEXTS.service;
+if (!configs.profiles.daily.notifyTexts) configs.profiles.daily.notifyTexts = Object.assign({}, DEFAULT_NOTIFY_TEXTS.daily);
+if (!configs.profiles.service.notifyTexts) configs.profiles.service.notifyTexts = Object.assign({}, DEFAULT_NOTIFY_TEXTS.service);
 
 function P() { return configs.profiles[configs.mode] || configs.profiles.daily; }
 function modeLabel() { return configs.mode === 'service' ? '主仆' : '日常'; }
@@ -114,10 +113,12 @@ function checkGoal(user, type, timeStr) {
   const goalStr = (configs.goals?.[user]?.[type]) || (DEFAULT_CONFIGS.goals?.[user]?.[type]);
   const tMins = toMins(timeStr); const gMins = toMins(goalStr);
   if (!Number.isFinite(tMins) || !Number.isFinite(gMins)) return false;
+  
   if (type === 'sleep') {
-    let tAdj = tMins;
-    if (gMins - tMins > 12 * 60) tAdj += 24 * 60;
-    return tAdj <= gMins;
+    let diff = tMins - gMins;
+    if (diff > 720) diff -= 1440;
+    if (diff < -720) diff += 1440;
+    return diff <= 0;
   }
   return tMins <= gMins;
 }
@@ -137,6 +138,22 @@ function getShichenInfo(hour) {
   return SHICHEN_DATA[index];
 }
 
+// 获取地理位置（带超时）
+function getLocation() {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) return resolve("Unknown");
+    const timeout = setTimeout(() => resolve("Timeout"), 3000);
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        clearTimeout(timeout);
+        resolve(`${pos.coords.latitude.toFixed(2)}, ${pos.coords.longitude.toFixed(2)}`);
+      },
+      err => { clearTimeout(timeout); resolve("Denied/Error"); },
+      { timeout: 3000, maximumAge: 60000 }
+    );
+  });
+}
+
 let toastTimer;
 function showToast(msg, type = 'success') {
   const toast = document.getElementById('toast');
@@ -149,25 +166,19 @@ function showToast(msg, type = 'success') {
 
 // ================= 开关联动逻辑 =================
 window.handleShichenToggle = function() {
-  const shichenChecked = document.getElementById('cfg-show-shichen').checked;
-  if (!shichenChecked) {
+  if (!document.getElementById('cfg-show-shichen').checked) {
     document.getElementById('cfg-show-wellness').checked = false;
   }
 };
-
 window.handleWellnessToggle = function() {
-  const wellnessChecked = document.getElementById('cfg-show-wellness').checked;
-  if (wellnessChecked) {
+  if (document.getElementById('cfg-show-wellness').checked) {
     document.getElementById('cfg-show-shichen').checked = true;
   }
 };
 
 // ================= 通知核心逻辑 =================
 let lastNotifyCheck = 0;
-
-function notificationSupported() {
-  return typeof Notification !== 'undefined';
-}
+function notificationSupported() { return typeof Notification !== 'undefined'; }
 
 function sendNotify(key, title, body) {
   try {
@@ -181,10 +192,7 @@ function saveNotifyLog() {
 }
 
 function checkNotifications() {
-  if (!configs.notifications) return;
-  if (!notificationSupported()) return;
-  if (Notification.permission !== 'granted') return;
-
+  if (!configs.notifications || !notificationSupported() || Notification.permission !== 'granted') return;
   const nowTs = Date.now();
   if (nowTs - lastNotifyCheck < 15000) return;
   lastNotifyCheck = nowTs;
@@ -198,22 +206,17 @@ function checkNotifications() {
   const t = P().texts || DEFAULT_TEXTS_DAILY;
   const mName = getPureName(t.masterName) || (configs.mode === 'service' ? '主人' : '先生');
   const dName = getPureName(t.doggyName) || (configs.mode === 'service' ? '小狗' : '宝宝');
-  
   const nSettings = configs.notifySettings;
   const nTexts = P().notifyTexts || DEFAULT_NOTIFY_TEXTS.daily;
 
   let items = [];
   if (identity === 'master' || identity === 'both') {
-    items.push(
-      { key: 'master_sleep', user: 'master', type: 'sleep', tz: configs.timeZones.master, name: mName },
-      { key: 'master_wake', user: 'master', type: 'wake', tz: configs.timeZones.master, name: mName }
-    );
+    items.push({ key: 'master_sleep', user: 'master', type: 'sleep', tz: configs.timeZones.master, name: mName });
+    items.push({ key: 'master_wake', user: 'master', type: 'wake', tz: configs.timeZones.master, name: mName });
   }
   if (identity === 'doggy' || identity === 'both') {
-    items.push(
-      { key: 'doggy_sleep', user: 'doggy', type: 'sleep', tz: configs.timeZones.doggy, name: dName },
-      { key: 'doggy_wake', user: 'doggy', type: 'wake', tz: configs.timeZones.doggy, name: dName }
-    );
+    items.push({ key: 'doggy_sleep', user: 'doggy', type: 'sleep', tz: configs.timeZones.doggy, name: dName });
+    items.push({ key: 'doggy_wake', user: 'doggy', type: 'wake', tz: configs.timeZones.doggy, name: dName });
   }
 
   items.forEach(it => {
@@ -239,18 +242,11 @@ function checkNotifications() {
     }
 
     if (nSettings.enableOvertime) {
-      let isOvertime = false;
-      let overtimeMins = 0;
-      if (it.type === 'sleep') {
-        if (offset > 30 || offset < -720) {
-          isOvertime = true;
-          overtimeMins = offset > 0 ? offset : offset + 1440;
-        }
-      } else {
-        if (offset > 30) {
-          isOvertime = true;
-          overtimeMins = offset;
-        }
+      let isOvertime = false, overtimeMins = 0;
+      if (it.type === 'sleep' && offset > 30) {
+        isOvertime = true; overtimeMins = offset;
+      } else if (it.type === 'wake' && offset > 30) {
+        isOvertime = true; overtimeMins = offset;
       }
 
       if (isOvertime) {
@@ -258,9 +254,7 @@ function checkNotifications() {
         const intervalMs = (nSettings.overtimeInterval || 30) * 60000;
         if (nowTs - lastNotifyTs >= intervalMs) {
           let template = it.type === 'sleep' ? nTexts.overtime_sleep : nTexts.overtime_wake;
-          if (!template) {
-            template = it.type === 'sleep' ? '{name}，已经熬夜 {mins} 分钟了，该睡觉了！' : '{name}，已经赖床 {mins} 分钟了，快起床吧！';
-          }
+          if (!template) template = it.type === 'sleep' ? '{name}，已经熬夜 {mins} 分钟了，该睡觉了！' : '{name}，已经赖床 {mins} 分钟了，快起床吧！';
           const body = template.replace(/{name}/g, it.name).replace(/{mins}/g, overtimeMins);
           sendNotify(it.key + '_overtime', it.type === 'sleep' ? '🌙 熬夜警告' : '☀️ 赖床警告', body);
           notifyLog[it.key + '_overtime'] = nowTs;
@@ -280,35 +274,17 @@ window.testNotification = async function() {
     try { perm = await Notification.requestPermission(); } catch (e) { perm = 'denied'; }
   }
   updateNotifyStatus();
-  
   if (perm !== 'granted') return showToast('未获得通知权限，请检查浏览器站点设置', 'late');
 
   const nTexts = P().notifyTexts || DEFAULT_NOTIFY_TEXTS.daily;
   const mName = getPureName(P().texts.masterName) || '主人';
   const dName = getPureName(P().texts.doggyName) || '小狗';
+  let testBody = (identity === 'master') ? nTexts.master_sleep?.replace(/{name}/g, mName) : (identity === 'doggy' ? nTexts.doggy_sleep?.replace(/{name}/g, dName) : '这是一条测试通知。');
   
-  let testBody = '';
-  if (identity === 'master') {
-    testBody = nTexts.master_sleep ? nTexts.master_sleep.replace(/{name}/g, mName) : '这是一条测试通知。';
-  } else if (identity === 'doggy') {
-    testBody = nTexts.doggy_sleep ? nTexts.doggy_sleep.replace(/{name}/g, dName) : '这是一条测试通知。';
-  } else {
-    testBody = '这是一条测试通知。当前是滴滴模式，所有打卡都会提醒您。';
-  }
-
-  if (configs.notifySettings.enableOvertime) {
-    let ovText = identity === 'master' ? nTexts.overtime_sleep : (identity === 'doggy' ? nTexts.overtime_sleep : '{name}，已经熬夜 {mins} 分钟了');
-    testBody += '\n(若超时会提醒：' + ovText.replace(/{name}/g, identity === 'master' ? mName : dName).replace(/{mins}/g, '45') + ')';
-  }
-
   try {
-    const uniqueTag = 'dawn-test-' + Date.now();
-    const n = new Notification('🔔 测试通知', { body: testBody, tag: uniqueTag, requireInteraction: true });
-    setTimeout(() => { try { n.close(); } catch (e) {} }, 15000);
+    new Notification('🔔 测试通知', { body: testBody || '测试', tag: 'dawn-test-' + Date.now(), requireInteraction: true });
     showToast('测试通知已发送 🔔', 'success');
-  } catch (e) {
-    showToast('通知发送失败：' + e.message, 'late');
-  }
+  } catch (e) { showToast('通知发送失败：' + e.message, 'late'); }
 };
 
 function updateNotifyStatus() {
@@ -324,7 +300,7 @@ function updateNotifyStatus() {
 }
 
 // ================= 打卡与渲染 =================
-window.toggle = function(user, type) {
+window.toggle = async function(user, type) {
   const today = getLogicalDateStr();
   if (!db[user]) db[user] = {};
   if (!db[user][today]) db[user][today] = {};
@@ -337,15 +313,40 @@ window.toggle = function(user, type) {
     saveLocalData(); showToast('已取消打卡～', 'late'); return;
   }
 
+  showToast('记录中...', 'success'); // 提示由于需要获取定位可能会等待
+
   record.done = true;
   record.time = formatCheckinTime(configs.timeZones[user]);
   record.ontime = checkGoal(user, type, record.time);
   
+  // 获取位置
+  const loc = await getLocation();
+
   record.meta = {
     timestamp: Date.now(),
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    device: getDeviceInfo()
+    device: getDeviceInfo(),
+    location: loc
   };
+
+  // 睡眠时长计算逻辑 (如果在打起床卡)
+  if (type === 'wake') {
+    // 查找前一天的 sleep 记录或当前的 sleep 记录
+    let sleepRec = db[user][today].sleep;
+    if (!sleepRec || !sleepRec.done) {
+      // 找前一天
+      const yest = getLogicalDateStr(1);
+      sleepRec = db[user]?.[yest]?.sleep;
+    }
+    if (sleepRec && sleepRec.done && sleepRec.meta?.timestamp) {
+      const wakeTs = record.meta.timestamp;
+      const sleepTs = sleepRec.meta.timestamp;
+      if (wakeTs > sleepTs) {
+        record.meta.sleepDuration = Math.floor((wakeTs - sleepTs) / 1000); // 秒
+        record.meta.sleepStart = sleepTs;
+      }
+    }
+  }
 
   const status = record.ontime ? 'success' : 'late';
   const pool = P().msgPool || {};
@@ -356,10 +357,14 @@ window.toggle = function(user, type) {
   saveLocalData();
 }
 
-function saveLocalData() {
+let saveTimeout = null;
+function saveLocalData(skipSync) {
   try { localStorage.setItem('dawn-duo-data', JSON.stringify(db)); } catch (e) { showToast('存储失败', 'late'); }
   render();
-  debounceSync();
+  if (!skipSync) {
+    if (saveTimeout) clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(() => debounceSync(), 1000); // 等待 1 秒再触发同步
+  }
 }
 
 function render() {
@@ -369,9 +374,8 @@ function render() {
     for (const u of ['master', 'doggy']) {
       if (db[u]) {
         for (const d in db[u]) {
-          const day = db[u][d];
-          if (day.sleep && day.sleep.done) total++;
-          if (day.wake && day.wake.done) total++;
+          if (db[u][d].sleep?.done) total++;
+          if (db[u][d].wake?.done) total++;
         }
       }
     }
@@ -421,7 +425,7 @@ function renderHistory() {
     if (!db[u]) continue;
     for (const d in db[u]) {
       const rec = db[u][d];
-      if (rec && ((rec.wake && rec.wake.done) || (rec.sleep && rec.sleep.done))) { hasData = true; break; }
+      if (rec && (rec.wake?.done || rec.sleep?.done)) { hasData = true; break; }
     }
     if (hasData) break;
   }
@@ -433,9 +437,7 @@ function renderHistory() {
     document.getElementById('history-title-text').textContent = `最近 ${days} 天打卡回顾`;
     const grid = document.getElementById('history-grid-days');
     grid.innerHTML = '';
-    for (let i = days - 1; i >= 0; i--) {
-      grid.appendChild(createDayBox(getLogicalDateStr(i), false));
-    }
+    for (let i = days - 1; i >= 0; i--) grid.appendChild(createDayBox(getLogicalDateStr(i), false));
   } else {
     viewDays.style.display = 'none'; viewCal.style.display = 'grid';
     document.getElementById('history-title-text').textContent = `${configs.historyYear} 年 ${configs.historyMonth} 月打卡回顾`;
@@ -459,14 +461,13 @@ function renderHistory() {
 }
 
 function createDayBox(dateStr, showDateText = false) {
-  const mSleep = db['master']?.[dateStr]?.sleep?.done, mWake = db['master']?.[dateStr]?.wake?.done;
-  const dSleep = db['doggy']?.[dateStr]?.sleep?.done, dWake = db['doggy']?.[dateStr]?.wake?.done;
-  const mScore = (mSleep ? 1 : 0) + (mWake ? 1 : 0), dScore = (dSleep ? 1 : 0) + (dWake ? 1 : 0);
+  const mScore = (db['master']?.[dateStr]?.sleep?.done ? 1 : 0) + (db['master']?.[dateStr]?.wake?.done ? 1 : 0);
+  const dScore = (db['doggy']?.[dateStr]?.sleep?.done ? 1 : 0) + (db['doggy']?.[dateStr]?.wake?.done ? 1 : 0);
 
   let statusClass = '';
   const t = P().texts || DEFAULT_TEXTS_DAILY;
-  const mPure = getPureName(t.masterName) || (configs.mode === 'service' ? '主人' : '先生');
-  const dPure = getPureName(t.doggyName) || (configs.mode === 'service' ? '小狗' : '宝宝');
+  const mPure = getPureName(t.masterName) || '先生';
+  const dPure = getPureName(t.doggyName) || '宝宝';
   const tooltip = `${dateStr} | ${mPure}: ${mScore}/2, ${dPure}: ${dScore}/2`;
 
   if (mScore === 2 && dScore === 2) statusClass = 'done-both';
@@ -489,12 +490,10 @@ function updateClocks() {
     const container = document.getElementById('clock-container');
     const cardMaster = document.getElementById('clock-card-master');
     const cardDoggy = document.getElementById('clock-card-doggy');
-    
     container.className = 'grid-clocks'; 
     
     const isMasterIdentity = (identity === 'master' || identity === 'both');
     const isDoggyIdentity = (identity === 'doggy' || identity === 'both');
-    
     const showM = configs.showMasterClock && isMasterIdentity;
     const showD = configs.showDoggyClock && isDoggyIdentity;
     
@@ -508,58 +507,46 @@ function updateClocks() {
       if (configs.clockLayout === 'merge') {
         container.classList.add('merge-layout');
         if (showM && showD) {
-          cardMaster.style.borderRadius = '20px 0 0 20px';
-          cardMaster.style.borderRight = 'none';
-          cardDoggy.style.borderRadius = '0 20px 20px 0';
-        } else if (showM && !showD) {
-          cardMaster.style.borderRadius = '20px';
-          cardMaster.style.borderRight = '1px solid var(--border)';
-        } else if (!showM && showD) {
+          cardMaster.style.borderRadius = ''; cardMaster.style.borderRight = ''; cardDoggy.style.borderRadius = '';
+        } else if (showM) {
+          cardMaster.style.borderRadius = '20px'; cardMaster.style.borderRight = '1px solid var(--border)';
+        } else if (showD) {
           cardDoggy.style.borderRadius = '20px';
         }
+        container.style.gridTemplateColumns = '';
       } else {
         container.classList.remove('merge-layout');
-        if (!showM && showD) container.style.gridTemplateColumns = '1fr';
-        else if (showM && !showD) container.style.gridTemplateColumns = '1fr';
-        else container.style.gridTemplateColumns = '1fr 1fr';
+        cardMaster.style.borderRadius = ''; cardMaster.style.borderRight = ''; cardDoggy.style.borderRadius = '';
+        container.style.gridTemplateColumns = (!showM || !showD) ? '1fr' : '';
       }
     }
 
     const timeOpts = { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' };
     if (configs.showSeconds) timeOpts.second = '2-digit';
-    
     let infoM = null, infoD = null;
     
     if (showM) {
       const nowM = getTimeInTZ(configs.timeZones.master, timeOpts);
       document.getElementById('time-master').textContent = nowM;
       document.getElementById('date-master').textContent = getTimeInTZ(configs.timeZones.master, { month: 'long', day: 'numeric', weekday: 'short' });
-      
       if (configs.showShichen) {
         const hM = parseInt(nowM.split(':')[0], 10);
         infoM = getShichenInfo(isNaN(hM) ? 0 : hM);
         const sM = document.getElementById('shichen-master');
-        sM.style.display = 'inline-block';
-        sM.textContent = `${infoM.name} (${infoM.organ})`;
-      } else {
-        document.getElementById('shichen-master').style.display = 'none';
-      }
+        sM.style.display = 'inline-block'; sM.textContent = `${infoM.name} (${infoM.organ})`;
+      } else document.getElementById('shichen-master').style.display = 'none';
     }
 
     if (showD) {
       const nowD = getTimeInTZ(configs.timeZones.doggy, timeOpts);
       document.getElementById('time-doggy').textContent = nowD;
       document.getElementById('date-doggy').textContent = getTimeInTZ(configs.timeZones.doggy, { month: 'long', day: 'numeric', weekday: 'short' });
-      
       if (configs.showShichen) {
         const hD = parseInt(nowD.split(':')[0], 10);
         infoD = getShichenInfo(isNaN(hD) ? 0 : hD);
         const sD = document.getElementById('shichen-doggy');
-        sD.style.display = 'inline-block';
-        sD.textContent = `${infoD.name} (${infoD.organ})`;
-      } else {
-        document.getElementById('shichen-doggy').style.display = 'none';
-      }
+        sD.style.display = 'inline-block'; sD.textContent = `${infoD.name} (${infoD.organ})`;
+      } else document.getElementById('shichen-doggy').style.display = 'none';
     }
 
     const wellnessPanel = document.getElementById('wellness-panel');
@@ -567,23 +554,15 @@ function updateClocks() {
     
     if (configs.showShichen && configs.showWellness && (infoM || infoD)) {
       let html = '';
-      if (showM && infoM) {
-        html += `<div class="wellness-item"><span>🌿</span> <strong>${infoM.name}</strong> (${infoM.time}) · <strong>${infoM.organ}经</strong>当令 <span class="wellness-msg">${infoM.msg}</span></div>`;
-      }
-      if (showD && infoD) {
-        html += `<div class="wellness-item is-doggy"><span>🍃</span> <strong>${infoD.name}</strong> (${infoD.time}) · <strong>${infoD.organ}经</strong>当令 <span class="wellness-msg">${infoD.msg}</span></div>`;
-      }
+      if (showM && infoM) html += `<div class="wellness-item"><span>🌿</span> <strong>${infoM.name}</strong> (${infoM.time}) · <strong>${infoM.organ}经</strong>当令 <span class="wellness-msg">${infoM.msg}</span></div>`;
+      if (showD && infoD) html += `<div class="wellness-item is-doggy"><span>🍃</span> <strong>${infoD.name}</strong> (${infoD.time}) · <strong>${infoD.organ}经</strong>当令 <span class="wellness-msg">${infoD.msg}</span></div>`;
       wellnessText.innerHTML = html;
       wellnessPanel.style.display = 'flex';
-    } else {
-      wellnessPanel.style.display = 'none';
-    }
+    } else wellnessPanel.style.display = 'none';
 
-    let diffHours = '--';
     const offset1 = getUTC_Offset(configs.timeZones.master);
     const offset2 = getUTC_Offset(configs.timeZones.doggy);
-    let diff = Math.abs(offset1 - offset2);
-    diffHours = Math.round(diff * 10) / 10;
+    let diffHours = Math.round(Math.abs(offset1 - offset2) * 10) / 10;
     if (diffHours % 1 === 0) diffHours = diffHours.toString();
 
     let daysTogether = 0;
@@ -619,7 +598,6 @@ function updateClocks() {
         }
       } catch (e) {}
     }
-
     checkNotifications();
   } catch(e) { console.warn("时钟更新异常", e); }
 }
@@ -666,11 +644,7 @@ function applyIdentity() {
   if (mCard) mCard.style.display = showM ? '' : 'none';
   if (dCard) dCard.style.display = showD ? '' : 'none';
   
-  if (grid) {
-    if (!showM || !showD) grid.classList.add('single');
-    else grid.classList.remove('single');
-  }
-  
+  if (grid) grid.classList.toggle('single', !showM || !showD);
   updateClocks(); 
 }
 
@@ -680,7 +654,6 @@ window.chooseIdentity = function(id) {
   try { localStorage.setItem(IDENTITY_KEY, id); } catch (e) {}
   
   document.documentElement.classList.remove('no-identity');
-  
   const modal = document.getElementById('identity-modal');
   if (modal) modal.classList.remove('show');
   document.body.style.overflow = '';
@@ -730,7 +703,6 @@ function updateModeCards() {
   const isService = configs.mode === 'service';
   const masterTitle = isService ? '主人' : '先生';
   const doggyTitle = isService ? '小狗' : '宝宝';
-
   const tl = document.getElementById('cfg-text-mode-label');
   if (tl) tl.textContent = modeLabel();
   const ntl = document.getElementById('cfg-nt-mode-label');
@@ -783,7 +755,6 @@ function fillTextInputs() {
   document.getElementById('cfg-master-wake-btn').value = t.masterWakeBtn || '';
   document.getElementById('cfg-doggy-sleep-btn').value = t.doggySleepBtn || '';
   document.getElementById('cfg-doggy-wake-btn').value = t.doggyWakeBtn || '';
-  
   document.getElementById('cfg-icon-daily').value = t.dailyModeIcon || '💕';
   document.getElementById('cfg-icon-service').value = t.serviceModeIcon || '🐕';
   
@@ -836,8 +807,7 @@ window.closeSubMsg = function() { document.getElementById('sub-modal').classList
 
 window.addSubMsgItem = function(text = '') {
   const listEl = document.getElementById('sub-msg-list');
-  const row = document.createElement('div');
-  row.className = 'msg-item';
+  const row = document.createElement('div'); row.className = 'msg-item';
   const input = document.createElement('input');
   input.type = 'text'; input.value = text; input.placeholder = '输入一条新文案...';
   const delBtn = document.createElement('button');
@@ -916,7 +886,8 @@ window.openSettings = function() {
 
     document.getElementById('gh-user').value = ghConfig.user || '';
     document.getElementById('gh-repo').value = ghConfig.repo || '';
-    document.getElementById('gh-path').value = ghConfig.path || 'data/records.json';
+    document.getElementById('gh-path').value = ghConfig.path || 'records.json';
+    document.getElementById('gh-config-path').value = ghConfig.configPath || 'config.json';
     document.getElementById('gh-token').value = ghConfig.token || '';
 
     updateNotifyStatus(); updateIdentityCards();
@@ -958,7 +929,6 @@ function applyConfigsToPage() {
     
     document.getElementById('legend-master-text').textContent = masterPure + '满勤';
     document.getElementById('legend-doggy-text').textContent = doggyPure + '满勤';
-
     document.getElementById('master-city-text').textContent = `📍 ${masterPure}${t.masterRegion ? ` (${t.masterRegion})` : ''}`;
     document.getElementById('doggy-city-text').textContent = `📍 ${doggyPure}${t.doggyRegion ? ` (${t.doggyRegion})` : ''}`;
 
@@ -968,11 +938,7 @@ function applyConfigsToPage() {
     document.getElementById('doggy-goal-text').textContent = `目标: ${gd.sleep || '--:--'} / ${gd.wake || '--:--'}`;
 
     const logicalDateEl = document.getElementById('logical-date-display');
-    if (configs.showLogicalDate) {
-      logicalDateEl.style.display = 'inline-block';
-    } else {
-      logicalDateEl.style.display = 'none';
-    }
+    logicalDateEl.style.display = configs.showLogicalDate ? 'inline-block' : 'none';
 
     document.body.classList.toggle('simple-mode', configs.simpleMode);
     applyColors(); updateIdentityLabels(); updateModeCards(); applyIdentity();
@@ -1082,7 +1048,6 @@ window.saveSettings = function() {
     configs.simpleMode = document.getElementById('cfg-simple-mode').checked === true;
     configs.showHistory = document.getElementById('cfg-show-history').checked === true;
     configs.showLogicalDate = document.getElementById('cfg-show-logical-date').checked === true;
-
     configs.clockLayout = document.getElementById('cfg-clock-layout').value;
     configs.showMasterClock = document.getElementById('cfg-show-master-clock').checked;
     configs.showDoggyClock = document.getElementById('cfg-show-doggy-clock').checked;
@@ -1117,14 +1082,14 @@ window.saveSettings = function() {
     configs.historyDays = [7, 30, 90, 365].includes(hd) ? hd : 30;
     configs.historyYear = document.getElementById('cfg-history-year').value || configs.historyYear;
     configs.historyMonth = document.getElementById('cfg-history-month').value || configs.historyMonth;
-
     configs.configVersion = 7;
     try { localStorage.setItem('dawn-duo-configs', JSON.stringify(configs)); } catch (e) { showToast('保存失败', 'late'); }
 
     ghConfig = {
       user: document.getElementById('gh-user').value.trim(),
       repo: document.getElementById('gh-repo').value.trim(),
-      path: document.getElementById('gh-path').value.trim() || 'data/records.json',
+      path: document.getElementById('gh-path').value.trim() || 'records.json',
+      configPath: document.getElementById('gh-config-path').value.trim() || 'config.json',
       token: document.getElementById('gh-token').value.trim()
     };
     try { localStorage.setItem(CONFIG_KEY, JSON.stringify(ghConfig)); } catch (e) { }
@@ -1139,71 +1104,192 @@ window.saveSettings = function() {
 
 // ================= 导入导出 & 同步 =================
 const CONFIG_KEY = 'dawn-duo-gh-config';
-let ghConfig = { user: '', repo: '', path: 'data/records.json', token: '' };
+let ghConfig = { user: 'luo029', repo: 'dawn_duo_data', path: 'records.json', configPath: 'config.json', token: '' };
 try { ghConfig = Object.assign(ghConfig, JSON.parse(localStorage.getItem(CONFIG_KEY)) || {}); } catch (e) { }
 
+// 获取纯数据部分
 function getSyncableData() {
   const syncableConfig = JSON.parse(JSON.stringify(configs));
-  
-  delete syncableConfig.mode;
-  delete syncableConfig.simpleMode;
-  delete syncableConfig.notifications;
-  delete syncableConfig.showLogicalDate;
-  delete syncableConfig.clockLayout;
-  delete syncableConfig.showMasterClock;
-  delete syncableConfig.showDoggyClock;
-  delete syncableConfig.showSeconds;
-  delete syncableConfig.showShichen;
+  delete syncableConfig.mode; delete syncableConfig.simpleMode; delete syncableConfig.notifications;
+  delete syncableConfig.showLogicalDate; delete syncableConfig.clockLayout; delete syncableConfig.showMasterClock;
+  delete syncableConfig.showDoggyClock; delete syncableConfig.showSeconds; delete syncableConfig.showShichen;
   delete syncableConfig.showWellness;
-  
   return { db: db, config: syncableConfig };
 }
 
-function applySyncData(payload) {
+function applySyncData(payloadDB, payloadConfig) {
   try {
-    if (payload.master || payload.doggy) {
-      db = payload;
-    } else if (payload.db) {
-      db = payload.db || { master: {}, doggy: {} };
-      if (payload.config) {
-        const localMode = configs.mode;
-        const localSimple = configs.simpleMode;
-        const localNotify = configs.notifications;
-        const localLogicalDate = configs.showLogicalDate;
-        const localClockLayout = configs.clockLayout;
-        const localShowMasterClock = configs.showMasterClock;
-        const localShowDoggyClock = configs.showDoggyClock;
-        const localShowSeconds = configs.showSeconds;
-        const localShowShichen = configs.showShichen;
-        const localShowWellness = configs.showWellness;
-
-        configs = deepMerge(DEFAULT_CONFIGS, payload.config); 
-        
-        configs.mode = localMode;
-        configs.simpleMode = localSimple;
-        configs.notifications = localNotify;
-        configs.showLogicalDate = localLogicalDate;
-        configs.clockLayout = localClockLayout;
-        configs.showMasterClock = localShowMasterClock;
-        configs.showDoggyClock = localShowDoggyClock;
-        configs.showSeconds = localShowSeconds;
-        configs.showShichen = localShowShichen;
-        configs.showWellness = localShowWellness;
-        configs.configVersion = 7;
-      }
+    if (payloadDB && (payloadDB.master || payloadDB.doggy)) {
+      db = payloadDB;
+      localStorage.setItem('dawn-duo-data', JSON.stringify(db));
     }
-    try { localStorage.setItem('dawn-duo-configs', JSON.stringify(configs)); } catch (e) { }
-    saveLocalData(); 
+    if (payloadConfig) {
+      const localMode = configs.mode, localSimple = configs.simpleMode, localNotify = configs.notifications;
+      const localLogicalDate = configs.showLogicalDate, localClockLayout = configs.clockLayout;
+      const localShowMasterClock = configs.showMasterClock, localShowDoggyClock = configs.showDoggyClock;
+      const localShowSeconds = configs.showSeconds, localShowShichen = configs.showShichen, localShowWellness = configs.showWellness;
+
+      configs = deepMerge(DEFAULT_CONFIGS, payloadConfig); 
+      
+      configs.mode = localMode; configs.simpleMode = localSimple; configs.notifications = localNotify;
+      configs.showLogicalDate = localLogicalDate; configs.clockLayout = localClockLayout;
+      configs.showMasterClock = localShowMasterClock; configs.showDoggyClock = localShowDoggyClock;
+      configs.showSeconds = localShowSeconds; configs.showShichen = localShowShichen; configs.showWellness = localShowWellness;
+      configs.configVersion = 7;
+      localStorage.setItem('dawn-duo-configs', JSON.stringify(configs));
+    }
+    
+    render(); applyConfigsToPage(); updateModeCards(); updateClocks();
   } catch(e) { console.warn('同步数据应用异常', e); }
+}
+
+// 简单的增量校验 hash 计算
+function getHash(str) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+    hash |= 0;
+  }
+  return hash.toString();
 }
 
 window.exportJSON = function() {
   const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db, null, 2));
   const dlAnchorElem = document.createElement('a');
-  dlAnchorElem.setAttribute("href", dataStr);
-  dlAnchorElem.setAttribute("download", "records.json");
+  dlAnchorElem.setAttribute("href", dataStr); dlAnchorElem.setAttribute("download", "records.json");
   document.body.appendChild(dlAnchorElem); dlAnchorElem.click(); document.body.removeChild(dlAnchorElem);
   showToast('JSON 导出成功', 'success');
+};
+
+window.exportCSV = function() {
+  try {
+    const rows = [['日期', '用户', '类型', '状态', '时间', '达标', '打卡时间戳', '时区', '设备', '位置', '睡眠时长(分钟)']];
+    for (const u of ['master', 'doggy']) {
+      if (!db[u]) continue;
+      for (const d of Object.keys(db[u]).sort()) {
+        for (const t of ['sleep', 'wake']) {
+          const rec = db[u][d]?.[t];
+          if (rec && rec.done) {
+            rows.push([
+              d, u === 'master' ? '主人' : '小狗', t === 'sleep' ? '休息' : '起床',
+              rec.ontime ? '按时' : '迟到', rec.time || '', rec.ontime ? '是' : '否',
+              rec.meta?.timestamp ? new Date(rec.meta.timestamp).toLocaleString() : '',
+              rec.meta?.timezone || '', rec.meta?.device || '', rec.meta?.location || '',
+              rec.meta?.sleepDuration ? Math.floor(rec.meta.sleepDuration / 60) : ''
+            ]);
+          }
+        }
+      }
+    }
+    const csv = '\uFEFF' + rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\r\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `dawn-duo-records-${getLogicalDateStr()}.csv`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('CSV 导出成功 📊', 'success');
+  } catch (e) { showToast('CSV 导出失败: ' + e.message, 'late'); }
+};
+
+window.exportAsImage = function() {
+  try {
+    const W = 800, H = 1000;
+    const canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d');
+    
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const bg = isDark ? '#120f17' : '#f4f8fc';
+    const text = isDark ? '#f3eef6' : '#1e1b2e';
+    const muted = isDark ? '#9c8fa6' : '#706881';
+    const empty = isDark ? '#2a2536' : '#e2e8f0';
+    const masterColor = P().colors?.master || '#38bdf8';
+    const doggyColor = P().colors?.doggy || '#f472b6';
+    
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = text; ctx.font = 'bold 32px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(P().texts?.title || '契约打卡报告', W/2, 60);
+    ctx.font = '16px sans-serif'; ctx.fillStyle = muted;
+    ctx.fillText(`契约日: ${getLogicalDateStr()}`, W/2, 90);
+    
+    const today = getLogicalDateStr();
+    ctx.textAlign = 'left'; ctx.font = 'bold 20px sans-serif'; ctx.fillStyle = text;
+    ctx.fillText('今日打卡', 40, 150);
+    
+    const users = [
+      { key: 'master', label: getPureName(P().texts?.masterName) || '主人', color: masterColor },
+      { key: 'doggy', label: getPureName(P().texts?.doggyName) || '小狗', color: doggyColor }
+    ];
+    
+    let y = 190;
+    for (const u of users) {
+      ctx.fillStyle = u.color; ctx.font = 'bold 22px sans-serif';
+      ctx.fillText(u.label, 40, y); y += 36;
+      
+      ctx.font = '18px sans-serif';
+      for (const t of ['sleep', 'wake']) {
+        const rec = db[u.key]?.[today]?.[t];
+        const label = t === 'sleep' ? '休息' : '起床';
+        ctx.fillStyle = text; ctx.fillText(`${label}:`, 60, y);
+        if (rec && rec.done) {
+          ctx.fillStyle = rec.ontime ? '#10b981' : '#ef4444';
+          let txt = `${rec.time} ${rec.ontime ? '✓ 按时' : '✗ 迟到'}`;
+          if (t === 'wake' && rec.meta?.sleepDuration) {
+            txt += ` (睡眠: ${Math.floor(rec.meta.sleepDuration/3600)}h${Math.floor((rec.meta.sleepDuration%3600)/60)}m)`;
+          }
+          ctx.fillText(txt, 140, y);
+        } else {
+          ctx.fillStyle = muted; ctx.fillText('未打卡', 140, y);
+        }
+        y += 30;
+      }
+      y += 20;
+    }
+    
+    ctx.fillStyle = text; ctx.font = 'bold 20px sans-serif'; ctx.fillText('最近 14 天', 40, y + 10); y += 50;
+    
+    const cell = 24, gap = 8;
+    let x = 40;
+    for (let i = 13; i >= 0; i--) {
+      const ds = getLogicalDateStr(i);
+      const mScore = (db.master?.[ds]?.sleep?.done ? 1 : 0) + (db.master?.[ds]?.wake?.done ? 1 : 0);
+      const dScore = (db.doggy?.[ds]?.sleep?.done ? 1 : 0) + (db.doggy?.[ds]?.wake?.done ? 1 : 0);
+      
+      ctx.globalAlpha = 1;
+      if (mScore === 2 && dScore === 2) {
+        ctx.fillStyle = masterColor; ctx.fillRect(x, y, cell, cell/2);
+        ctx.fillStyle = doggyColor; ctx.fillRect(x, y + cell/2, cell, cell/2);
+      } else if (mScore === 2) {
+        ctx.fillStyle = masterColor; ctx.fillRect(x, y, cell, cell);
+      } else if (dScore === 2) {
+        ctx.fillStyle = doggyColor; ctx.fillRect(x, y, cell, cell);
+      } else if (mScore > 0 && dScore > 0) {
+        ctx.globalAlpha = 0.4; ctx.fillStyle = masterColor; ctx.fillRect(x, y, cell, cell/2);
+        ctx.fillStyle = doggyColor; ctx.fillRect(x, y + cell/2, cell, cell/2); ctx.globalAlpha = 1;
+      } else if (mScore > 0) {
+        ctx.globalAlpha = 0.4; ctx.fillStyle = masterColor; ctx.fillRect(x, y, cell, cell); ctx.globalAlpha = 1;
+      } else if (dScore > 0) {
+        ctx.globalAlpha = 0.4; ctx.fillStyle = doggyColor; ctx.fillRect(x, y, cell, cell); ctx.globalAlpha = 1;
+      } else {
+        ctx.fillStyle = empty; ctx.fillRect(x, y, cell, cell);
+      }
+      x += cell + gap;
+    }
+    
+    ctx.fillStyle = muted; ctx.font = '14px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('💗 由「契约打卡」生成', W/2, H - 30);
+    
+    canvas.toBlob(blob => {
+      if (!blob) return showToast('图片生成失败', 'late');
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `dawn-duo-${getLogicalDateStr()}.png`;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('图片导出成功 🖼️', 'success');
+    }, 'image/png');
+  } catch (e) { showToast('图片导出失败: ' + e.message, 'late'); }
 };
 
 window.importData = function(event) {
@@ -1224,12 +1310,11 @@ window.importData = function(event) {
 };
 
 window.clearLocalData = function() {
-  if (confirm('⚠️ 确定要清除本机所有打卡记录吗？\n\n此操作不可逆！')) {
-    localStorage.removeItem('dawn-duo-data');
-    localStorage.removeItem('dawn-duo-notify-log');
-    db = { master: {}, doggy: {} }; notifyLog = {};
-    render(); showToast('本机数据已清空。', 'late'); closeSettings(); debounceSync();
-  }
+  if (!confirm('⚠️ 确定要清除本机所有打卡记录吗？\n\n此操作不可逆！（云端数据不受影响，如需清空云端请手动上传）')) return;
+  localStorage.removeItem('dawn-duo-data');
+  localStorage.removeItem('dawn-duo-notify-log');
+  db = { master: {}, doggy: {} }; notifyLog = {};
+  render(); showToast('本机数据已清空。', 'late'); closeSettings();
 };
 
 function encodeBase64Utf8(str) {
@@ -1244,77 +1329,119 @@ function decodeBase64Utf8(b64) {
   return new TextDecoder('utf-8').decode(bytes);
 }
 
+// 异步请求单文件
+async function fetchGHFile(path) {
+  if (!ghConfig.user || !ghConfig.repo || !ghConfig.token) return null;
+  try {
+    const url = `https://api.github.com/repos/${ghConfig.user}/${ghConfig.repo}/contents/${path}?t=${Date.now()}`;
+    const res = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}`, 'Accept': 'application/vnd.github.v3+json' } });
+    if (res.ok) {
+      const data = await res.json();
+      return { sha: data.sha, content: decodeBase64Utf8(data.content) };
+    }
+  } catch (e) { console.warn(`拉取 ${path} 失败`, e); }
+  return null;
+}
+
+// 异步上传单文件
+async function pushGHFile(path, contentStr, oldSha) {
+  try {
+    const url = `https://api.github.com/repos/${ghConfig.user}/${ghConfig.repo}/contents/${path}`;
+    const base64Content = encodeBase64Utf8(contentStr);
+    const res = await fetch(url, {
+      method: 'PUT',
+      headers: { 'Authorization': `token ${ghConfig.token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: `🐾 自动更新 ${path}`, content: base64Content, sha: oldSha || undefined })
+    });
+    return res.ok;
+  } catch (e) { console.warn(`上传 ${path} 失败`, e); return false; }
+}
+
 let syncTimer = null;
 function debounceSync() {
   if (!ghConfig.user || !ghConfig.repo || !ghConfig.token) return;
   if (syncTimer) clearTimeout(syncTimer);
-  syncTimer = setTimeout(() => { autoSyncToGitHub(); }, 2500);
+  syncTimer = setTimeout(() => { autoSyncToGitHub(); }, 3000);
 }
 
-async function autoSyncToGitHub() {
+async function autoSyncToGitHub(force = false) {
   if (!ghConfig.user || !ghConfig.repo || !ghConfig.token) return;
   try {
-    const url = `https://api.github.com/repos/${ghConfig.user}/${ghConfig.repo}/contents/${ghConfig.path}`;
-    let sha = null;
-    const getRes = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}`, 'Accept': 'application/vnd.github.v3+json' } });
-    if (getRes.ok) sha = (await getRes.json()).sha;
     const payload = getSyncableData();
-    const base64Content = encodeBase64Utf8(JSON.stringify(payload, null, 2));
-    await fetch(url, {
-      method: 'PUT',
-      headers: { 'Authorization': `token ${ghConfig.token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: '🐾 自动更新契约数据', content: base64Content, sha: sha || undefined })
-    });
+    const dbStr = JSON.stringify(payload.db, null, 2);
+    const cfgStr = JSON.stringify(payload.config, null, 2);
+
+    // 获取云端 sha
+    const dbRemote = await fetchGHFile(ghConfig.path);
+    const cfgRemote = await fetchGHFile(ghConfig.configPath);
+
+    const dbHash = getHash(dbStr);
+    const cfgHash = getHash(cfgStr);
+    
+    let needPushDB = true;
+    let needPushCfg = true;
+
+    if (!force) {
+      // 简单比对：如果云端内容存在且与本地相同，就不推送
+      if (dbRemote && getHash(dbRemote.content) === dbHash) needPushDB = false;
+      if (cfgRemote && getHash(cfgRemote.content) === cfgHash) needPushCfg = false;
+    }
+
+    if (needPushDB) await pushGHFile(ghConfig.path, dbStr, dbRemote?.sha);
+    if (needPushCfg) await pushGHFile(ghConfig.configPath, cfgStr, cfgRemote?.sha);
+    
+    if (needPushDB || needPushCfg) console.log("自动同步完成");
   } catch (e) { console.warn('自动同步失败', e); }
 }
 
-async function autoPullOnLoad() {
+async function autoPullOnLoad(force = false) {
   if (!ghConfig.user || !ghConfig.repo || !ghConfig.token) return;
   try {
-    const url = `https://api.github.com/repos/${ghConfig.user}/${ghConfig.repo}/contents/${ghConfig.path}`;
-    const res = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}`, 'Accept': 'application/vnd.github.v3+json' } });
-    if (res.ok) {
-      const data = await res.json();
-      const payload = JSON.parse(decodeBase64Utf8(data.content));
-      applySyncData(payload);
-      showToast('已自动同步云端数据 📥', 'success');
+    const dbRemote = await fetchGHFile(ghConfig.path);
+    const cfgRemote = await fetchGHFile(ghConfig.configPath);
+    
+    let dbPayload = null;
+    let cfgPayload = null;
+
+    if (dbRemote) {
+      // 防抖比对：如果拉取的内容和本地一致，就不要覆盖本地
+      if (force || getHash(dbRemote.content) !== getHash(JSON.stringify(db))) {
+        const parsed = JSON.parse(dbRemote.content);
+        if (parsed.master || parsed.doggy) dbPayload = parsed;
+      }
+    }
+    
+    if (cfgRemote) {
+      if (force || getHash(cfgRemote.content) !== getHash(JSON.stringify(configs))) {
+        cfgPayload = JSON.parse(cfgRemote.content);
+      }
+    }
+
+    if (dbPayload || cfgPayload) {
+      applySyncData(dbPayload, cfgPayload);
+      if (force) showToast('已强制从云端拉取数据 📥', 'success');
+      else showToast('已自动同步云端最新数据 📥', 'success');
     }
   } catch (e) { console.warn('自动拉取失败', e); }
 }
 
+// 每 5 分钟自动拉取一次
+setInterval(() => { autoPullOnLoad(false); }, 5 * 60 * 1000);
+
 window.syncFromGitHub = async function() {
   if (!confirm('⚠️ 确认要拉取云端数据吗？\n\n将覆盖当前本机的打卡记录和文案配置。')) return;
   if (!ghConfig.user || !ghConfig.repo || !ghConfig.token) return showToast('请先填写完整配置！', 'late');
-  try {
-    const url = `https://api.github.com/repos/${ghConfig.user}/${ghConfig.repo}/contents/${ghConfig.path}`;
-    const res = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}`, 'Accept': 'application/vnd.github.v3+json' } });
-    if (res.ok) {
-      const data = await res.json();
-      const payload = JSON.parse(decodeBase64Utf8(data.content));
-      applySyncData(payload); showToast('拉取成功。📥', 'success'); closeSettings();
-    } else showToast('拉取失败，检查权限或网络。', 'late');
-  } catch (e) { showToast('网络错误: ' + e.message, 'late'); }
+  await autoPullOnLoad(true);
+  closeSettings();
 };
 
 window.saveToGitHub = async function() {
   if (!confirm('⚠️ 确认要推送并覆盖云端数据吗？')) return;
   saveSettings();
   if (!ghConfig.user || !ghConfig.repo || !ghConfig.token) return showToast('请先填写完整配置！', 'late');
-  try {
-    const url = `https://api.github.com/repos/${ghConfig.user}/${ghConfig.repo}/contents/${ghConfig.path}`;
-    let sha = null;
-    const getRes = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}`, 'Accept': 'application/vnd.github.v3+json' } });
-    if (getRes.ok) sha = (await getRes.json()).sha;
-    const payload = getSyncableData();
-    const base64Content = encodeBase64Utf8(JSON.stringify(payload, null, 2));
-    const putRes = await fetch(url, {
-      method: 'PUT',
-      headers: { 'Authorization': `token ${ghConfig.token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: '🐾 手动更新契约数据', content: base64Content, sha: sha || undefined })
-    });
-    if (putRes.ok) { showToast('⬆️ 数据已成功上传。', 'success'); closeSettings(); }
-    else showToast('上传失败，检查Token权限。', 'late');
-  } catch (e) { showToast('网络错误: ' + e.message, 'late'); }
+  await autoSyncToGitHub(true);
+  showToast('⬆️ 数据已成功上传。', 'success'); 
+  closeSettings();
 };
 
 // ================= 启动 =================
@@ -1337,4 +1464,4 @@ updateModeCards();
 render();
 initIdentity();
 updateNotifyStatus();
-autoPullOnLoad();
+autoPullOnLoad(false);

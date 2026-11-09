@@ -310,7 +310,12 @@
             </div>
             <div class="form-group" id="group-history-days">
               <label>显示天数</label>
-              <select id="cfg-history-days"><option value="7">7 天</option><option value="30">30 天</option><option value="90">90 天</option></select>
+              <select id="cfg-history-days">
+                <option value="7">7 天</option>
+                <option value="30">30 天</option>
+                <option value="90">90 天</option>
+                <option value="365">365 天</option>
+              </select>
             </div>
             <div class="form-group" id="group-history-month" style="display: none; gap: 8px;">
               <label>选择月份</label>
@@ -451,11 +456,12 @@
         <div class="config-card">
           <div class="config-title">☁️ GitHub 云端同步</div>
           <div class="mode-tip" style="margin-bottom: 12px;">
-            提示：如果文件放在<b>主目录</b>，路径填 <code>records.json</code>；<br>如果放在 <code>data</code> 文件夹里，填 <code>data/records.json</code>。
+            提示：打卡数据存放在 <code>records.json</code>，配置文案存放在 <code>config.json</code>。系统已实现双文件分离增量同步。
           </div>
           <div class="form-group"><label>用户名</label><input type="text" id="gh-user" placeholder="yourname"></div>
-          <div class="form-group"><label>数据仓库名称</label><input type="text" id="gh-repo" placeholder="dawn-duo-data"></div>
-          <div class="form-group"><label>文件路径</label><input type="text" id="gh-path" placeholder="data/records.json"></div>
+          <div class="form-group"><label>数据仓库名称</label><input type="text" id="gh-repo" placeholder="dawn_duo_data"></div>
+          <div class="form-group"><label>打卡文件路径</label><input type="text" id="gh-path" placeholder="records.json"></div>
+          <div class="form-group"><label>配置文件路径</label><input type="text" id="gh-config-path" placeholder="config.json"></div>
           <div class="form-group"><label>Personal Access Token</label><input type="password" id="gh-token" placeholder="github_pat_xxx"></div>
           <div class="flex-row" style="margin-top: 16px;">
             <button class="btn outline" onclick="syncFromGitHub()" style="flex:1;">⬇️ 立即拉取</button>

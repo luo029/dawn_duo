@@ -60,6 +60,22 @@ let identity = '';
 try { identity = localStorage.getItem(IDENTITY_KEY) || ''; } catch (e) { identity = ''; }
 if (['master', 'doggy', 'both'].indexOf(identity) === -1) identity = '';
 
+// ✅ 核心配置直接写死内置
+const CONFIG_KEY = 'dawn-duo-gh-config';
+let ghConfig = { 
+  user: 'luo029', 
+  repo: 'dawn_duo_data', 
+  path: 'records.json', 
+  configPath: 'config.json', 
+  token: '', 
+  autoSync: true 
+};
+try { 
+  const savedGh = JSON.parse(localStorage.getItem(CONFIG_KEY)) || {};
+  ghConfig.token = savedGh.token || ''; 
+  ghConfig.autoSync = savedGh.autoSync !== false;
+} catch (e) { }
+
 let db = { master: {}, doggy: {} };
 let notifyLog = JSON.parse(localStorage.getItem('dawn-duo-notify-log') || '{}');
 let lastLogicalDate = getLogicalDateStr();
@@ -171,6 +187,105 @@ window.handleWellnessToggle = function() {
   if (document.getElementById('cfg-show-wellness').checked) {
     document.getElementById('cfg-show-shichen').checked = true;
   }
+};
+
+// ================= 初始化与锁屏验证逻辑 =================
+window.verifyAndUnlock = async function() {
+  const tokenInput = document.getElementById('setup-token');
+  const btn = document.getElementById('setup-btn');
+  const progressArea = document.getElementById('setup-progress-area');
+  const progressBar = document.getElementById('setup-progress-bar');
+  const progressText = document.getElementById('setup-progress-text');
+  
+  const token = tokenInput.value.trim();
+  if (!token) return showToast('小狗不乖哦，口令不能空着~', 'late');
+
+  tokenInput.disabled = true;
+  btn.disabled = true;
+  btn.textContent = '正在献上忠诚...';
+  progressArea.classList.add('show');
+  progressBar.classList.remove('error');
+  progressBar.style.width = '10%';
+  progressText.classList.remove('error');
+  progressText.textContent = '正在核对主人的印记...';
+
+  try {
+    const res = await fetch(`https://api.github.com/repos/${ghConfig.user}/${ghConfig.repo}`, {
+      headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json' }
+    });
+
+    if (!res.ok) throw new Error('Token无效或无权限');
+
+    progressBar.style.width = '40%';
+    progressText.textContent = '主人已确认，正在解开小狗的项圈...';
+    
+    setTimeout(() => {
+      progressBar.style.width = '80%';
+      progressText.textContent = '正在同步专属调教记录...';
+      
+      setTimeout(() => {
+        progressBar.style.width = '100%';
+        progressText.textContent = '🐾 项圈已解开，欢迎回来，我的小狗。';
+        
+        ghConfig.token = token;
+        localStorage.setItem(CONFIG_KEY, JSON.stringify(ghConfig));
+
+        // ✅ 强制默认：小狗身份 + 主仆模式
+        identity = 'doggy';
+        localStorage.setItem('dawn-duo-identity', 'doggy');
+        
+        configs.mode = 'service';
+        localStorage.setItem('dawn-duo-configs', JSON.stringify(configs));
+
+        setTimeout(() => {
+          // 1. 隐藏解锁层
+          const setupOverlay = document.getElementById('setup-overlay');
+          if (setupOverlay) {
+            setupOverlay.classList.add('hide');
+            setTimeout(() => { setupOverlay.style.display = 'none'; }, 500);
+          }
+          
+          // 2. 关键：隐藏身份选择层，否则会挡住主页面
+          const identityModal = document.getElementById('identity-modal');
+          if (identityModal) identityModal.classList.remove('show');
+          document.body.style.overflow = '';
+          
+          // 3. 显示主界面
+          document.getElementById('main-wrap').style.display = 'block'; 
+          
+          // 4. 重新刷新数据，渲染出今日打卡卡片
+          applyConfigsToPage();
+          updateModeCards();
+          applyIdentity();
+          render();
+
+          autoPullOnLoad();
+        }, 1200);
+
+      }, 1000);
+    }, 1000);
+
+  } catch (err) {
+    progressBar.classList.add('error');
+    progressBar.style.width = '100%';
+    progressText.classList.add('error');
+    progressText.textContent = '❌ 口令错误，小狗可是要被惩罚的哦。';
+    
+    setTimeout(() => {
+      tokenInput.disabled = false;
+      btn.disabled = false;
+      btn.textContent = '重新向主人献上忠诚';
+      progressBar.style.width = '0%';
+    }, 2500);
+  }
+};
+
+window.clearToken = function() {
+  if (!confirm('解除绑定后，将无法同步数据，确定吗？')) return;
+  ghConfig.token = '';
+  localStorage.setItem(CONFIG_KEY, JSON.stringify(ghConfig));
+  closeSettings();
+  location.reload();
 };
 
 // ================= 通知核心逻辑 =================
@@ -459,9 +574,7 @@ function render() {
       });
     });
 
-    // 更新全局独立状态栏
     updatePartnerStatusPanel();
-
     renderHistory();
   } catch(e) { console.warn('渲染异常', e); }
 }
@@ -576,6 +689,7 @@ function updateClocks() {
     const container = document.getElementById('clock-container');
     const cardMaster = document.getElementById('clock-card-master');
     const cardDoggy = document.getElementById('clock-card-doggy');
+    if(!container) return;
     container.className = 'grid-clocks'; 
     
     const isMasterIdentity = (identity === 'master' || identity === 'both');
@@ -690,8 +804,6 @@ function updateClocks() {
     checkNotifications();
   } catch(e) { console.warn("时钟更新异常", e); }
 }
-setInterval(updateClocks, 1000);
-updateClocks();
 
 window.toggleTheme = function() {
   const html = document.documentElement;
@@ -808,21 +920,50 @@ window.chooseIdentity = function(id) {
   const modal = document.getElementById('identity-modal');
   if (modal) modal.classList.remove('show');
   document.body.style.overflow = '';
+  
+  // 显示主界面并渲染
+  document.getElementById('main-wrap').style.display = 'block';
   applyIdentity(); updateIdentityCards();
+  
   let msg = '身份已选择 💗';
   if (id === 'master') msg = '已切换为 ' + (getPureName(P().texts.masterName) || '先生') + ' 👑（对方卡片只读）';
   else if (id === 'doggy') msg = '已切换为 ' + (getPureName(P().texts.doggyName) || '宝宝') + ' 🎀（对方卡片只读）';
   else msg = '已切换为 滴滴 🍉 两个页面都能操作';
   showToast(msg, 'success');
+
+  // 触发一次拉取
+  autoPullOnLoad(false);
 };
 
 function initIdentity() {
-  updateIdentityLabels(); updateIdentityCards();
+  // ✅ 如果没有身份缓存，强制默认赋为小狗
   if (!identity) {
-    const modal = document.getElementById('identity-modal');
-    if (modal) { modal.classList.add('show'); document.body.style.overflow = 'hidden'; }
+    identity = 'doggy';
+    try { localStorage.setItem(IDENTITY_KEY, 'doggy'); } catch(e) {}
+  }
+  // ✅ 如果没设置过模式，强制默认赋为主仆
+  if (!configs.mode) {
+    configs.mode = 'service';
+    try { localStorage.setItem('dawn-duo-configs', JSON.stringify(configs)); } catch(e) {}
+  }
+
+  updateIdentityLabels(); updateIdentityCards();
+  
+  // 确保身份选择弹窗处于关闭状态
+  const identityModal = document.getElementById('identity-modal');
+  if (identityModal) identityModal.classList.remove('show');
+  document.body.style.overflow = '';
+
+  if (!ghConfig.token) {
+    // 未填写 Token，显示项圈解锁层
+    const overlay = document.getElementById('setup-overlay');
+    if (overlay) overlay.style.display = 'flex';
+    document.getElementById('main-wrap').style.display = 'none';
   } else {
-    document.documentElement.classList.remove('no-identity');
+    // 已填写 Token，直接进主界面
+    const overlay = document.getElementById('setup-overlay');
+    if (overlay) overlay.style.display = 'none';
+    document.getElementById('main-wrap').style.display = 'block';
     applyIdentity(); 
   }
 }
@@ -1062,12 +1203,6 @@ window.openSettings = function() {
     const fixDateInput = document.getElementById('cfg-fix-date');
     if (!fixDateInput.value) fixDateInput.value = getLogicalDateStr();
     renderFixPanel();
-
-    document.getElementById('gh-user').value = ghConfig.user || '';
-    document.getElementById('gh-repo').value = ghConfig.repo || '';
-    document.getElementById('gh-path').value = ghConfig.path || 'records.json';
-    document.getElementById('gh-config-path').value = ghConfig.configPath || 'config.json';
-    document.getElementById('gh-token').value = ghConfig.token || '';
 
     updateNotifyStatus(); updateIdentityCards();
 
@@ -1336,14 +1471,7 @@ window.saveSettings = function(skipSync) {
     configs.configVersion = 7;
     try { localStorage.setItem('dawn-duo-configs', JSON.stringify(configs)); } catch (e) { showToast('保存失败', 'late'); }
 
-    ghConfig = {
-      user: document.getElementById('gh-user').value.trim(),
-      repo: document.getElementById('gh-repo').value.trim(),
-      path: document.getElementById('gh-path').value.trim() || 'records.json',
-      configPath: document.getElementById('gh-config-path').value.trim() || 'config.json',
-      token: document.getElementById('gh-token').value.trim(),
-      autoSync: document.getElementById('cfg-auto-sync').checked
-    };
+    ghConfig.autoSync = document.getElementById('cfg-auto-sync').checked;
     try { localStorage.setItem(CONFIG_KEY, JSON.stringify(ghConfig)); } catch (e) { }
 
     applyConfigsToPage(); updateClocks(); render(); updateNotifyStatus();
@@ -1354,10 +1482,6 @@ window.saveSettings = function(skipSync) {
     showToast('保存时发生错误', 'late');
   }
 };
-
-const CONFIG_KEY = 'dawn-duo-gh-config';
-let ghConfig = { user: 'luo029', repo: 'dawn_duo_data', path: 'records.json', configPath: 'config.json', token: '', autoSync: true };
-try { ghConfig = Object.assign(ghConfig, JSON.parse(localStorage.getItem(CONFIG_KEY)) || {}); } catch (e) { }
 
 function getSyncableData() {
   const syncableConfig = JSON.parse(JSON.stringify(configs));
@@ -1470,7 +1594,6 @@ function calculateDiff(localData, remoteData, isUpload) {
           dbDiff.push({ type: isUpload ? 'add' : 'remove', text: `【${date}】${uName} ${tName}：将${isUpload ? '新增' : '删除'} (${lRec.time})` });
         } else if (lRec && rRec) {
           if (lRec.time !== rRec.time || lRec.done !== rRec.done) {
-            // ✅ 修正：上传时显示"本地新值"，拉取时显示"云端新值"
             const targetTime = isUpload ? lRec.time : rRec.time;
             dbDiff.push({ type: 'modify', text: `【${date}】${uName} ${tName}：修改 -> ${targetTime}` });
           }
@@ -1499,7 +1622,6 @@ function calculateDiff(localData, remoteData, isUpload) {
         const rv = rTexts[k];
         if (lv !== rv) {
           const label = CONFIG_KEY_MAP[`texts.${k}`] || `文案 ${k}`;
-          // ✅ 修正：上传时显示本地值，拉取时显示云端值
           const target = isUpload ? lv : rv;
           cfgDiff.push({ type: 'modify', text: `[${modeName}] ${label}：修改 -> ${target}` });
         }
@@ -1552,7 +1674,6 @@ function renderDiffModal(diff, isUpload) {
   const title = isUpload ? '⬆️ 推送：本地 → 云端' : '⬇️ 拉取：云端 → 本地';
   document.getElementById('diff-modal-title').textContent = title;
 
-  // 整块弹窗主题色切换
   const modalBox = document.querySelector('#diff-modal .diff-modal-box');
   if (modalBox) {
     modalBox.classList.remove('upload-mode', 'pull-mode');
@@ -1575,7 +1696,6 @@ function renderDiffModal(diff, isUpload) {
 
   confirmBtn.style.display = 'block';
 
-  // 顶部统计条
   const stats = { add: 0, remove: 0, modify: 0 };
   [...diff.dbDiff, ...diff.cfgDiff].forEach(it => { if (stats[it.type] !== undefined) stats[it.type]++; });
   let summary = '<div class="diff-summary">';
@@ -1610,7 +1730,6 @@ function renderDiffModal(diff, isUpload) {
 
 window.closeDiffModal = function() {
   document.getElementById('diff-modal').classList.remove('show');
-  // 清理主题模式，避免下次弹窗残留
   const modalBox = document.querySelector('#diff-modal .diff-modal-box');
   if (modalBox) modalBox.classList.remove('upload-mode', 'pull-mode');
   pendingSyncData = null;
@@ -1627,7 +1746,6 @@ window.confirmSyncDiff = async function() {
     const dbStr = JSON.stringify(localData.db, null, 2);
     const cfgStr = JSON.stringify(localData.config, null, 2);
     
-    // ✅ 修复：检查 push 结果
     const ok1 = await pushGHFile(ghConfig.path, dbStr, remoteDbSha);
     const ok2 = await pushGHFile(ghConfig.configPath, cfgStr, remoteCfgSha);
     
@@ -1654,7 +1772,6 @@ async function fetchGHFile(path) {
       const data = await res.json();
       return { sha: data.sha, content: decodeBase64Utf8(data.content) };
     }
-    // ✅ 修复：404 才视作"文件不存在"；其它错误（401/403/网络）抛出
     if (res.status === 404) return null;
     throw new Error(`GitHub API 返回 ${res.status}`);
   } catch (e) {
@@ -1720,7 +1837,6 @@ window.syncFromGitHub = async function() {
 window.saveToGitHub = async function() {
   if (!ghConfig.user || !ghConfig.repo || !ghConfig.token) return showToast('请先填写完整配置！', 'late');
   
-  // ✅ 修复：传 true 跳过 debounceSync，防止 3 秒后自动推送覆盖云端
   saveSettings(true);
   showToast('正在获取云端数据对比...', 'success');
   
@@ -1811,14 +1927,13 @@ async function autoPullOnLoad(force = false) {
 
     if (dbRemote) {
       const parsed = JSON.parse(dbRemote.content);
-      // ✅ 修复：云端为空 + 本地有数据 → 不自动覆盖本地
       const isEmpty = (!parsed.master || Object.keys(parsed.master).length === 0)
                    && (!parsed.doggy || Object.keys(parsed.doggy).length === 0);
       const localHasData = (db.master && Object.keys(db.master).length > 0)
                         || (db.doggy && Object.keys(db.doggy).length > 0);
 
       if (isEmpty && localHasData && !force) {
-        // 云端空数据 + 本地有数据，跳过覆盖
+        // 跳过覆盖
       } else {
         const localDbStr = JSON.stringify(db, null, 2);
         if (force || getHash(dbRemote.content) !== getHash(localDbStr)) {
@@ -2038,4 +2153,5 @@ updateModeCards();
 render();
 initIdentity();
 updateNotifyStatus();
-autoPullOnLoad(false);
+setInterval(updateClocks, 1000);
+updateClocks();

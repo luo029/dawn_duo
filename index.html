@@ -7,9 +7,6 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%2338bdf8'/%3E%3Ccircle cx='50' cy='50' r='30' fill='%23f472b6'/%3E%3C/svg%3E">
 <script>
   (function() {
-    if (!localStorage.getItem('dawn-duo-identity')) {
-      document.documentElement.classList.add('no-identity');
-    }
     const savedTheme = localStorage.getItem('dawn-duo-theme') || 'dark';
     document.documentElement.setAttribute('data-theme', savedTheme);
     try {
@@ -26,7 +23,65 @@
 </head>
 <body>
 
-<div class="wrap">
+<!-- 1. 项圈解锁验证层 (默认隐藏，由 JS 决定是否显示) -->
+<div class="setup-overlay" id="setup-overlay">
+  <div class="setup-box">
+    <div class="setup-emoji">🔗</div>
+    <h2>小狗的秘密项圈</h2>
+    <p>请输入主人的专属调教口令<br>以连接属于你们的私密云端囚笼...</p>
+    
+    <div class="form-group">
+      <input type="password" id="setup-token" placeholder="粘贴主人的印记 (github_pat_...)" autocomplete="off">
+    </div>
+    
+    <!-- 进度条区域 -->
+    <div class="progress-area" id="setup-progress-area">
+      <div class="progress-bar-wrap">
+        <div class="progress-bar" id="setup-progress-bar"></div>
+      </div>
+      <div class="progress-text" id="setup-progress-text">等待输入口令...</div>
+    </div>
+
+    <button class="btn primary setup-btn" id="setup-btn" onclick="verifyAndUnlock()">向主人献上忠诚</button>
+  </div>
+</div>
+
+<!-- 2. 身份选择层 (Token 验证通过后显示) -->
+<div class="identity-overlay" id="identity-modal">
+  <div class="identity-box">
+    <h2>你是谁呀？</h2>
+    <div class="id-sub">选择你的身份，只显示属于你的打卡页面<br>（之后可随时在设置中切换）</div>
+    <div class="identity-list">
+      <button class="identity-card" id="id-modal-card-master" onclick="chooseIdentity('master')">
+        <span class="id-emoji">👑</span>
+        <span class="id-info">
+          <span class="id-name" id="id-name-master">先生</span>
+          <span class="id-desc" id="id-desc-master">只显示先生的打卡页面</span>
+        </span>
+        <span class="id-arrow">›</span>
+      </button>
+      <button class="identity-card" id="id-modal-card-doggy" onclick="chooseIdentity('doggy')">
+        <span class="id-emoji">🎀</span>
+        <span class="id-info">
+          <span class="id-name" id="id-name-doggy">宝宝</span>
+          <span class="id-desc" id="id-desc-doggy">只显示宝宝的打卡页面</span>
+        </span>
+        <span class="id-arrow">›</span>
+      </button>
+      <button class="identity-card" id="id-modal-card-both" onclick="chooseIdentity('both')">
+        <span class="id-emoji">🍉</span>
+        <span class="id-info">
+          <span class="id-name">滴滴</span>
+          <span class="id-desc">两个打卡页面都看得到</span>
+        </span>
+        <span class="id-arrow">›</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- 3. 主界面 -->
+<div class="wrap" id="main-wrap" style="display: none;">
   <header class="topbar">
     <div class="brand">
       <h1 id="display-title">☀️ 契约</h1>
@@ -136,40 +191,6 @@
 </div>
 
 <div id="toast"></div>
-
-<!-- 身份选择 Overlay -->
-<div class="identity-overlay" id="identity-modal">
-  <div class="identity-box">
-    <h2>你是谁呀？</h2>
-    <div class="id-sub">选择你的身份，只显示属于你的打卡页面<br>（之后可随时在设置中切换）</div>
-    <div class="identity-list">
-      <button class="identity-card" id="id-modal-card-master" onclick="chooseIdentity('master')">
-        <span class="id-emoji">👑</span>
-        <span class="id-info">
-          <span class="id-name" id="id-name-master">先生</span>
-          <span class="id-desc" id="id-desc-master">只显示先生的打卡页面</span>
-        </span>
-        <span class="id-arrow">›</span>
-      </button>
-      <button class="identity-card" id="id-modal-card-doggy" onclick="chooseIdentity('doggy')">
-        <span class="id-emoji">🎀</span>
-        <span class="id-info">
-          <span class="id-name" id="id-name-doggy">宝宝</span>
-          <span class="id-desc" id="id-desc-doggy">只显示宝宝的打卡页面</span>
-        </span>
-        <span class="id-arrow">›</span>
-      </button>
-      <button class="identity-card" id="id-modal-card-both" onclick="chooseIdentity('both')">
-        <span class="id-emoji">🍉</span>
-        <span class="id-info">
-          <span class="id-name">滴滴</span>
-          <span class="id-desc">两个打卡页面都看得到</span>
-        </span>
-        <span class="id-arrow">›</span>
-      </button>
-    </div>
-  </div>
-</div>
 
 <!-- 设置弹窗 Modal -->
 <div class="modal-overlay" id="settings-modal">
@@ -509,19 +530,14 @@
         </div>
 
         <div class="config-card">
-          <div class="config-title">☁️ GitHub 云端同步</div>
+          <div class="config-title">☁️ 云端数据同步</div>
           <div class="switch-row" style="margin-bottom: 12px; padding: 0;">
             <label>开启自动拉取/推送</label>
             <label class="toggle-switch"><input type="checkbox" id="cfg-auto-sync"><span class="slider"></span></label>
           </div>
           <div class="mode-tip" style="margin-bottom: 12px;">
-            提示：打卡数据存放在 <code>records.json</code>，配置文案存放在 <code>config.json</code>。系统已实现双文件分离增量同步。
+            已绑定专属私有仓库：<b>luo029/dawn_duo_data</b><br>Token 已保存在本机，可直接进行拉取或上传。
           </div>
-          <div class="form-group"><label>用户名</label><input type="text" id="gh-user" placeholder="yourname"></div>
-          <div class="form-group"><label>数据仓库名称</label><input type="text" id="gh-repo" placeholder="dawn_duo_data"></div>
-          <div class="form-group"><label>打卡文件路径</label><input type="text" id="gh-path" placeholder="records.json"></div>
-          <div class="form-group"><label>配置文件路径</label><input type="text" id="gh-config-path" placeholder="config.json"></div>
-          <div class="form-group"><label>Personal Access Token</label><input type="password" id="gh-token" placeholder="github_pat_xxx"></div>
           <div class="flex-row" style="margin-top: 16px;">
             <button class="btn outline" onclick="syncFromGitHub()" style="flex:1;">⬇️ 立即拉取</button>
             <button class="btn primary" onclick="saveToGitHub()" style="flex:1;">⬆️ 立即上传</button>
@@ -531,6 +547,7 @@
         <div class="config-card danger-zone">
           <div class="config-title" style="color: var(--warn); border-bottom-color: var(--warn);">⚠️ 危险操作</div>
           <button class="btn danger outline" style="width: 100%;" onclick="clearLocalData()">清空本机打卡记录</button>
+          <button class="btn danger outline" style="width: 100%; margin-top: 8px;" onclick="clearToken()">解除 Token 绑定</button>
         </div>
       </div>
     </div>

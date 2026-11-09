@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<title>☀️ 先生与宝宝的契约</title>
+<title>契约打卡</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%2338bdf8'/%3E%3Ccircle cx='50' cy='50' r='30' fill='%23f472b6'/%3E%3C/svg%3E">
 <script>
   (function() {
@@ -12,6 +12,14 @@
     }
     const savedTheme = localStorage.getItem('dawn-duo-theme') || 'dark';
     document.documentElement.setAttribute('data-theme', savedTheme);
+    try {
+      const cfg = JSON.parse(localStorage.getItem('dawn-duo-configs'));
+      if (cfg && cfg.profiles) {
+        const mode = cfg.mode === 'service' ? 'service' : 'daily';
+        const t = cfg.profiles[mode] && cfg.profiles[mode].texts;
+        if (t && t.title) document.title = t.title;
+      }
+    } catch(e){}
   })();
 </script>
 <link rel="stylesheet" href="css/style.css">
@@ -21,8 +29,8 @@
 <div class="wrap">
   <header class="topbar">
     <div class="brand">
-      <h1 id="display-title">☀️ 先生与宝宝的契约</h1>
-      <p id="display-subtitle">跨越半个地球的日常陪伴</p>
+      <h1 id="display-title">☀️ 契约</h1>
+      <p id="display-subtitle">跨越半个地球的陪伴</p>
     </div>
     <div class="top-actions">
       <button class="btn icon-btn" id="theme-toggle" onclick="toggleTheme()">🌙</button>
@@ -35,7 +43,6 @@
     <span class="logical-date" id="logical-date-display">--</span>
   </div>
 
-  <!-- 时钟区域 -->
   <div class="grid-clocks" id="clock-container">
     <div class="clock-card master" id="clock-card-master">
       <div class="clock-city" id="master-city-text">📍 先生</div>
@@ -51,7 +58,6 @@
     </div>
   </div>
   
-  <!-- 养生提示区 -->
   <div id="wellness-panel" class="wellness-box" style="display:none;">
     <div id="wellness-text"></div>
   </div>
@@ -127,7 +133,7 @@
 
 <div id="toast"></div>
 
-<!-- 身份选择弹窗 -->
+<!-- 身份选择 Overlay -->
 <div class="identity-overlay" id="identity-modal">
   <div class="identity-box">
     <h2>你是谁呀？</h2>
@@ -161,7 +167,7 @@
   </div>
 </div>
 
-<!-- 主设置面板 -->
+<!-- 设置弹窗 Modal -->
 <div class="modal-overlay" id="settings-modal">
   <div class="modal">
     <div class="modal-head">
@@ -178,7 +184,6 @@
     </div>
 
     <div class="modal-body">
-      <!-- Tab 1: 基础外观 -->
       <div class="tab-content active" id="tab-general">
         <div class="config-card">
           <div class="config-title">🪪 身份与版本模式</div>
@@ -210,7 +215,7 @@
 
         <div class="config-card">
           <div class="config-title">🔠 标题与图标</div>
-          <div class="form-group"><label>主标题</label><input type="text" id="cfg-title" placeholder="☀️ 先生与宝宝的契约"></div>
+          <div class="form-group"><label>主标题</label><input type="text" id="cfg-title" placeholder="☀️ 契约"></div>
           <div class="form-group"><label>副标题</label><input type="text" id="cfg-subtitle" placeholder="跨越半个地球的日常陪伴"></div>
           <div class="flex-row">
             <div class="form-group"><label>日常模式图标</label><input type="text" id="cfg-icon-daily" placeholder="💕"></div>
@@ -254,7 +259,6 @@
         </div>
       </div>
 
-      <!-- Tab 2: 时钟养生 -->
       <div class="tab-content" id="tab-clock">
         <div class="config-card">
           <div class="config-title">🕰️ 时钟显示设置</div>
@@ -284,7 +288,6 @@
         </div>
       </div>
 
-      <!-- Tab 3: 作息打卡 -->
       <div class="tab-content" id="tab-rules">
         <div class="config-card">
           <div class="config-title">⏰ 目标时间与日历</div>
@@ -394,7 +397,6 @@
         </div>
       </div>
 
-      <!-- Tab 4: 互动文案 -->
       <div class="tab-content" id="tab-msgs">
         <div class="config-card">
           <div class="config-title">👑 <span id="cfg-msg-master-title">主人</span> 的弹窗文案</div>
@@ -433,10 +435,9 @@
         </div>
       </div>
 
-      <!-- Tab 5: 数据同步 -->
       <div class="tab-content" id="tab-data">
         <div class="config-card">
-          <div class="config-title">🛠️ 打卡记录修正</div>
+          <div class="config-title">🛠️ 打卡记录修正 (点击切换状态)</div>
           <div class="form-group"><input type="date" id="cfg-fix-date" onchange="renderFixPanel()"></div>
           <div class="fix-panel" id="fix-panel"></div>
         </div>
@@ -482,7 +483,7 @@
   </div>
 </div>
 
-<!-- 二级弹窗 -->
+<!-- 二级文案编辑 Modal -->
 <div class="sub-modal" id="sub-modal">
   <div class="sub-modal-box">
     <div class="sub-modal-head">
@@ -494,6 +495,27 @@
     <div class="sub-modal-foot">
       <button class="btn outline" onclick="closeSubMsg()">取消</button>
       <button class="btn primary" onclick="saveSubMsg()">确认</button>
+    </div>
+  </div>
+</div>
+
+<!-- 自定义美化时间输入 Modal (已将文字改为 取消打卡) -->
+<div class="sub-modal" id="custom-time-modal">
+  <div class="sub-modal-box" style="max-width:320px;">
+    <div class="sub-modal-head">
+      <h3 id="custom-time-title" style="font-size:1rem;">修改打卡时间</h3>
+      <button class="close-btn" onclick="closeCustomTimeModal()">✕</button>
+    </div>
+    <div style="padding: 10px 0;">
+      <div class="form-group">
+        <label>打卡具体时间 (24小时制)</label>
+        <input type="time" id="custom-time-input" style="font-size:1.2rem; text-align:center; padding:10px;">
+      </div>
+    </div>
+    <div class="sub-modal-foot" style="flex-wrap:wrap; gap:8px;">
+      <button class="btn danger outline" onclick="submitCustomTime('clear')" style="flex:1 1 100%; padding:8px; font-size:0.8rem;">🗑️ 取消打卡</button>
+      <button class="btn outline" onclick="closeCustomTimeModal()" style="flex:1;">取消</button>
+      <button class="btn primary" onclick="submitCustomTime('save')" style="flex:1;">保存</button>
     </div>
   </div>
 </div>

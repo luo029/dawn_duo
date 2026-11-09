@@ -18,10 +18,8 @@ function deepMerge(base, override) {
 function migrateConfigs(raw) {
   if (!raw || typeof raw !== 'object') return {};
   if (raw.configVersion >= 7) return raw;
-  
   const out = Object.assign({}, raw);
   out.configVersion = 7;
-  
   if (out.timeZones && typeof out.timeZones.master === 'string') {
     out.timeZones = { master: { type: 'iana', value: out.timeZones.master }, doggy: { type: 'iana', value: out.timeZones.doggy } };
   }
@@ -44,10 +42,8 @@ function migrateConfigs(raw) {
 
 let savedConfigs = {};
 try { savedConfigs = migrateConfigs(JSON.parse(localStorage.getItem('dawn-duo-configs')) || {}); } catch (e) { savedConfigs = {}; }
-
 let configs = deepMerge(DEFAULT_CONFIGS, savedConfigs);
 if (configs.mode !== 'service') configs.mode = 'daily';
-
 if (!configs.profiles) configs.profiles = deepMerge(DEFAULT_CONFIGS.profiles, {});
 if (!configs.profiles.daily.notifyTexts) configs.profiles.daily.notifyTexts = Object.assign({}, DEFAULT_NOTIFY_TEXTS.daily);
 if (!configs.profiles.service.notifyTexts) configs.profiles.service.notifyTexts = Object.assign({}, DEFAULT_NOTIFY_TEXTS.service);
@@ -113,7 +109,6 @@ function checkGoal(user, type, timeStr) {
   const goalStr = (configs.goals?.[user]?.[type]) || (DEFAULT_CONFIGS.goals?.[user]?.[type]);
   const tMins = toMins(timeStr); const gMins = toMins(goalStr);
   if (!Number.isFinite(tMins) || !Number.isFinite(gMins)) return false;
-  
   if (type === 'sleep') {
     let diff = tMins - gMins;
     if (diff > 720) diff -= 1440;
@@ -138,7 +133,6 @@ function getShichenInfo(hour) {
   return SHICHEN_DATA[index];
 }
 
-// 获取地理位置（带超时）
 function getLocation() {
   return new Promise((resolve) => {
     if (!navigator.geolocation) return resolve("Unknown");
@@ -164,7 +158,6 @@ function showToast(msg, type = 'success') {
   toastTimer = setTimeout(() => toast.classList.remove('show'), 2500 + msg.length * 120);
 }
 
-// ================= 开关联动逻辑 =================
 window.handleShichenToggle = function() {
   if (!document.getElementById('cfg-show-shichen').checked) {
     document.getElementById('cfg-show-wellness').checked = false;
@@ -268,7 +261,6 @@ function checkNotifications() {
 window.testNotification = async function() {
   if (!notificationSupported()) return showToast('当前浏览器不支持通知', 'late');
   if (!window.isSecureContext) return showToast('⚠️ 必须在 HTTPS 或 localhost 下才能发送通知', 'late');
-  
   let perm = Notification.permission;
   if (perm === 'default') {
     try { perm = await Notification.requestPermission(); } catch (e) { perm = 'denied'; }
@@ -277,10 +269,9 @@ window.testNotification = async function() {
   if (perm !== 'granted') return showToast('未获得通知权限，请检查浏览器站点设置', 'late');
 
   const nTexts = P().notifyTexts || DEFAULT_NOTIFY_TEXTS.daily;
-  const mName = getPureName(P().texts.masterName) || '主人';
+  const mName = getPureName(P().texts.masterName) || '先生';
   const dName = getPureName(P().texts.doggyName) || '小狗';
   let testBody = (identity === 'master') ? nTexts.master_sleep?.replace(/{name}/g, mName) : (identity === 'doggy' ? nTexts.doggy_sleep?.replace(/{name}/g, dName) : '这是一条测试通知。');
-  
   try {
     new Notification('🔔 测试通知', { body: testBody || '测试', tag: 'dawn-test-' + Date.now(), requireInteraction: true });
     showToast('测试通知已发送 🔔', 'success');
@@ -313,13 +304,10 @@ window.toggle = async function(user, type) {
     saveLocalData(); showToast('已取消打卡～', 'late'); return;
   }
 
-  showToast('记录中...', 'success'); // 提示由于需要获取定位可能会等待
-
+  showToast('记录中...', 'success');
   record.done = true;
   record.time = formatCheckinTime(configs.timeZones[user]);
   record.ontime = checkGoal(user, type, record.time);
-  
-  // 获取位置
   const loc = await getLocation();
 
   record.meta = {
@@ -329,12 +317,9 @@ window.toggle = async function(user, type) {
     location: loc
   };
 
-  // 睡眠时长计算逻辑 (如果在打起床卡)
   if (type === 'wake') {
-    // 查找前一天的 sleep 记录或当前的 sleep 记录
     let sleepRec = db[user][today].sleep;
     if (!sleepRec || !sleepRec.done) {
-      // 找前一天
       const yest = getLogicalDateStr(1);
       sleepRec = db[user]?.[yest]?.sleep;
     }
@@ -342,7 +327,7 @@ window.toggle = async function(user, type) {
       const wakeTs = record.meta.timestamp;
       const sleepTs = sleepRec.meta.timestamp;
       if (wakeTs > sleepTs) {
-        record.meta.sleepDuration = Math.floor((wakeTs - sleepTs) / 1000); // 秒
+        record.meta.sleepDuration = Math.floor((wakeTs - sleepTs) / 1000);
         record.meta.sleepStart = sleepTs;
       }
     }
@@ -352,7 +337,6 @@ window.toggle = async function(user, type) {
   const pool = P().msgPool || {};
   const arr = pool?.[user]?.[type]?.[status] || [];
   const msg = arr.length > 0 ? arr[Math.floor(Math.random() * arr.length)] : (record.ontime ? '打卡成功！(未配置文案)' : '打卡完成，但未达标。');
-
   showToast(msg, status);
   saveLocalData();
 }
@@ -363,7 +347,7 @@ function saveLocalData(skipSync) {
   render();
   if (!skipSync) {
     if (saveTimeout) clearTimeout(saveTimeout);
-    saveTimeout = setTimeout(() => debounceSync(), 1000); // 等待 1 秒再触发同步
+    saveTimeout = setTimeout(() => debounceSync(), 1000);
   }
 }
 
@@ -484,7 +468,6 @@ function createDayBox(dateStr, showDateText = false) {
   return el;
 }
 
-// ================= 时钟与养生渲染 =================
 function updateClocks() {
   try {
     const container = document.getElementById('clock-container');
@@ -604,7 +587,6 @@ function updateClocks() {
 setInterval(updateClocks, 1000);
 updateClocks();
 
-// ================= 主题、身份与设置逻辑 =================
 window.toggleTheme = function() {
   const html = document.documentElement;
   const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
@@ -643,7 +625,6 @@ function applyIdentity() {
   
   if (mCard) mCard.style.display = showM ? '' : 'none';
   if (dCard) dCard.style.display = showD ? '' : 'none';
-  
   if (grid) grid.classList.toggle('single', !showM || !showD);
   updateClocks(); 
 }
@@ -652,7 +633,6 @@ window.chooseIdentity = function(id) {
   if (['master', 'doggy', 'both'].indexOf(id) === -1) return;
   identity = id;
   try { localStorage.setItem(IDENTITY_KEY, id); } catch (e) {}
-  
   document.documentElement.classList.remove('no-identity');
   const modal = document.getElementById('identity-modal');
   if (modal) modal.classList.remove('show');
@@ -728,7 +708,6 @@ function updateModeCards() {
   const sIcon = document.getElementById('mode-icon-service');
   if (dIcon) dIcon.textContent = t.dailyModeIcon || '💕';
   if (sIcon) sIcon.textContent = t.serviceModeIcon || '🐕';
-  
   updateIdentityLabels(); updateIdentityCards();
 }
 
@@ -951,6 +930,48 @@ function applyColors() {
   document.documentElement.style.setProperty('--doggy-color', colors.doggy);
 }
 
+// 补卡自定义弹窗状态
+let currentFixTarget = null;
+
+window.openCustomTimeModal = function(user, type, label, dateStr, currentTime) {
+  currentFixTarget = { user, type, label, dateStr };
+  document.getElementById('custom-time-title').textContent = `修改 ${label} 打卡时间`;
+  document.getElementById('custom-time-input').value = currentTime || configs.goals?.[user]?.[type] || '23:00';
+  document.getElementById('custom-time-modal').classList.add('show');
+};
+
+window.closeCustomTimeModal = function() {
+  document.getElementById('custom-time-modal').classList.remove('show');
+  currentFixTarget = null;
+};
+
+window.submitCustomTime = function(action) {
+  if (!currentFixTarget) return;
+  const { user, type, dateStr } = currentFixTarget;
+  if (!db[user]) db[user] = {};
+  if (!db[user][dateStr]) db[user][dateStr] = {};
+
+  if (action === 'clear') {
+    delete db[user][dateStr][type];
+    if (Object.keys(db[user][dateStr]).length === 0) delete db[user][dateStr];
+    showToast('已取消打卡', 'late');
+  } else {
+    const timeVal = document.getElementById('custom-time-input').value;
+    if (!/^\d{1,2}:\d{2}$/.test(timeVal)) {
+      showToast('请输入有效的时间格式 (HH:mm)', 'late');
+      return;
+    }
+    const parts = timeVal.split(':');
+    const timeFormatted = parts[0].padStart(2, '0') + ':' + parts[1];
+    const ontime = checkGoal(user, type, timeFormatted);
+    db[user][dateStr][type] = { done: true, time: timeFormatted, ontime: ontime };
+    showToast('时间修正成功！', 'success');
+  }
+  saveLocalData();
+  renderFixPanel();
+  closeCustomTimeModal();
+};
+
 function renderFixPanel() {
   const dateStr = document.getElementById('cfg-fix-date').value;
   const panel = document.getElementById('fix-panel');
@@ -976,14 +997,30 @@ function renderFixPanel() {
     const btn = document.createElement('button');
     btn.className = `fix-btn ${cls}`;
     btn.textContent = `${item.label}: ${stateText}`;
+    
+    // 点击逻辑循环：未打卡 -> 自动补按时 -> 自动补迟到 -> 弹出自定义美化时间弹窗 (支持取消打卡)
     btn.onclick = () => {
       if (!db[item.user]) db[item.user] = {};
       if (!db[item.user][dateStr]) db[item.user][dateStr] = {};
       let cur = db[item.user][dateStr][item.type];
-      if (!cur || !cur.done) db[item.user][dateStr][item.type] = { done: true, time: '补卡', ontime: true };
-      else if (cur.ontime) db[item.user][dateStr][item.type] = { done: true, time: '补卡', ontime: false };
-      else { delete db[item.user][dateStr][item.type]; if (Object.keys(db[item.user][dateStr]).length === 0) delete db[item.user][dateStr]; }
-      saveLocalData(); renderFixPanel();
+      
+      const getGoalTime = (addHour = false) => {
+        let goal = configs.goals?.[item.user]?.[item.type] || '00:00';
+        if (!addHour) return goal;
+        let h = parseInt(goal.split(':')[0]), m = parseInt(goal.split(':')[1]);
+        h = (h + 1) % 24;
+        return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+      };
+
+      if (!cur || !cur.done) {
+        db[item.user][dateStr][item.type] = { done: true, time: getGoalTime(false), ontime: true };
+        saveLocalData(); renderFixPanel();
+      } else if (cur.ontime) {
+        db[item.user][dateStr][item.type] = { done: true, time: getGoalTime(true), ontime: false };
+        saveLocalData(); renderFixPanel();
+      } else {
+        openCustomTimeModal(item.user, item.type, item.label, dateStr, cur.time);
+      }
     };
     panel.appendChild(btn);
   });
@@ -1102,12 +1139,10 @@ window.saveSettings = function() {
   }
 };
 
-// ================= 导入导出 & 同步 =================
 const CONFIG_KEY = 'dawn-duo-gh-config';
 let ghConfig = { user: 'luo029', repo: 'dawn_duo_data', path: 'records.json', configPath: 'config.json', token: '' };
 try { ghConfig = Object.assign(ghConfig, JSON.parse(localStorage.getItem(CONFIG_KEY)) || {}); } catch (e) { }
 
-// 获取纯数据部分
 function getSyncableData() {
   const syncableConfig = JSON.parse(JSON.stringify(configs));
   delete syncableConfig.mode; delete syncableConfig.simpleMode; delete syncableConfig.notifications;
@@ -1130,7 +1165,6 @@ function applySyncData(payloadDB, payloadConfig) {
       const localShowSeconds = configs.showSeconds, localShowShichen = configs.showShichen, localShowWellness = configs.showWellness;
 
       configs = deepMerge(DEFAULT_CONFIGS, payloadConfig); 
-      
       configs.mode = localMode; configs.simpleMode = localSimple; configs.notifications = localNotify;
       configs.showLogicalDate = localLogicalDate; configs.clockLayout = localClockLayout;
       configs.showMasterClock = localShowMasterClock; configs.showDoggyClock = localShowDoggyClock;
@@ -1138,12 +1172,10 @@ function applySyncData(payloadDB, payloadConfig) {
       configs.configVersion = 7;
       localStorage.setItem('dawn-duo-configs', JSON.stringify(configs));
     }
-    
     render(); applyConfigsToPage(); updateModeCards(); updateClocks();
   } catch(e) { console.warn('同步数据应用异常', e); }
 }
 
-// 简单的增量校验 hash 计算
 function getHash(str) {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
@@ -1198,7 +1230,6 @@ window.exportAsImage = function() {
     const canvas = document.createElement('canvas');
     canvas.width = W; canvas.height = H;
     const ctx = canvas.getContext('2d');
-    
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     const bg = isDark ? '#120f17' : '#f4f8fc';
     const text = isDark ? '#f3eef6' : '#1e1b2e';
@@ -1206,27 +1237,22 @@ window.exportAsImage = function() {
     const empty = isDark ? '#2a2536' : '#e2e8f0';
     const masterColor = P().colors?.master || '#38bdf8';
     const doggyColor = P().colors?.doggy || '#f472b6';
-    
     ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
     ctx.fillStyle = text; ctx.font = 'bold 32px sans-serif'; ctx.textAlign = 'center';
     ctx.fillText(P().texts?.title || '契约打卡报告', W/2, 60);
     ctx.font = '16px sans-serif'; ctx.fillStyle = muted;
     ctx.fillText(`契约日: ${getLogicalDateStr()}`, W/2, 90);
-    
     const today = getLogicalDateStr();
     ctx.textAlign = 'left'; ctx.font = 'bold 20px sans-serif'; ctx.fillStyle = text;
     ctx.fillText('今日打卡', 40, 150);
-    
     const users = [
       { key: 'master', label: getPureName(P().texts?.masterName) || '主人', color: masterColor },
       { key: 'doggy', label: getPureName(P().texts?.doggyName) || '小狗', color: doggyColor }
     ];
-    
     let y = 190;
     for (const u of users) {
       ctx.fillStyle = u.color; ctx.font = 'bold 22px sans-serif';
       ctx.fillText(u.label, 40, y); y += 36;
-      
       ctx.font = '18px sans-serif';
       for (const t of ['sleep', 'wake']) {
         const rec = db[u.key]?.[today]?.[t];
@@ -1246,16 +1272,13 @@ window.exportAsImage = function() {
       }
       y += 20;
     }
-    
     ctx.fillStyle = text; ctx.font = 'bold 20px sans-serif'; ctx.fillText('最近 14 天', 40, y + 10); y += 50;
-    
     const cell = 24, gap = 8;
     let x = 40;
     for (let i = 13; i >= 0; i--) {
       const ds = getLogicalDateStr(i);
       const mScore = (db.master?.[ds]?.sleep?.done ? 1 : 0) + (db.master?.[ds]?.wake?.done ? 1 : 0);
       const dScore = (db.doggy?.[ds]?.sleep?.done ? 1 : 0) + (db.doggy?.[ds]?.wake?.done ? 1 : 0);
-      
       ctx.globalAlpha = 1;
       if (mScore === 2 && dScore === 2) {
         ctx.fillStyle = masterColor; ctx.fillRect(x, y, cell, cell/2);
@@ -1276,10 +1299,8 @@ window.exportAsImage = function() {
       }
       x += cell + gap;
     }
-    
     ctx.fillStyle = muted; ctx.font = '14px sans-serif'; ctx.textAlign = 'center';
     ctx.fillText('💗 由「契约打卡」生成', W/2, H - 30);
-    
     canvas.toBlob(blob => {
       if (!blob) return showToast('图片生成失败', 'late');
       const url = URL.createObjectURL(blob);
@@ -1329,7 +1350,6 @@ function decodeBase64Utf8(b64) {
   return new TextDecoder('utf-8').decode(bytes);
 }
 
-// 异步请求单文件
 async function fetchGHFile(path) {
   if (!ghConfig.user || !ghConfig.repo || !ghConfig.token) return null;
   try {
@@ -1343,7 +1363,6 @@ async function fetchGHFile(path) {
   return null;
 }
 
-// 异步上传单文件
 async function pushGHFile(path, contentStr, oldSha) {
   try {
     const url = `https://api.github.com/repos/${ghConfig.user}/${ghConfig.repo}/contents/${path}`;
@@ -1371,7 +1390,6 @@ async function autoSyncToGitHub(force = false) {
     const dbStr = JSON.stringify(payload.db, null, 2);
     const cfgStr = JSON.stringify(payload.config, null, 2);
 
-    // 获取云端 sha
     const dbRemote = await fetchGHFile(ghConfig.path);
     const cfgRemote = await fetchGHFile(ghConfig.configPath);
 
@@ -1382,7 +1400,6 @@ async function autoSyncToGitHub(force = false) {
     let needPushCfg = true;
 
     if (!force) {
-      // 简单比对：如果云端内容存在且与本地相同，就不推送
       if (dbRemote && getHash(dbRemote.content) === dbHash) needPushDB = false;
       if (cfgRemote && getHash(cfgRemote.content) === cfgHash) needPushCfg = false;
     }
@@ -1404,7 +1421,6 @@ async function autoPullOnLoad(force = false) {
     let cfgPayload = null;
 
     if (dbRemote) {
-      // 防抖比对：如果拉取的内容和本地一致，就不要覆盖本地
       if (force || getHash(dbRemote.content) !== getHash(JSON.stringify(db))) {
         const parsed = JSON.parse(dbRemote.content);
         if (parsed.master || parsed.doggy) dbPayload = parsed;
@@ -1425,7 +1441,6 @@ async function autoPullOnLoad(force = false) {
   } catch (e) { console.warn('自动拉取失败', e); }
 }
 
-// 每 5 分钟自动拉取一次
 setInterval(() => { autoPullOnLoad(false); }, 5 * 60 * 1000);
 
 window.syncFromGitHub = async function() {
@@ -1444,7 +1459,6 @@ window.saveToGitHub = async function() {
   closeSettings();
 };
 
-// ================= 启动 =================
 try {
   const local = localStorage.getItem('dawn-duo-data');
   if (local) {

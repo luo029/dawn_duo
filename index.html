@@ -39,7 +39,7 @@
   </header>
 
   <div class="diff-pill">
-    <span id="diff-text">相隔 -- 小时 · 契约已绑定 <span id="days-together">0</span> 天 💗</span>
+    <span>相隔 <span id="diff-hours">--</span> 小时 · 契约已绑定 <span id="days-together">0</span> 天 💗</span>
     <span class="logical-date" id="logical-date-display">--</span>
   </div>
 
@@ -63,6 +63,10 @@
   </div>
 
   <div class="section-title">🔗 今日契约打卡</div>
+  
+  <!-- 独立对方状态栏 -->
+  <div class="partner-status-panel" id="partner-status-panel" style="display:none;"></div>
+
   <div class="grid-users" id="grid-users">
     <div class="user-card master-card">
       <div class="role-tag" id="display-master-tag">👑 先生</div>
@@ -211,6 +215,15 @@
             </button>
           </div>
           <div class="mode-tip">身份与模式仅保存在本机。</div>
+          
+          <div class="switch-row" style="margin-top: 12px; border-top: 1px dashed var(--border); padding-top: 12px;">
+            <label>显示对方打卡卡片</label>
+            <label class="toggle-switch"><input type="checkbox" id="cfg-show-partner-card"><span class="slider"></span></label>
+          </div>
+          <div class="switch-row">
+            <label>显示对方独立状态栏</label>
+            <label class="toggle-switch"><input type="checkbox" id="cfg-show-partner-status"><span class="slider"></span></label>
+          </div>
         </div>
 
         <div class="config-card">
@@ -394,6 +407,47 @@
           </div>
           <div class="form-group"><label>熬夜提醒文案</label><input type="text" id="cfg-nt-overtime-sleep" placeholder="{name}，已经熬夜 {mins} 分钟了..."></div>
           <div class="form-group"><label>赖床提醒文案</label><input type="text" id="cfg-nt-overtime-wake" placeholder="{name}，已经赖床 {mins} 分钟了..."></div>
+
+          <div class="switch-row" style="margin-top: 16px; border-top: 1px dashed var(--border); padding-top: 12px;">
+            <label>对方打卡通知</label>
+            <label class="toggle-switch"><input type="checkbox" id="cfg-notify-partner" onchange="togglePartnerNotifyInputs()"><span class="slider"></span></label>
+          </div>
+          <div class="mode-tip" style="margin-top: 6px;">身份选为"主人"或"小狗"时，同步到对方新打卡后会发出系统通知（需页面处于打开状态）。</div>
+          
+          <div id="partner-notify-inputs" style="margin-top: 12px;">
+            <div class="config-card" style="padding: 12px; margin-bottom: 8px; border-color: rgba(56, 189, 248, 0.3); background: rgba(56, 189, 248, 0.02);">
+              <div class="config-title" style="font-size: 0.8rem; color: var(--master-color); border-bottom: none; margin-bottom: 8px; padding-bottom: 0;">👑 <span id="label-partner-master-title">主人</span> 打卡通知</div>
+              <div class="flex-row">
+                 <div class="form-group"><label>休息提醒</label><input type="text" id="cfg-nt-partner-master-sleep" placeholder="👑 {name} 已休息啦 🌙 ({time})"></div>
+                 <div class="form-group"><label>起床提醒</label><input type="text" id="cfg-nt-partner-master-wake" placeholder="👑 {name} 已起床啦 ☀️ ({time})"></div>
+              </div>
+            </div>
+            <div class="config-card" style="padding: 12px; border-color: rgba(244, 114, 182, 0.3); background: rgba(244, 114, 182, 0.02);">
+              <div class="config-title doggy-title" style="font-size: 0.8rem; border-bottom: none; margin-bottom: 8px; padding-bottom: 0;">🎀 <span id="label-partner-doggy-title">小狗</span> 打卡通知</div>
+              <div class="flex-row">
+                 <div class="form-group"><label>休息提醒</label><input type="text" id="cfg-nt-partner-doggy-sleep" placeholder="🎀 {name} 已休息啦 🌙 ({time})"></div>
+                 <div class="form-group"><label>起床提醒</label><input type="text" id="cfg-nt-partner-doggy-wake" placeholder="🎀 {name} 已起床啦 ☀️ ({time})"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 独立状态栏文案 -->
+          <div class="config-title" style="margin-top: 16px; border-bottom: 1px dashed var(--border); padding-bottom: 10px; font-size: 0.85rem;">📢 独立状态栏文案</div>
+          <div class="config-card" style="padding: 12px; margin-bottom: 8px; border-color: rgba(56, 189, 248, 0.3); background: rgba(56, 189, 248, 0.02);">
+            <div class="config-title" style="font-size: 0.8rem; color: var(--master-color); border-bottom: none; margin-bottom: 8px; padding-bottom: 0;">👑 <span id="label-status-master-title">主人</span> 状态文案</div>
+            <div class="flex-row">
+                <div class="form-group"><label>休息状态</label><input type="text" id="cfg-status-master-sleep" placeholder="🌙 {name} 已经休息啦 ({time})"></div>
+                <div class="form-group"><label>起床状态</label><input type="text" id="cfg-status-master-wake" placeholder="☀️ {name} 已经醒来啦 ({time})"></div>
+            </div>
+          </div>
+          <div class="config-card" style="padding: 12px; border-color: rgba(244, 114, 182, 0.3); background: rgba(244, 114, 182, 0.02);">
+            <div class="config-title doggy-title" style="font-size: 0.8rem; border-bottom: none; margin-bottom: 8px; padding-bottom: 0;">🎀 <span id="label-status-doggy-title">小狗</span> 状态文案</div>
+            <div class="flex-row">
+                <div class="form-group"><label>休息状态</label><input type="text" id="cfg-status-doggy-sleep" placeholder="🌙 {name} 已经休息啦 ({time})"></div>
+                <div class="form-group"><label>起床状态</label><input type="text" id="cfg-status-doggy-wake" placeholder="☀️ {name} 已经醒来啦 ({time})"></div>
+            </div>
+          </div>
+
         </div>
       </div>
 
@@ -456,6 +510,10 @@
 
         <div class="config-card">
           <div class="config-title">☁️ GitHub 云端同步</div>
+          <div class="switch-row" style="margin-bottom: 12px; padding: 0;">
+            <label>开启自动拉取/推送</label>
+            <label class="toggle-switch"><input type="checkbox" id="cfg-auto-sync"><span class="slider"></span></label>
+          </div>
           <div class="mode-tip" style="margin-bottom: 12px;">
             提示：打卡数据存放在 <code>records.json</code>，配置文案存放在 <code>config.json</code>。系统已实现双文件分离增量同步。
           </div>
@@ -499,7 +557,7 @@
   </div>
 </div>
 
-<!-- 自定义美化时间输入 Modal (已将文字改为 取消打卡) -->
+<!-- 自定义美化时间输入 Modal -->
 <div class="sub-modal" id="custom-time-modal">
   <div class="sub-modal-box" style="max-width:320px;">
     <div class="sub-modal-head">
@@ -516,6 +574,23 @@
       <button class="btn danger outline" onclick="submitCustomTime('clear')" style="flex:1 1 100%; padding:8px; font-size:0.8rem;">🗑️ 取消打卡</button>
       <button class="btn outline" onclick="closeCustomTimeModal()" style="flex:1;">取消</button>
       <button class="btn primary" onclick="submitCustomTime('save')" style="flex:1;">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 同步 Diff 弹窗 -->
+<div class="sub-modal" id="diff-modal">
+  <div class="sub-modal-box diff-modal-box">
+    <div class="sub-modal-head">
+      <h3 id="diff-modal-title">同步差异对比</h3>
+      <button class="close-btn" onclick="closeDiffModal()">✕</button>
+    </div>
+    <div class="diff-scroll" id="diff-content">
+      <!-- 动态填充 -->
+    </div>
+    <div class="sub-modal-foot">
+      <button class="btn outline" onclick="closeDiffModal()">取消</button>
+      <button class="btn primary" id="diff-confirm-btn" onclick="confirmSyncDiff()">确认同步</button>
     </div>
   </div>
 </div>

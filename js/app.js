@@ -31,6 +31,8 @@ function migrateConfigs(raw) {
     delete out.notifySettings.texts; 
   }
   if (out.showLogicalDate === undefined) out.showLogicalDate = true;
+  if (out.showPartnerCard === undefined) out.showPartnerCard = true;
+  if (out.showPartnerStatus === undefined) out.showPartnerStatus = true;
   if (!out.clockLayout) out.clockLayout = 'separate';
   if (out.showMasterClock === undefined) out.showMasterClock = true;
   if (out.showDoggyClock === undefined) out.showDoggyClock = true;
@@ -47,6 +49,8 @@ if (configs.mode !== 'service') configs.mode = 'daily';
 if (!configs.profiles) configs.profiles = deepMerge(DEFAULT_CONFIGS.profiles, {});
 if (!configs.profiles.daily.notifyTexts) configs.profiles.daily.notifyTexts = Object.assign({}, DEFAULT_NOTIFY_TEXTS.daily);
 if (!configs.profiles.service.notifyTexts) configs.profiles.service.notifyTexts = Object.assign({}, DEFAULT_NOTIFY_TEXTS.service);
+if (!configs.notifySettings) configs.notifySettings = { enableOvertime: false, overtimeInterval: 30, partnerNotify: true };
+if (configs.notifySettings.partnerNotify === undefined) configs.notifySettings.partnerNotify = true;
 
 function P() { return configs.profiles[configs.mode] || configs.profiles.daily; }
 function modeLabel() { return configs.mode === 'service' ? '主仆' : '日常'; }
@@ -258,6 +262,46 @@ function checkNotifications() {
   });
 }
 
+function detectPartnerCheckin(remoteDb) {
+  if (!identity || identity === 'both') return;
+  if (!configs.notifications) return;
+  if (!configs.notifySettings || configs.notifySettings.partnerNotify === false) return;
+  if (!notificationSupported() || Notification.permission !== 'granted') return;
+
+  const partnerKey = identity === 'master' ? 'doggy' : 'master';
+  const today = getLogicalDateStr();
+  const localRec = (db[partnerKey] || {})[today] || {};
+  const remoteRec = (remoteDb[partnerKey] || {})[today] || {};
+  if (!remoteRec || typeof remoteRec !== 'object') return;
+
+  const prof = P();
+  const partnerNameRaw = partnerKey === 'master' ? prof.texts?.masterName : prof.texts?.doggyName;
+  const partnerName = getPureName(partnerNameRaw) || (partnerKey === 'master' ? '先生' : '宝宝');
+  const nTexts = prof.notifyTexts || DEFAULT_NOTIFY_TEXTS.daily;
+
+  ['sleep', 'wake'].forEach(type => {
+    const localDone = localRec[type]?.done;
+    const remoteDone = remoteRec[type]?.done;
+    if (localDone || !remoteDone) return;
+    
+    const logKey = `partner_${partnerKey}_${type}_${today}`;
+    if (notifyLog[logKey]) return;
+    
+    const tplKey = `partner_${partnerKey}_${type}`;
+    const tpl = nTexts[tplKey] || `{name} 已${type === 'sleep' ? '休息' : '起床'} ({time})`;
+    const time = remoteRec[type]?.time || '';
+    
+    const body = tpl.replace(/{name}/g, partnerName).replace(/{time}/g, time);
+    const title = type === 'sleep' 
+      ? (partnerKey === 'master' ? '👑 主人已休息' : '🎀 小狗已休息') 
+      : (partnerKey === 'master' ? '👑 主人已起床' : '🎀 小狗已起床');
+      
+    sendNotify(logKey, title, body);
+    notifyLog[logKey] = true;
+  });
+  saveNotifyLog();
+}
+
 window.testNotification = async function() {
   if (!notificationSupported()) return showToast('当前浏览器不支持通知', 'late');
   if (!window.isSecureContext) return showToast('⚠️ 必须在 HTTPS 或 localhost 下才能发送通知', 'late');
@@ -290,8 +334,31 @@ function updateNotifyStatus() {
   el.textContent = txt;
 }
 
+window.togglePartnerNotifyInputs = function() {
+  const isChecked = document.getElementById('cfg-notify-partner').checked;
+  const container = document.getElementById('partner-notify-inputs');
+  const inputs = container.querySelectorAll('input');
+  inputs.forEach(inp => {
+    inp.disabled = !isChecked;
+    if (isChecked) {
+      inp.style.opacity = '1';
+      inp.style.cursor = 'text';
+      inp.parentElement.parentElement.style.opacity = '1';
+    } else {
+      inp.style.opacity = '0.5';
+      inp.style.cursor = 'not-allowed';
+      inp.parentElement.parentElement.style.opacity = '0.5';
+    }
+  });
+};
+
 // ================= 打卡与渲染 =================
 window.toggle = async function(user, type) {
+  if ((identity === 'master' && user === 'doggy') || (identity === 'doggy' && user === 'master')) {
+    showToast('这是对方的打卡，只能查看哦 👀', 'late');
+    return;
+  }
+
   const today = getLogicalDateStr();
   if (!db[user]) db[user] = {};
   if (!db[user][today]) db[user][today] = {};
@@ -336,7 +403,7 @@ window.toggle = async function(user, type) {
   const status = record.ontime ? 'success' : 'late';
   const pool = P().msgPool || {};
   const arr = pool?.[user]?.[type]?.[status] || [];
-  const msg = arr.length > 0 ? arr[Math.floor(Math.random() * arr.length)] : (record.ontime ? '打卡成功！(未配置文案)' : '打卡完成，但未达标。');
+  const msg = arr.length > 0 ? arr[Math.floor(Math.random() * arr.length)] : (record.ontime ? '打卡成功！' : '打卡完成，但未达标。');
   showToast(msg, status);
   saveLocalData();
 }
@@ -391,8 +458,44 @@ function render() {
         }
       });
     });
+
+    // 更新全局独立状态栏
+    updatePartnerStatusPanel();
+
     renderHistory();
   } catch(e) { console.warn('渲染异常', e); }
+}
+
+function updatePartnerStatusPanel() {
+  const panel = document.getElementById('partner-status-panel');
+  if (!panel) return;
+
+  if (configs.showPartnerStatus === false || identity === 'both' || !identity) {
+    panel.style.display = 'none';
+    return;
+  }
+
+  const partnerUser = identity === 'master' ? 'doggy' : 'master';
+  const today = getLogicalDateStr();
+  const rec = db[partnerUser]?.[today];
+  const pNameRaw = partnerUser === 'master' ? P().texts.masterName : P().texts.doggyName;
+  const pName = getPureName(pNameRaw) || (partnerUser === 'master' ? '先生' : '宝宝');
+  
+  const nTexts = P().notifyTexts || DEFAULT_NOTIFY_TEXTS.daily;
+  
+  if (rec?.sleep?.done && !rec?.wake?.done) {
+    panel.style.display = 'flex';
+    panel.className = 'partner-status-panel sleep-status';
+    const tpl = nTexts[`status_${partnerUser}_sleep`] || `🌙 {name} 已经休息啦 ({time})`;
+    panel.innerHTML = tpl.replace(/{name}/g, pName).replace(/{time}/g, rec.sleep.time || '已休息');
+  } else if (rec?.wake?.done) {
+    panel.style.display = 'flex';
+    panel.className = 'partner-status-panel wake-status';
+    const tpl = nTexts[`status_${partnerUser}_wake`] || `☀️ {name} 已经醒来啦 ({time})`;
+    panel.innerHTML = tpl.replace(/{name}/g, pName).replace(/{time}/g, rec.wake.time || '已起床');
+  } else {
+    panel.style.display = 'none';
+  }
 }
 
 function renderHistory() {
@@ -554,7 +657,10 @@ function updateClocks() {
     const d = Math.ceil(Math.abs(currDate - annDate) / (1000 * 60 * 60 * 24));
     if (Number.isFinite(d)) daysTogether = d;
 
-    document.getElementById('diff-text').innerHTML = `相隔 <span>${diffHours}</span> 小时 · 契约已绑定 <span>${daysTogether}</span> 天 💗`;
+    const diffHoursEl = document.getElementById('diff-hours');
+    const daysTogetherEl = document.getElementById('days-together');
+    if (diffHoursEl) diffHoursEl.textContent = diffHours;
+    if (daysTogetherEl) daysTogetherEl.textContent = daysTogether;
 
     const currentLogicalDate = getLogicalDateStr();
     if (currentLogicalDate !== lastLogicalDate) {
@@ -605,6 +711,10 @@ function updateIdentityLabels() {
   setText('id-name-master', m); setText('id-desc-master', `只显示 ${m} 的打卡页面`);
   setText('id-name-doggy', d); setText('id-desc-doggy', `只显示 ${d} 的打卡页面`);
   setText('id-pill-label-master', m); setText('id-pill-label-doggy', d);
+  setText('label-partner-master-title', m);
+  setText('label-partner-doggy-title', d);
+  setText('label-status-master-title', m);
+  setText('label-status-doggy-title', d);
 }
 
 function updateIdentityCards() {
@@ -617,16 +727,77 @@ function updateIdentityCards() {
 }
 
 function applyIdentity() {
-  const showM = (identity === 'master' || identity === 'both');
-  const showD = (identity === 'doggy' || identity === 'both');
-  const grid = document.getElementById('grid-users');
   const mCard = document.querySelector('.grid-users .master-card');
   const dCard = document.querySelector('.grid-users .doggy-card');
-  
-  if (mCard) mCard.style.display = showM ? '' : 'none';
-  if (dCard) dCard.style.display = showD ? '' : 'none';
-  if (grid) grid.classList.toggle('single', !showM || !showD);
-  updateClocks(); 
+  const grid = document.getElementById('grid-users');
+
+  if (!identity) {
+    if (mCard) mCard.style.display = 'none';
+    if (dCard) dCard.style.display = 'none';
+    if (grid) grid.classList.add('single');
+    updateClocks();
+    return;
+  }
+
+  const showPartner = configs.showPartnerCard !== false;
+  let visibleCount = 0;
+
+  if (identity === 'master') {
+    if (mCard) { 
+      mCard.style.display = ''; 
+      mCard.classList.remove('read-only'); 
+      mCard.querySelectorAll('.checkin-btn').forEach(btn => { btn.disabled = false; }); 
+      visibleCount++;
+    }
+    if (dCard) {
+      if (showPartner) {
+        dCard.style.display = ''; dCard.classList.add('read-only'); dCard.querySelectorAll('.checkin-btn').forEach(btn => { btn.disabled = true; });
+        visibleCount++;
+      } else {
+        dCard.style.display = 'none';
+      }
+    }
+  } else if (identity === 'doggy') {
+    if (dCard) { 
+      dCard.style.display = ''; 
+      dCard.classList.remove('read-only'); 
+      dCard.querySelectorAll('.checkin-btn').forEach(btn => { btn.disabled = false; }); 
+      visibleCount++;
+    }
+    if (mCard) {
+      if (showPartner) {
+        mCard.style.display = ''; mCard.classList.add('read-only'); mCard.querySelectorAll('.checkin-btn').forEach(btn => { btn.disabled = true; });
+        visibleCount++;
+      } else {
+        mCard.style.display = 'none';
+      }
+    }
+  } else {
+    // both
+    if (mCard) { 
+      mCard.style.display = ''; 
+      mCard.classList.remove('read-only'); 
+      mCard.querySelectorAll('.checkin-btn').forEach(btn => { btn.disabled = false; }); 
+      visibleCount++;
+    }
+    if (dCard) { 
+      dCard.style.display = ''; 
+      dCard.classList.remove('read-only'); 
+      dCard.querySelectorAll('.checkin-btn').forEach(btn => { btn.disabled = false; }); 
+      visibleCount++;
+    }
+  }
+
+  if (grid) {
+    if (visibleCount <= 1) {
+      grid.classList.add('single');
+    } else {
+      grid.classList.remove('single');
+    }
+  }
+
+  updateClocks();
+  render(); 
 }
 
 window.chooseIdentity = function(id) {
@@ -639,9 +810,9 @@ window.chooseIdentity = function(id) {
   document.body.style.overflow = '';
   applyIdentity(); updateIdentityCards();
   let msg = '身份已选择 💗';
-  if (id === 'master') msg = '已切换为 ' + (getPureName(P().texts.masterName) || '先生') + ' 👑';
-  else if (id === 'doggy') msg = '已切换为 ' + (getPureName(P().texts.doggyName) || '宝宝') + ' 🎀';
-  else msg = '已切换为 滴滴 🍉 两个页面都能看';
+  if (id === 'master') msg = '已切换为 ' + (getPureName(P().texts.masterName) || '先生') + ' 👑（对方卡片只读）';
+  else if (id === 'doggy') msg = '已切换为 ' + (getPureName(P().texts.doggyName) || '宝宝') + ' 🎀（对方卡片只读）';
+  else msg = '已切换为 滴滴 🍉 两个页面都能操作';
   showToast(msg, 'success');
 };
 
@@ -657,9 +828,10 @@ function initIdentity() {
 }
 
 window.switchTab = function(e, tabId) {
+  const targetBtn = e.currentTarget || e.target;
   document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
   document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-  e.target.classList.add('active');
+  targetBtn.classList.add('active');
   document.getElementById(tabId).classList.add('active');
 };
 
@@ -740,6 +912,8 @@ function fillTextInputs() {
   const n = configs.notifySettings;
   document.getElementById('cfg-notify-overtime').checked = n.enableOvertime;
   document.getElementById('cfg-notify-interval').value = n.overtimeInterval;
+  const pn = document.getElementById('cfg-notify-partner');
+  if (pn) pn.checked = n.partnerNotify !== false;
   
   const nt = P().notifyTexts || DEFAULT_NOTIFY_TEXTS.daily;
   document.getElementById('cfg-nt-master-sleep').value = nt.master_sleep || '';
@@ -748,6 +922,32 @@ function fillTextInputs() {
   document.getElementById('cfg-nt-doggy-wake').value = nt.doggy_wake || '';
   document.getElementById('cfg-nt-overtime-sleep').value = nt.overtime_sleep || '';
   document.getElementById('cfg-nt-overtime-wake').value = nt.overtime_wake || '';
+  
+  const pMS = document.getElementById('cfg-nt-partner-master-sleep');
+  const pMW = document.getElementById('cfg-nt-partner-master-wake');
+  const pDS = document.getElementById('cfg-nt-partner-doggy-sleep');
+  const pDW = document.getElementById('cfg-nt-partner-doggy-wake');
+  if (pMS) pMS.value = nt.partner_master_sleep || '';
+  if (pMW) pMW.value = nt.partner_master_wake || '';
+  if (pDS) pDS.value = nt.partner_doggy_sleep || '';
+  if (pDW) pDW.value = nt.partner_doggy_wake || '';
+
+  const sMS = document.getElementById('cfg-status-master-sleep');
+  const sMW = document.getElementById('cfg-status-master-wake');
+  const sDS = document.getElementById('cfg-status-doggy-sleep');
+  const sDW = document.getElementById('cfg-status-doggy-wake');
+  if (sMS) sMS.value = nt.status_master_sleep || '';
+  if (sMW) sMW.value = nt.status_master_wake || '';
+  if (sDS) sDS.value = nt.status_doggy_sleep || '';
+  if (sDW) sDW.value = nt.status_doggy_wake || '';
+
+  document.getElementById('cfg-show-partner-card').checked = configs.showPartnerCard !== false;
+  document.getElementById('cfg-show-partner-status').checked = configs.showPartnerStatus !== false;
+  
+  const as = document.getElementById('cfg-auto-sync');
+  if (as) as.checked = ghConfig.autoSync !== false;
+
+  togglePartnerNotifyInputs();
 }
 
 function updateColorInputs() {
@@ -872,6 +1072,7 @@ window.openSettings = function() {
     updateNotifyStatus(); updateIdentityCards();
 
     document.getElementById('settings-modal').classList.add('show');
+    document.body.style.overflow = 'hidden';
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
     document.querySelector('.tab-btn').classList.add('active');
@@ -879,7 +1080,10 @@ window.openSettings = function() {
   } catch(e) { showToast('打开设置面板失败', 'late'); }
 };
 
-window.closeSettings = function() { document.getElementById('settings-modal').classList.remove('show'); };
+window.closeSettings = function() {
+  document.getElementById('settings-modal').classList.remove('show');
+  document.body.style.overflow = '';
+};
 
 function applyConfigsToPage() {
   try {
@@ -998,7 +1202,6 @@ function renderFixPanel() {
     btn.className = `fix-btn ${cls}`;
     btn.textContent = `${item.label}: ${stateText}`;
     
-    // 点击逻辑循环：未打卡 -> 自动补按时 -> 自动补迟到 -> 弹出自定义美化时间弹窗 (支持取消打卡)
     btn.onclick = () => {
       if (!db[item.user]) db[item.user] = {};
       if (!db[item.user][dateStr]) db[item.user][dateStr] = {};
@@ -1026,7 +1229,7 @@ function renderFixPanel() {
   });
 }
 
-window.saveSettings = function() {
+window.saveSettings = function(skipSync) {
   try {
     const prof = P();
     prof.texts = {
@@ -1072,6 +1275,7 @@ window.saveSettings = function() {
     configs.notifySettings.enableOvertime = document.getElementById('cfg-notify-overtime').checked;
     const intv = parseInt(document.getElementById('cfg-notify-interval').value, 10);
     configs.notifySettings.overtimeInterval = Number.isFinite(intv) && intv >= 10 ? intv : 30;
+    configs.notifySettings.partnerNotify = document.getElementById('cfg-notify-partner').checked;
     
     prof.notifyTexts = {
       master_sleep: document.getElementById('cfg-nt-master-sleep').value.trim(),
@@ -1079,12 +1283,22 @@ window.saveSettings = function() {
       doggy_sleep: document.getElementById('cfg-nt-doggy-sleep').value.trim(),
       doggy_wake: document.getElementById('cfg-nt-doggy-wake').value.trim(),
       overtime_sleep: document.getElementById('cfg-nt-overtime-sleep').value.trim(),
-      overtime_wake: document.getElementById('cfg-nt-overtime-wake').value.trim()
+      overtime_wake: document.getElementById('cfg-nt-overtime-wake').value.trim(),
+      partner_master_sleep: document.getElementById('cfg-nt-partner-master-sleep').value.trim(),
+      partner_master_wake: document.getElementById('cfg-nt-partner-master-wake').value.trim(),
+      partner_doggy_sleep: document.getElementById('cfg-nt-partner-doggy-sleep').value.trim(),
+      partner_doggy_wake: document.getElementById('cfg-nt-partner-doggy-wake').value.trim(),
+      status_master_sleep: document.getElementById('cfg-status-master-sleep').value.trim(),
+      status_master_wake: document.getElementById('cfg-status-master-wake').value.trim(),
+      status_doggy_sleep: document.getElementById('cfg-status-doggy-sleep').value.trim(),
+      status_doggy_wake: document.getElementById('cfg-status-doggy-wake').value.trim()
     };
 
     configs.simpleMode = document.getElementById('cfg-simple-mode').checked === true;
     configs.showHistory = document.getElementById('cfg-show-history').checked === true;
     configs.showLogicalDate = document.getElementById('cfg-show-logical-date').checked === true;
+    configs.showPartnerCard = document.getElementById('cfg-show-partner-card').checked === true;
+    configs.showPartnerStatus = document.getElementById('cfg-show-partner-status').checked === true;
     configs.clockLayout = document.getElementById('cfg-clock-layout').value;
     configs.showMasterClock = document.getElementById('cfg-show-master-clock').checked;
     configs.showDoggyClock = document.getElementById('cfg-show-doggy-clock').checked;
@@ -1127,20 +1341,22 @@ window.saveSettings = function() {
       repo: document.getElementById('gh-repo').value.trim(),
       path: document.getElementById('gh-path').value.trim() || 'records.json',
       configPath: document.getElementById('gh-config-path').value.trim() || 'config.json',
-      token: document.getElementById('gh-token').value.trim()
+      token: document.getElementById('gh-token').value.trim(),
+      autoSync: document.getElementById('cfg-auto-sync').checked
     };
     try { localStorage.setItem(CONFIG_KEY, JSON.stringify(ghConfig)); } catch (e) { }
 
     applyConfigsToPage(); updateClocks(); render(); updateNotifyStatus();
     showToast('设置已保存！💗', 'success');
-    closeSettings(); debounceSync();
+    closeSettings();
+    if (!skipSync) debounceSync();
   } catch (e) {
     showToast('保存时发生错误', 'late');
   }
 };
 
 const CONFIG_KEY = 'dawn-duo-gh-config';
-let ghConfig = { user: 'luo029', repo: 'dawn_duo_data', path: 'records.json', configPath: 'config.json', token: '' };
+let ghConfig = { user: 'luo029', repo: 'dawn_duo_data', path: 'records.json', configPath: 'config.json', token: '', autoSync: true };
 try { ghConfig = Object.assign(ghConfig, JSON.parse(localStorage.getItem(CONFIG_KEY)) || {}); } catch (e) { }
 
 function getSyncableData() {
@@ -1148,7 +1364,7 @@ function getSyncableData() {
   delete syncableConfig.mode; delete syncableConfig.simpleMode; delete syncableConfig.notifications;
   delete syncableConfig.showLogicalDate; delete syncableConfig.clockLayout; delete syncableConfig.showMasterClock;
   delete syncableConfig.showDoggyClock; delete syncableConfig.showSeconds; delete syncableConfig.showShichen;
-  delete syncableConfig.showWellness;
+  delete syncableConfig.showWellness; delete syncableConfig.showPartnerCard; delete syncableConfig.showPartnerStatus;
   return { db: db, config: syncableConfig };
 }
 
@@ -1158,17 +1374,21 @@ function applySyncData(payloadDB, payloadConfig) {
       db = payloadDB;
       localStorage.setItem('dawn-duo-data', JSON.stringify(db));
     }
-    if (payloadConfig) {
+    
+    const isSettingsOpen = document.getElementById('settings-modal').classList.contains('show');
+    if (payloadConfig && !isSettingsOpen) {
       const localMode = configs.mode, localSimple = configs.simpleMode, localNotify = configs.notifications;
       const localLogicalDate = configs.showLogicalDate, localClockLayout = configs.clockLayout;
       const localShowMasterClock = configs.showMasterClock, localShowDoggyClock = configs.showDoggyClock;
       const localShowSeconds = configs.showSeconds, localShowShichen = configs.showShichen, localShowWellness = configs.showWellness;
+      const localShowPartnerCard = configs.showPartnerCard, localShowPartnerStatus = configs.showPartnerStatus;
 
       configs = deepMerge(DEFAULT_CONFIGS, payloadConfig); 
       configs.mode = localMode; configs.simpleMode = localSimple; configs.notifications = localNotify;
       configs.showLogicalDate = localLogicalDate; configs.clockLayout = localClockLayout;
       configs.showMasterClock = localShowMasterClock; configs.showDoggyClock = localShowDoggyClock;
       configs.showSeconds = localShowSeconds; configs.showShichen = localShowShichen; configs.showWellness = localShowWellness;
+      configs.showPartnerCard = localShowPartnerCard; configs.showPartnerStatus = localShowPartnerStatus;
       configs.configVersion = 7;
       localStorage.setItem('dawn-duo-configs', JSON.stringify(configs));
     }
@@ -1184,6 +1404,455 @@ function getHash(str) {
   }
   return hash.toString();
 }
+
+// ================= Diff 与同步核心逻辑 =================
+const CONFIG_KEY_MAP = {
+  'texts.title': '主标题',
+  'texts.subtitle': '副标题',
+  'texts.masterName': '主人名字',
+  'texts.masterTag': '主人标签',
+  'texts.masterRegion': '主人地区',
+  'texts.masterSleepBtn': '主人休息按钮文案',
+  'texts.masterWakeBtn': '主人起床按钮文案',
+  'texts.doggyName': '小狗名字',
+  'texts.doggyTag': '小狗标签',
+  'texts.doggyRegion': '小狗地区',
+  'texts.doggySleepBtn': '小狗睡觉按钮文案',
+  'texts.doggyWakeBtn': '小狗起床按钮文案',
+  'goals.master.sleep': '主人目标休息时间',
+  'goals.master.wake': '主人目标起床时间',
+  'goals.doggy.sleep': '小狗目标休息时间',
+  'goals.doggy.wake': '小狗目标起床时间',
+  'timeZones.master.value': '主人所在时区',
+  'timeZones.doggy.value': '小狗所在时区',
+  'notifyTexts.master_sleep': '主人-到点休息提醒',
+  'notifyTexts.master_wake': '主人-到点起床提醒',
+  'notifyTexts.doggy_sleep': '小狗-到点睡觉提醒',
+  'notifyTexts.doggy_wake': '小狗-到点起床提醒',
+  'notifyTexts.overtime_sleep': '超时熬夜提醒',
+  'notifyTexts.overtime_wake': '超时赖床提醒',
+  'notifyTexts.partner_master_sleep': '主人休息-对方通知',
+  'notifyTexts.partner_master_wake': '主人起床-对方通知',
+  'notifyTexts.partner_doggy_sleep': '小狗休息-对方通知',
+  'notifyTexts.partner_doggy_wake': '小狗起床-对方通知',
+  'notifyTexts.status_master_sleep': '主人休息-状态栏文案',
+  'notifyTexts.status_master_wake': '主人起床-状态栏文案',
+  'notifyTexts.status_doggy_sleep': '小狗休息-状态栏文案',
+  'notifyTexts.status_doggy_wake': '小狗起床-状态栏文案'
+};
+
+function calculateDiff(localData, remoteData, isUpload) {
+  const dbDiff = [];
+  const cfgDiff = [];
+  
+  // 1. 打卡记录对比
+  const users = ['master', 'doggy'];
+  users.forEach(user => {
+    const lUser = localData.db[user] || {};
+    const rUser = remoteData.db[user] || {};
+    const allDates = new Set([...Object.keys(lUser), ...Object.keys(rUser)]);
+    
+    Array.from(allDates).sort().forEach(date => {
+      const lDay = lUser[date] || {};
+      const rDay = rUser[date] || {};
+      const types = ['sleep', 'wake'];
+      
+      types.forEach(type => {
+        const lRec = lDay[type];
+        const rRec = rDay[type];
+        
+        const uName = user === 'master' ? '主人' : '小狗';
+        const tName = type === 'sleep' ? '休息' : '起床';
+        
+        if (!lRec && rRec) {
+          dbDiff.push({ type: isUpload ? 'remove' : 'add', text: `【${date}】${uName} ${tName}：将${isUpload ? '删除' : '新增'} (${rRec.time})` });
+        } else if (lRec && !rRec) {
+          dbDiff.push({ type: isUpload ? 'add' : 'remove', text: `【${date}】${uName} ${tName}：将${isUpload ? '新增' : '删除'} (${lRec.time})` });
+        } else if (lRec && rRec) {
+          if (lRec.time !== rRec.time || lRec.done !== rRec.done) {
+            // ✅ 修正：上传时显示"本地新值"，拉取时显示"云端新值"
+            const targetTime = isUpload ? lRec.time : rRec.time;
+            dbDiff.push({ type: 'modify', text: `【${date}】${uName} ${tName}：修改 -> ${targetTime}` });
+          }
+        }
+      });
+    });
+  });
+  
+  // 2. 配置对比
+  const localCfg = localData.config;
+  const remoteCfg = remoteData.config || {};
+  
+  if (localCfg.profiles) {
+    ['daily', 'service'].forEach(mode => {
+      const modeName = mode === 'daily' ? '日常' : '主仆';
+      const lProf = localCfg.profiles[mode] || {};
+      const rProf = remoteCfg.profiles?.[mode] || {};
+      
+      // texts
+      const lTexts = lProf.texts || {};
+      const rTexts = rProf.texts || {};
+      const textKeys = new Set([...Object.keys(lTexts), ...Object.keys(rTexts)]);
+      
+      textKeys.forEach(k => {
+        const lv = lTexts[k];
+        const rv = rTexts[k];
+        if (lv !== rv) {
+          const label = CONFIG_KEY_MAP[`texts.${k}`] || `文案 ${k}`;
+          // ✅ 修正：上传时显示本地值，拉取时显示云端值
+          const target = isUpload ? lv : rv;
+          cfgDiff.push({ type: 'modify', text: `[${modeName}] ${label}：修改 -> ${target}` });
+        }
+      });
+      
+      // notifyTexts
+      const lNt = lProf.notifyTexts || {};
+      const rNt = rProf.notifyTexts || {};
+      const ntKeys = new Set([...Object.keys(lNt), ...Object.keys(rNt)]);
+      
+      ntKeys.forEach(k => {
+        const lv = lNt[k];
+        const rv = rNt[k];
+        if (lv !== rv) {
+          const label = CONFIG_KEY_MAP[`notifyTexts.${k}`] || `通知 ${k}`;
+          const target = isUpload ? lv : rv;
+          cfgDiff.push({ type: 'modify', text: `[${modeName}] ${label}：修改 -> ${target}` });
+        }
+      });
+
+      // msgPool
+      const lMpStr = JSON.stringify(lProf.msgPool || {});
+      const rMpStr = JSON.stringify(rProf.msgPool || {});
+      if (lMpStr !== rMpStr) {
+        cfgDiff.push({ type: 'modify', text: `[${modeName}] 互动弹窗文案池 发生更新` });
+      }
+    });
+  }
+  
+  if (localCfg.goals) {
+    ['master', 'doggy'].forEach(user => {
+      ['sleep', 'wake'].forEach(type => {
+        const lv = localCfg.goals[user]?.[type];
+        const rv = remoteCfg.goals?.[user]?.[type];
+        if (lv !== rv) {
+          const label = CONFIG_KEY_MAP[`goals.${user}.${type}`];
+          const target = isUpload ? lv : rv;
+          cfgDiff.push({ type: 'modify', text: `${label}：修改 -> ${target}` });
+        }
+      });
+    });
+  }
+
+  return { dbDiff, cfgDiff };
+}
+
+let pendingSyncData = null;
+
+function renderDiffModal(diff, isUpload) {
+  const title = isUpload ? '⬆️ 推送：本地 → 云端' : '⬇️ 拉取：云端 → 本地';
+  document.getElementById('diff-modal-title').textContent = title;
+
+  // 整块弹窗主题色切换
+  const modalBox = document.querySelector('#diff-modal .diff-modal-box');
+  if (modalBox) {
+    modalBox.classList.remove('upload-mode', 'pull-mode');
+    modalBox.classList.add(isUpload ? 'upload-mode' : 'pull-mode');
+  }
+
+  const confirmBtn = document.getElementById('diff-confirm-btn');
+  confirmBtn.textContent = isUpload ? '⬆️ 确认上传' : '⬇️ 确认覆盖本地';
+  confirmBtn.className = 'btn ' + (isUpload ? 'upload-btn' : 'pull-btn');
+
+  const content = document.getElementById('diff-content');
+  content.innerHTML = '';
+
+  if (diff.dbDiff.length === 0 && diff.cfgDiff.length === 0) {
+    content.innerHTML = '<div class="diff-empty">两边数据完全一致，没有任何差异。</div>';
+    confirmBtn.style.display = 'none';
+    document.getElementById('diff-modal').classList.add('show');
+    return;
+  }
+
+  confirmBtn.style.display = 'block';
+
+  // 顶部统计条
+  const stats = { add: 0, remove: 0, modify: 0 };
+  [...diff.dbDiff, ...diff.cfgDiff].forEach(it => { if (stats[it.type] !== undefined) stats[it.type]++; });
+  let summary = '<div class="diff-summary">';
+  if (stats.add > 0)    summary += `<span class="diff-stat add">➕ 新增 ${stats.add}</span>`;
+  if (stats.remove > 0) summary += `<span class="diff-stat remove">➖ 删除 ${stats.remove}</span>`;
+  if (stats.modify > 0) summary += `<span class="diff-stat modify">✏️ 修改 ${stats.modify}</span>`;
+  summary += '</div>';
+  content.innerHTML = summary;
+
+  const icons = { add: '➕', remove: '➖', modify: '✏️' };
+
+  if (diff.dbDiff.length > 0) {
+    let html = '<div class="diff-section"><div class="diff-section-title">📅 打卡记录变动</div><div class="diff-list">';
+    diff.dbDiff.forEach(item => {
+      html += `<div class="diff-item ${item.type}"><span class="diff-icon">${icons[item.type]}</span><span class="diff-text">${item.text}</span></div>`;
+    });
+    html += '</div></div>';
+    content.innerHTML += html;
+  }
+
+  if (diff.cfgDiff.length > 0) {
+    let html = '<div class="diff-section"><div class="diff-section-title">⚙️ 配置/文案变动</div><div class="diff-list">';
+    diff.cfgDiff.forEach(item => {
+      html += `<div class="diff-item ${item.type}"><span class="diff-icon">${icons[item.type]}</span><span class="diff-text">${item.text}</span></div>`;
+    });
+    html += '</div></div>';
+    content.innerHTML += html;
+  }
+
+  document.getElementById('diff-modal').classList.add('show');
+}
+
+window.closeDiffModal = function() {
+  document.getElementById('diff-modal').classList.remove('show');
+  // 清理主题模式，避免下次弹窗残留
+  const modalBox = document.querySelector('#diff-modal .diff-modal-box');
+  if (modalBox) modalBox.classList.remove('upload-mode', 'pull-mode');
+  pendingSyncData = null;
+};
+
+window.confirmSyncDiff = async function() {
+  if (!pendingSyncData) return;
+  const { isUpload, localData, remoteDb, remoteCfg, remoteDbSha, remoteCfgSha } = pendingSyncData;
+  
+  closeDiffModal();
+  
+  if (isUpload) {
+    showToast('正在上传...', 'success');
+    const dbStr = JSON.stringify(localData.db, null, 2);
+    const cfgStr = JSON.stringify(localData.config, null, 2);
+    
+    // ✅ 修复：检查 push 结果
+    const ok1 = await pushGHFile(ghConfig.path, dbStr, remoteDbSha);
+    const ok2 = await pushGHFile(ghConfig.configPath, cfgStr, remoteCfgSha);
+    
+    if (ok1 && ok2) {
+      showToast('⬆️ 数据已成功上传', 'success');
+      closeSettings();
+    } else {
+      showToast('上传失败，请检查网络 / Token / 仓库权限', 'late');
+    }
+  } else {
+    showToast('正在应用云端数据...', 'success');
+    applySyncData(remoteDb, remoteCfg);
+    showToast('⬇️ 本地数据已成功更新', 'success');
+    closeSettings();
+  }
+};
+
+async function fetchGHFile(path) {
+  if (!ghConfig.user || !ghConfig.repo || !ghConfig.token) return null;
+  try {
+    const url = `https://api.github.com/repos/${ghConfig.user}/${ghConfig.repo}/contents/${path}?t=${Date.now()}`;
+    const res = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}`, 'Accept': 'application/vnd.github.v3+json' } });
+    if (res.ok) {
+      const data = await res.json();
+      return { sha: data.sha, content: decodeBase64Utf8(data.content) };
+    }
+    // ✅ 修复：404 才视作"文件不存在"；其它错误（401/403/网络）抛出
+    if (res.status === 404) return null;
+    throw new Error(`GitHub API 返回 ${res.status}`);
+  } catch (e) {
+    console.warn(`拉取 ${path} 失败`, e);
+    throw e;
+  }
+}
+
+async function pushGHFile(path, contentStr, oldSha) {
+  try {
+    const url = `https://api.github.com/repos/${ghConfig.user}/${ghConfig.repo}/contents/${path}`;
+    const base64Content = encodeBase64Utf8(contentStr);
+    const res = await fetch(url, {
+      method: 'PUT',
+      headers: { 'Authorization': `token ${ghConfig.token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: `🐾 自动更新 ${path}`, content: base64Content, sha: oldSha || undefined })
+    });
+    return res.ok;
+  } catch (e) { console.warn(`上传 ${path} 失败`, e); return false; }
+}
+
+window.syncFromGitHub = async function() {
+  if (!ghConfig.user || !ghConfig.repo || !ghConfig.token) return showToast('请先填写完整配置！', 'late');
+  
+  showToast('正在获取云端数据对比...', 'success');
+  
+  try {
+    const dbRemote = await fetchGHFile(ghConfig.path);
+    const cfgRemote = await fetchGHFile(ghConfig.configPath);
+    
+    if (!dbRemote && !cfgRemote) {
+        return showToast('云端没有任何数据', 'late');
+    }
+    
+    const remoteDb = dbRemote ? JSON.parse(dbRemote.content) : { master: {}, doggy: {} };
+    const remoteCfg = cfgRemote ? JSON.parse(cfgRemote.content) : null;
+    
+    let fullRemoteCfg = null;
+    if (remoteCfg) fullRemoteCfg = deepMerge(DEFAULT_CONFIGS, remoteCfg);
+    
+    const localData = getSyncableData();
+    
+    const diff = calculateDiff(localData, { db: remoteDb, config: fullRemoteCfg || localData.config }, false);
+    
+    if (diff.dbDiff.length === 0 && diff.cfgDiff.length === 0) {
+        return showToast('云端与本地数据完全一致，无需拉取', 'success');
+    }
+    
+    pendingSyncData = {
+        isUpload: false,
+        remoteDb: remoteDb,
+        remoteCfg: remoteCfg
+    };
+    
+    renderDiffModal(diff, false);
+    
+  } catch(e) {
+    console.error(e);
+    showToast('对比失败: ' + e.message, 'late');
+  }
+};
+
+window.saveToGitHub = async function() {
+  if (!ghConfig.user || !ghConfig.repo || !ghConfig.token) return showToast('请先填写完整配置！', 'late');
+  
+  // ✅ 修复：传 true 跳过 debounceSync，防止 3 秒后自动推送覆盖云端
+  saveSettings(true);
+  showToast('正在获取云端数据对比...', 'success');
+  
+  try {
+    const dbRemote = await fetchGHFile(ghConfig.path);
+    const cfgRemote = await fetchGHFile(ghConfig.configPath);
+    
+    const remoteDb = dbRemote ? JSON.parse(dbRemote.content) : { master: {}, doggy: {} };
+    const remoteCfg = cfgRemote ? JSON.parse(cfgRemote.content) : null;
+    
+    let fullRemoteCfg = null;
+    if (remoteCfg) fullRemoteCfg = deepMerge(DEFAULT_CONFIGS, remoteCfg);
+    
+    const localData = getSyncableData();
+    
+    const diff = calculateDiff(localData, { db: remoteDb, config: fullRemoteCfg }, true);
+    
+    if (diff.dbDiff.length === 0 && diff.cfgDiff.length === 0) {
+        if (!confirm('本地和云端数据完全一致，无需上传。\n是否强制上传并覆盖云端？')) return;
+        await pushGHFile(ghConfig.path, JSON.stringify(localData.db, null, 2), dbRemote?.sha);
+        await pushGHFile(ghConfig.configPath, JSON.stringify(localData.config, null, 2), cfgRemote?.sha);
+        showToast('⬆️ 数据已成功上传 (无差异)', 'success');
+        closeSettings();
+        return;
+    }
+    
+    pendingSyncData = {
+        isUpload: true,
+        localData,
+        remoteDbSha: dbRemote?.sha,
+        remoteCfgSha: cfgRemote?.sha
+    };
+    
+    renderDiffModal(diff, true);
+    
+  } catch(e) {
+    console.error(e);
+    showToast('对比失败: ' + e.message, 'late');
+  }
+};
+
+let syncTimer = null;
+function debounceSync() {
+  if (ghConfig.autoSync === false) return;
+  if (!ghConfig.user || !ghConfig.repo || !ghConfig.token) return;
+  if (syncTimer) clearTimeout(syncTimer);
+  syncTimer = setTimeout(() => { autoSyncToGitHub(); }, 3000);
+}
+
+async function autoSyncToGitHub(force = false) {
+  if (ghConfig.autoSync === false && !force) return;
+  if (!ghConfig.user || !ghConfig.repo || !ghConfig.token) return;
+  try {
+    const payload = getSyncableData();
+    const dbStr = JSON.stringify(payload.db, null, 2);
+    const cfgStr = JSON.stringify(payload.config, null, 2);
+
+    const dbRemote = await fetchGHFile(ghConfig.path);
+    const cfgRemote = await fetchGHFile(ghConfig.configPath);
+
+    const dbHash = getHash(dbStr);
+    const cfgHash = getHash(cfgStr);
+    
+    let needPushDB = true;
+    let needPushCfg = true;
+
+    if (!force) {
+      if (dbRemote && getHash(dbRemote.content) === dbHash) needPushDB = false;
+      if (cfgRemote && getHash(cfgRemote.content) === cfgHash) needPushCfg = false;
+    }
+
+    if (needPushDB) await pushGHFile(ghConfig.path, dbStr, dbRemote?.sha);
+    if (needPushCfg) await pushGHFile(ghConfig.configPath, cfgStr, cfgRemote?.sha);
+    
+    if (needPushDB || needPushCfg) console.log("自动同步完成");
+  } catch (e) { console.warn('自动同步失败', e); }
+}
+
+async function autoPullOnLoad(force = false) {
+  if (ghConfig.autoSync === false && !force) return;
+  if (!ghConfig.user || !ghConfig.repo || !ghConfig.token) return;
+  try {
+    const dbRemote = await fetchGHFile(ghConfig.path);
+    const cfgRemote = await fetchGHFile(ghConfig.configPath);
+    
+    let dbPayload = null;
+    let cfgPayload = null;
+
+    if (dbRemote) {
+      const parsed = JSON.parse(dbRemote.content);
+      // ✅ 修复：云端为空 + 本地有数据 → 不自动覆盖本地
+      const isEmpty = (!parsed.master || Object.keys(parsed.master).length === 0)
+                   && (!parsed.doggy || Object.keys(parsed.doggy).length === 0);
+      const localHasData = (db.master && Object.keys(db.master).length > 0)
+                        || (db.doggy && Object.keys(db.doggy).length > 0);
+
+      if (isEmpty && localHasData && !force) {
+        // 云端空数据 + 本地有数据，跳过覆盖
+      } else {
+        const localDbStr = JSON.stringify(db, null, 2);
+        if (force || getHash(dbRemote.content) !== getHash(localDbStr)) {
+          if (parsed.master || parsed.doggy) dbPayload = parsed;
+        }
+      }
+    }
+    
+    if (cfgRemote) {
+      const syncable = getSyncableData();
+      const localSyncStr = JSON.stringify(syncable.config, null, 2);
+      if (force || getHash(cfgRemote.content) !== getHash(localSyncStr)) {
+        cfgPayload = JSON.parse(cfgRemote.content);
+      }
+    }
+
+    if (dbPayload) {
+      detectPartnerCheckin(dbPayload);
+    }
+
+    if (dbPayload || cfgPayload) {
+      applySyncData(dbPayload, cfgPayload);
+      if (force) showToast('已强制从云端拉取数据 📥', 'success');
+      else showToast('已自动同步云端最新数据 📥', 'success');
+    }
+  } catch (e) { console.warn('自动拉取失败', e); }
+}
+
+setInterval(() => { autoPullOnLoad(false); }, 5 * 60 * 1000);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    autoPullOnLoad(false);
+  }
+});
 
 window.exportJSON = function() {
   const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db, null, 2));
@@ -1349,115 +2018,6 @@ function decodeBase64Utf8(b64) {
   const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
   return new TextDecoder('utf-8').decode(bytes);
 }
-
-async function fetchGHFile(path) {
-  if (!ghConfig.user || !ghConfig.repo || !ghConfig.token) return null;
-  try {
-    const url = `https://api.github.com/repos/${ghConfig.user}/${ghConfig.repo}/contents/${path}?t=${Date.now()}`;
-    const res = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}`, 'Accept': 'application/vnd.github.v3+json' } });
-    if (res.ok) {
-      const data = await res.json();
-      return { sha: data.sha, content: decodeBase64Utf8(data.content) };
-    }
-  } catch (e) { console.warn(`拉取 ${path} 失败`, e); }
-  return null;
-}
-
-async function pushGHFile(path, contentStr, oldSha) {
-  try {
-    const url = `https://api.github.com/repos/${ghConfig.user}/${ghConfig.repo}/contents/${path}`;
-    const base64Content = encodeBase64Utf8(contentStr);
-    const res = await fetch(url, {
-      method: 'PUT',
-      headers: { 'Authorization': `token ${ghConfig.token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: `🐾 自动更新 ${path}`, content: base64Content, sha: oldSha || undefined })
-    });
-    return res.ok;
-  } catch (e) { console.warn(`上传 ${path} 失败`, e); return false; }
-}
-
-let syncTimer = null;
-function debounceSync() {
-  if (!ghConfig.user || !ghConfig.repo || !ghConfig.token) return;
-  if (syncTimer) clearTimeout(syncTimer);
-  syncTimer = setTimeout(() => { autoSyncToGitHub(); }, 3000);
-}
-
-async function autoSyncToGitHub(force = false) {
-  if (!ghConfig.user || !ghConfig.repo || !ghConfig.token) return;
-  try {
-    const payload = getSyncableData();
-    const dbStr = JSON.stringify(payload.db, null, 2);
-    const cfgStr = JSON.stringify(payload.config, null, 2);
-
-    const dbRemote = await fetchGHFile(ghConfig.path);
-    const cfgRemote = await fetchGHFile(ghConfig.configPath);
-
-    const dbHash = getHash(dbStr);
-    const cfgHash = getHash(cfgStr);
-    
-    let needPushDB = true;
-    let needPushCfg = true;
-
-    if (!force) {
-      if (dbRemote && getHash(dbRemote.content) === dbHash) needPushDB = false;
-      if (cfgRemote && getHash(cfgRemote.content) === cfgHash) needPushCfg = false;
-    }
-
-    if (needPushDB) await pushGHFile(ghConfig.path, dbStr, dbRemote?.sha);
-    if (needPushCfg) await pushGHFile(ghConfig.configPath, cfgStr, cfgRemote?.sha);
-    
-    if (needPushDB || needPushCfg) console.log("自动同步完成");
-  } catch (e) { console.warn('自动同步失败', e); }
-}
-
-async function autoPullOnLoad(force = false) {
-  if (!ghConfig.user || !ghConfig.repo || !ghConfig.token) return;
-  try {
-    const dbRemote = await fetchGHFile(ghConfig.path);
-    const cfgRemote = await fetchGHFile(ghConfig.configPath);
-    
-    let dbPayload = null;
-    let cfgPayload = null;
-
-    if (dbRemote) {
-      if (force || getHash(dbRemote.content) !== getHash(JSON.stringify(db))) {
-        const parsed = JSON.parse(dbRemote.content);
-        if (parsed.master || parsed.doggy) dbPayload = parsed;
-      }
-    }
-    
-    if (cfgRemote) {
-      if (force || getHash(cfgRemote.content) !== getHash(JSON.stringify(configs))) {
-        cfgPayload = JSON.parse(cfgRemote.content);
-      }
-    }
-
-    if (dbPayload || cfgPayload) {
-      applySyncData(dbPayload, cfgPayload);
-      if (force) showToast('已强制从云端拉取数据 📥', 'success');
-      else showToast('已自动同步云端最新数据 📥', 'success');
-    }
-  } catch (e) { console.warn('自动拉取失败', e); }
-}
-
-setInterval(() => { autoPullOnLoad(false); }, 5 * 60 * 1000);
-
-window.syncFromGitHub = async function() {
-  if (!confirm('⚠️ 确认要拉取云端数据吗？\n\n将覆盖当前本机的打卡记录和文案配置。')) return;
-  if (!ghConfig.user || !ghConfig.repo || !ghConfig.token) return showToast('请先填写完整配置！', 'late');
-  await autoPullOnLoad(true);
-  closeSettings();
-};
-
-window.saveToGitHub = async function() {
-  if (!confirm('⚠️ 确认要推送并覆盖云端数据吗？')) return;
-  saveSettings();
-  if (!ghConfig.user || !ghConfig.repo || !ghConfig.token) return showToast('请先填写完整配置！', 'late');
-  await autoSyncToGitHub(true);
-  showToast('⬆️ 数据已成功上传。', 'success'); 
-  closeSettings();
-};
 
 try {
   const local = localStorage.getItem('dawn-duo-data');

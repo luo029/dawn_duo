@@ -11,16 +11,48 @@ const MSG_DAILY = {
 };
 
 const MSG_SERVICE = {
-  master: { sleep: { success: [], late: [] }, wake: { success: [], late: [] } },
-  doggy: { sleep: { success: [], late: [] }, wake: { success: [], late: [] } }
+  master: {
+    sleep: { success: ["主人已休息，晚安。", "主人休息了，明天见。", "主人已躺下，好梦。"], late: ["主人今天晚睡了。", "主人休息得有点晚，注意身体。"] },
+    wake: { success: ["主人早安。", "主人已起床，新的一天开始了。", "主人醒了。"], late: ["主人起晚了。", "主人今天赖床了。"] }
+  },
+  doggy: {
+    sleep: { success: ["小狗乖乖睡觉了。", "小狗已休息，晚安。", "小狗钻进被窝了。"], late: ["小狗今天晚睡了。", "小狗还不睡吗？"] },
+    wake: { success: ["小狗早安。", "小狗起床了，真乖。", "小狗醒了。"], late: ["小狗赖床了。", "小狗起晚了。"] }
+  }
 };
 
 const DEFAULT_NOTIFY_TEXTS = {
   daily: {
-    master_sleep: '{name}，到点啦，该休息了哦~', master_wake: '{name}，早安，该起床啦！', doggy_sleep: '{name}，乖乖睡觉的时间到了哦~', doggy_wake: '{name}，太阳晒屁股啦，起床吧！', overtime_sleep: '{name}，已经熬夜 {mins} 分钟了，该睡觉了！', overtime_wake: '{name}，已经赖床 {mins} 分钟了，快起床吧！'
+    master_sleep: '{name}，到点啦，该休息了哦~', 
+    master_wake: '{name}，早安，该起床啦！', 
+    doggy_sleep: '{name}，乖乖睡觉的时间到了哦~', 
+    doggy_wake: '{name}，太阳晒屁股啦，起床吧！', 
+    overtime_sleep: '{name}，已经熬夜 {mins} 分钟了，该睡觉了！', 
+    overtime_wake: '{name}，已经赖床 {mins} 分钟了，快起床吧！',
+    partner_master_sleep: '👑 {name} 已休息啦 🌙 ({time})', 
+    partner_master_wake: '👑 {name} 已起床啦 ☀️ ({time})',
+    partner_doggy_sleep: '🎀 {name} 已休息啦 🌙 ({time})', 
+    partner_doggy_wake: '🎀 {name} 已起床啦 ☀️ ({time})',
+    status_master_sleep: '🌙 {name} 已经休息啦 ({time})',
+    status_master_wake: '☀️ {name} 已经醒来啦 ({time})',
+    status_doggy_sleep: '🌙 {name} 已经休息啦 ({time})',
+    status_doggy_wake: '☀️ {name} 已经醒来啦 ({time})'
   },
   service: {
-    master_sleep: '{name}，该休息了。', master_wake: '{name}，该起床了。', doggy_sleep: '{name}，该睡觉了。', doggy_wake: '{name}，该起来了。', overtime_sleep: '{name}，已经熬夜 {mins} 分钟了。', overtime_wake: '{name}，已经赖床 {mins} 分钟了。'
+    master_sleep: '{name}，该休息了。', 
+    master_wake: '{name}，该起床了。', 
+    doggy_sleep: '{name}，该睡觉了。', 
+    doggy_wake: '{name}，该起来了。', 
+    overtime_sleep: '{name}，已经熬夜 {mins} 分钟了。', 
+    overtime_wake: '{name}，已经赖床 {mins} 分钟了。',
+    partner_master_sleep: '👑 {name} 已休息。({time})', 
+    partner_master_wake: '👑 {name} 已起床。({time})',
+    partner_doggy_sleep: '🎀 {name} 已休息。({time})', 
+    partner_doggy_wake: '🎀 {name} 已起床。({time})',
+    status_master_sleep: '🌙 主人已安寝，小狗请保持安静 ({time})',
+    status_master_wake: '☀️ 主人已苏醒，准备迎接新的一天 ({time})',
+    status_doggy_sleep: '🌙 小狗已乖乖入梦 ({time})',
+    status_doggy_wake: '☀️ 小狗已醒来，等待主人 ({time})'
   }
 };
 
@@ -53,11 +85,13 @@ const SHICHEN_DATA = [
 // ================= 核心配置 =================
 const DEFAULT_CONFIGS = {
   configVersion: 7,
-  mode: 'daily', 
+  mode: 'daily',
   simpleMode: false,
   notifications: false,
+  showPartnerCard: true,
+  showPartnerStatus: true,
   showLogicalDate: true,
-  notifySettings: { enableOvertime: false, overtimeInterval: 30 },
+  notifySettings: { enableOvertime: false, overtimeInterval: 30, partnerNotify: true },
   profiles: {
     daily: { texts: DEFAULT_TEXTS_DAILY, colors: { master: '#38bdf8', doggy: '#f472b6' }, msgPool: MSG_DAILY, notifyTexts: DEFAULT_NOTIFY_TEXTS.daily },
     service: { texts: DEFAULT_TEXTS_SERVICE, colors: { master: '#a855f7', doggy: '#fb7185' }, msgPool: MSG_SERVICE, notifyTexts: DEFAULT_NOTIFY_TEXTS.service }
@@ -70,7 +104,7 @@ const DEFAULT_CONFIGS = {
   historyDays: 30,
   historyYear: '2026',
   historyMonth: '11',
-  
+
   clockLayout: 'separate',
   showMasterClock: true,
   showDoggyClock: true,

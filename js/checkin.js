@@ -20,7 +20,7 @@ window.toggle = async function(user, type) {
   record.time = formatCheckinTime(configs.timeZones[user]);
   record.ontime = checkGoal(user, type, record.time);
   
-  // 异步获取位置，避免阻塞 UI
+  // 修复：异步获取位置，避免阻塞 UI
   record.meta = { timestamp: Date.now(), timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, device: getDeviceInfo(), location: "获取中..." };
 
   getLocation().then(loc => {

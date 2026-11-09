@@ -7,6 +7,9 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%2338bdf8'/%3E%3Ccircle cx='50' cy='50' r='30' fill='%23f472b6'/%3E%3C/svg%3E">
 <script>
   (function() {
+    if (!localStorage.getItem('dawn-duo-identity')) {
+      document.documentElement.classList.add('no-identity');
+    }
     const savedTheme = localStorage.getItem('dawn-duo-theme') || 'dark';
     document.documentElement.setAttribute('data-theme', savedTheme);
   })();
@@ -32,17 +35,25 @@
     <span class="logical-date" id="logical-date-display">--</span>
   </div>
 
-  <div class="grid-clocks">
-    <div class="clock-card master">
+  <!-- 时钟区域 -->
+  <div class="grid-clocks" id="clock-container">
+    <div class="clock-card master" id="clock-card-master">
       <div class="clock-city" id="master-city-text">📍 先生</div>
       <div class="clock-time" id="time-master">--:--:--</div>
       <div class="clock-date" id="date-master">--</div>
+      <div id="shichen-master" class="shichen-badge" style="display:none;"></div>
     </div>
-    <div class="clock-card doggy">
+    <div class="clock-card doggy" id="clock-card-doggy">
       <div class="clock-city" id="doggy-city-text">📍 宝宝</div>
       <div class="clock-time" id="time-doggy">--:--:--</div>
       <div class="clock-date" id="date-doggy">--</div>
+      <div id="shichen-doggy" class="shichen-badge" style="display:none;"></div>
     </div>
+  </div>
+  
+  <!-- 养生提示区 -->
+  <div id="wellness-panel" class="wellness-box" style="display:none;">
+    <div id="wellness-text"></div>
   </div>
 
   <div class="section-title">🔗 今日契约打卡</div>
@@ -159,19 +170,19 @@
     </div>
 
     <div class="tabs">
-      <button class="tab-btn active" onclick="switchTab(event, 'tab-general')">基本设置</button>
-      <button class="tab-btn" onclick="switchTab(event, 'tab-appearance')">称呼与颜色</button>
-      <button class="tab-btn" onclick="switchTab(event, 'tab-rules')">作息与提醒</button>
+      <button class="tab-btn active" onclick="switchTab(event, 'tab-general')">基础外观</button>
+      <button class="tab-btn" onclick="switchTab(event, 'tab-clock')">时钟养生</button>
+      <button class="tab-btn" onclick="switchTab(event, 'tab-rules')">作息打卡</button>
       <button class="tab-btn" onclick="switchTab(event, 'tab-msgs')">互动文案</button>
-      <button class="tab-btn" onclick="switchTab(event, 'tab-data')">数据与同步</button>
+      <button class="tab-btn" onclick="switchTab(event, 'tab-data')">数据同步</button>
     </div>
 
     <div class="modal-body">
-      <!-- Tab 1: 基本设置 -->
+      <!-- Tab 1: 基础外观 -->
       <div class="tab-content active" id="tab-general">
         <div class="config-card">
-          <div class="config-title">🪪 我的身份 (只保存在本机)</div>
-          <div class="identity-selector">
+          <div class="config-title">🪪 身份与版本模式</div>
+          <div class="identity-selector" style="margin-bottom: 16px;">
             <button class="id-pill" id="id-pill-master" onclick="chooseIdentity('master')">
               <span class="id-pill-emoji">👑</span><span class="id-pill-label" id="id-pill-label-master">先生</span>
             </button>
@@ -182,66 +193,33 @@
               <span class="id-pill-emoji">🍉</span><span class="id-pill-label">滴滴</span>
             </button>
           </div>
-          <div class="mode-tip">身份只保存在本机，不上传云端。</div>
-        </div>
-
-        <div class="config-card">
-          <div class="config-title">🔄 版本模式</div>
           <div class="mode-list">
             <button class="mode-card" id="mode-card-daily" onclick="setMode('daily')">
-              <span class="mode-emoji">💕</span>
-              <span class="mode-info"><span class="mode-name">日常版本</span><span class="mode-desc">先生 与 宝宝 · 温柔的日常陪伴</span></span>
+              <span class="mode-emoji" id="mode-icon-daily">💕</span>
+              <span class="mode-info"><span class="mode-name">日常版本</span></span>
               <span class="mode-check">✓</span>
             </button>
             <button class="mode-card" id="mode-card-service" onclick="setMode('service')">
-              <span class="mode-emoji">🐶</span>
-              <span class="mode-info"><span class="mode-name">主仆版本</span><span class="mode-desc">主人 与 小狗 · 更亲密的契约</span></span>
+              <span class="mode-emoji" id="mode-icon-service">🐕</span>
+              <span class="mode-info"><span class="mode-name">主仆版本</span></span>
               <span class="mode-check">✓</span>
             </button>
           </div>
+          <div class="mode-tip">身份与模式仅保存在本机。</div>
         </div>
 
         <div class="config-card">
-          <div class="config-title">📅 纪念日</div>
-          <div class="form-group">
-            <input type="date" id="cfg-anniversary" value="2026-11-04">
+          <div class="config-title">🔠 标题与图标</div>
+          <div class="form-group"><label>主标题</label><input type="text" id="cfg-title" placeholder="☀️ 先生与宝宝的契约"></div>
+          <div class="form-group"><label>副标题</label><input type="text" id="cfg-subtitle" placeholder="跨越半个地球的日常陪伴"></div>
+          <div class="flex-row">
+            <div class="form-group"><label>日常模式图标</label><input type="text" id="cfg-icon-daily" placeholder="💕"></div>
+            <div class="form-group"><label>主仆模式图标</label><input type="text" id="cfg-icon-service" placeholder="🐕"></div>
           </div>
         </div>
 
         <div class="config-card">
-          <div class="config-title">🔔 提醒与界面</div>
-          <div class="switch-row">
-            <label>开启系统通知</label>
-            <label class="toggle-switch">
-              <input type="checkbox" id="cfg-notifications">
-              <span class="slider"></span>
-            </label>
-          </div>
-          <div id="notify-status" class="tip-text"></div>
-          <div class="flex-row" style="margin-top: 12px;">
-            <button class="btn outline" onclick="testNotification()" style="flex: 1;">🔔 发送测试通知</button>
-          </div>
-          <div class="switch-row" style="margin-top: 12px;">
-            <label>简洁模式</label>
-            <label class="toggle-switch">
-              <input type="checkbox" id="cfg-simple-mode">
-              <span class="slider"></span>
-            </label>
-          </div>
-          <div class="switch-row" style="margin-top: 12px;">
-            <label>显示打卡日历回顾</label>
-            <label class="toggle-switch">
-              <input type="checkbox" id="cfg-show-history">
-              <span class="slider"></span>
-            </label>
-          </div>
-        </div>
-      </div>
-
-      <!-- Tab 2: 称呼与颜色 -->
-      <div class="tab-content" id="tab-appearance">
-        <div class="config-card">
-          <div class="config-title">👑 <span id="cfg-title-master">先生</span> 设置</div>
+          <div class="config-title">👑 <span id="cfg-title-master">主人</span> 称呼</div>
           <div class="flex-row">
             <div class="form-group"><label>名字</label><input type="text" id="cfg-master-name" placeholder="🧘 先生"></div>
             <div class="form-group"><label>标签</label><input type="text" id="cfg-master-tag" placeholder="👑 先生"></div>
@@ -255,7 +233,7 @@
         </div>
 
         <div class="config-card">
-          <div class="config-title doggy-title">🎀 <span id="cfg-title-doggy">宝宝</span> 设置</div>
+          <div class="config-title doggy-title">🎀 <span id="cfg-title-doggy">小狗</span> 称呼</div>
           <div class="flex-row">
             <div class="form-group"><label>名字</label><input type="text" id="cfg-doggy-name" placeholder="🍼 宝宝"></div>
             <div class="form-group"><label>标签</label><input type="text" id="cfg-doggy-tag" placeholder="🎀 宝宝"></div>
@@ -269,25 +247,92 @@
         </div>
 
         <div class="config-card">
-          <div class="config-title">🔠 标题</div>
-          <div class="form-group"><label>主标题</label><input type="text" id="cfg-title" placeholder="☀️ 先生与宝宝的契约"></div>
-          <div class="form-group"><label>副标题</label><input type="text" id="cfg-subtitle" placeholder="跨越半个地球的日常陪伴"></div>
+          <div class="config-title">📅 纪念日与界面</div>
+          <div class="form-group"><label>纪念日</label><input type="date" id="cfg-anniversary" value="2026-11-04"></div>
+          <div class="switch-row"><label>简洁模式</label><label class="toggle-switch"><input type="checkbox" id="cfg-simple-mode"><span class="slider"></span></label></div>
+          <div class="switch-row"><label>显示契约日</label><label class="toggle-switch"><input type="checkbox" id="cfg-show-logical-date"><span class="slider"></span></label></div>
         </div>
       </div>
 
-      <!-- Tab 3: 作息与提醒 -->
+      <!-- Tab 2: 时钟养生 -->
+      <div class="tab-content" id="tab-clock">
+        <div class="config-card">
+          <div class="config-title">🕰️ 时钟显示设置</div>
+          <div class="form-group">
+            <label>时钟排版</label>
+            <select id="cfg-clock-layout">
+              <option value="separate">分开显示 (左右两个卡片)</option>
+              <option value="merge">合并显示 (放在一个框内)</option>
+            </select>
+          </div>
+          <div class="switch-row"><label>显示主人时间</label><label class="toggle-switch"><input type="checkbox" id="cfg-show-master-clock"><span class="slider"></span></label></div>
+          <div class="switch-row"><label>显示小狗时间</label><label class="toggle-switch"><input type="checkbox" id="cfg-show-doggy-clock"><span class="slider"></span></label></div>
+          <div class="switch-row"><label>显示秒数</label><label class="toggle-switch"><input type="checkbox" id="cfg-show-seconds"><span class="slider"></span></label></div>
+        </div>
+        
+        <div class="config-card">
+          <div class="config-title">🏮 传统文化与养生</div>
+          <div class="switch-row">
+            <label>显示十二时辰 (子丑寅卯)</label>
+            <label class="toggle-switch"><input type="checkbox" id="cfg-show-shichen" onchange="handleShichenToggle()"><span class="slider"></span></label>
+          </div>
+          <div class="switch-row">
+            <label>显示经络养生提示</label>
+            <label class="toggle-switch"><input type="checkbox" id="cfg-show-wellness" onchange="handleWellnessToggle()"><span class="slider"></span></label>
+          </div>
+          <div class="mode-tip">根据当前时区自动计算，显示时辰与经络运行规律。</div>
+        </div>
+      </div>
+
+      <!-- Tab 3: 作息打卡 -->
       <div class="tab-content" id="tab-rules">
+        <div class="config-card">
+          <div class="config-title">⏰ 目标时间与日历</div>
+          <div class="flex-row">
+            <div class="form-group"><label id="label-goal-master-sleep">主人休息目标</label><input type="time" id="cfg-goal-master-sleep" value="23:00"></div>
+            <div class="form-group"><label id="label-goal-master-wake">主人起床目标</label><input type="time" id="cfg-goal-master-wake" value="07:00"></div>
+          </div>
+          <div class="flex-row">
+            <div class="form-group"><label id="label-goal-doggy-sleep">小狗睡觉目标</label><input type="time" id="cfg-goal-doggy-sleep" value="22:30"></div>
+            <div class="form-group"><label id="label-goal-doggy-wake">小狗起床目标</label><input type="time" id="cfg-goal-doggy-wake" value="07:30"></div>
+          </div>
+          
+          <div class="switch-row" style="margin-top: 12px; border-top: 1px dashed var(--border); padding-top: 12px;">
+            <label>显示打卡日历回顾</label>
+            <label class="toggle-switch"><input type="checkbox" id="cfg-show-history"><span class="slider"></span></label>
+          </div>
+          <div class="flex-row" style="margin-top: 8px;">
+            <div class="form-group">
+              <label>日历模式</label>
+              <select id="cfg-history-type" onchange="toggleHistoryTypeOptions()">
+                <option value="days">最近 X 天</option><option value="month">按月份查看</option>
+              </select>
+            </div>
+            <div class="form-group" id="group-history-days">
+              <label>显示天数</label>
+              <select id="cfg-history-days"><option value="7">7 天</option><option value="30">30 天</option><option value="90">90 天</option></select>
+            </div>
+            <div class="form-group" id="group-history-month" style="display: none; gap: 8px;">
+              <label>选择月份</label>
+              <div style="display:flex; gap:4px;">
+                <select id="cfg-history-year" style="flex:1;"></select>
+                <select id="cfg-history-month" style="flex:1;"></select>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="config-card">
           <div class="config-title">🌍 时区与地区设置</div>
           <div class="flex-row">
             <div class="form-group">
-              <label id="label-tz-master-type">先生 时区设置</label>
+              <label id="label-tz-master-type">主人 时区设置</label>
               <select id="cfg-tz-master-type" onchange="toggleTzInput('master')">
                 <option value="iana">标准时区</option><option value="offset">自定义时差</option>
               </select>
             </div>
             <div class="form-group">
-              <label id="label-tz-doggy-type">宝宝 时区设置</label>
+              <label id="label-tz-doggy-type">小狗 时区设置</label>
               <select id="cfg-tz-doggy-type" onchange="toggleTzInput('doggy')">
                 <option value="iana">标准时区</option><option value="offset">自定义时差</option>
               </select>
@@ -295,7 +340,6 @@
           </div>
           <div class="flex-row">
             <div class="form-group" id="group-tz-master-iana">
-              <label id="label-tz-master-iana">先生 所在时区</label>
               <select id="cfg-tz-master-iana">
                 <option value="Asia/Shanghai">中国标准时间</option><option value="Asia/Tokyo">日本标准时间</option>
                 <option value="America/New_York">美东时间 (纽约)</option><option value="America/Los_Angeles">美西时间 (洛杉矶)</option>
@@ -303,11 +347,9 @@
               </select>
             </div>
             <div class="form-group" id="group-tz-master-offset" style="display:none;">
-              <label id="label-tz-master-offset">先生 时差 (如 -13)</label>
               <input type="number" id="cfg-tz-master-offset" step="0.5" placeholder="例如: -13">
             </div>
             <div class="form-group" id="group-tz-doggy-iana">
-              <label id="label-tz-doggy-iana">宝宝 所在时区</label>
               <select id="cfg-tz-doggy-iana">
                 <option value="Asia/Shanghai">中国标准时间</option><option value="Asia/Tokyo">日本标准时间</option>
                 <option value="America/New_York">美东时间 (纽约)</option><option value="America/Los_Angeles">美西时间 (洛杉矶)</option>
@@ -315,69 +357,42 @@
               </select>
             </div>
             <div class="form-group" id="group-tz-doggy-offset" style="display:none;">
-              <label id="label-tz-doggy-offset">宝宝 时差 (如 -13)</label>
               <input type="number" id="cfg-tz-doggy-offset" step="0.5" placeholder="例如: -13">
             </div>
           </div>
         </div>
 
         <div class="config-card">
-          <div class="config-title">⏰ 打卡目标时间</div>
-          <div class="flex-row">
-            <div class="form-group"><label id="label-goal-master-sleep">先生休息目标</label><input type="time" id="cfg-goal-master-sleep" value="23:00"></div>
-            <div class="form-group"><label id="label-goal-master-wake">先生起床目标</label><input type="time" id="cfg-goal-master-wake" value="07:00"></div>
-          </div>
-          <div class="flex-row">
-            <div class="form-group"><label id="label-goal-doggy-sleep">宝宝睡觉目标</label><input type="time" id="cfg-goal-doggy-sleep" value="22:30"></div>
-            <div class="form-group"><label id="label-goal-doggy-wake">宝宝起床目标</label><input type="time" id="cfg-goal-doggy-wake" value="07:30"></div>
-          </div>
-        </div>
-
-        <div class="config-card">
-          <div class="config-title">🔔 通知触发与文案 (<span id="cfg-nt-mode-label">日常</span>模式)</div>
-          <div class="form-group"><label>先生 - 休息提醒</label><input type="text" id="cfg-nt-master-sleep" placeholder="{name}，到点啦..."></div>
-          <div class="form-group"><label>先生 - 起床提醒</label><input type="text" id="cfg-nt-master-wake" placeholder="{name}，早安..."></div>
-          <div class="form-group"><label>宝宝 - 睡觉提醒</label><input type="text" id="cfg-nt-doggy-sleep" placeholder="{name}，乖乖睡觉..."></div>
-          <div class="form-group"><label>宝宝 - 起床提醒</label><input type="text" id="cfg-nt-doggy-wake" placeholder="{name}，太阳晒屁股啦..."></div>
-        </div>
-
-        <div class="config-card">
-          <div class="config-title">⏳ 熬夜/赖床 超时提醒</div>
-          <div class="switch-row" style="margin-bottom: 12px;">
-            <label>开启超时提醒</label>
+          <div class="config-title">🔔 系统通知与提醒</div>
+          <div class="switch-row">
+            <label>开启系统通知</label>
             <label class="toggle-switch">
-              <input type="checkbox" id="cfg-notify-overtime">
+              <input type="checkbox" id="cfg-notifications">
               <span class="slider"></span>
             </label>
           </div>
-          <div class="form-group"><label>提醒间隔 (分钟)</label><input type="number" id="cfg-notify-interval" min="10" max="180" step="10" value="30"></div>
+          <div id="notify-status" class="tip-text" style="margin-bottom: 8px;"></div>
+          <button class="btn outline" onclick="testNotification()" style="width: 100%; font-size: 0.8rem; padding: 8px;">🔔 发送测试通知</button>
+          
+          <div class="config-title" style="margin-top: 16px; border-bottom: none; font-size: 0.8rem; padding-bottom: 0;">(<span id="cfg-nt-mode-label">日常</span>模式) 到点提醒文案</div>
+          <div class="form-group"><label id="label-nt-master-sleep">主人 - 休息提醒</label><input type="text" id="cfg-nt-master-sleep" placeholder="{name}，到点啦..."></div>
+          <div class="form-group"><label id="label-nt-master-wake">主人 - 起床提醒</label><input type="text" id="cfg-nt-master-wake" placeholder="{name}，早安..."></div>
+          <div class="form-group"><label id="label-nt-doggy-sleep">小狗 - 睡觉提醒</label><input type="text" id="cfg-nt-doggy-sleep" placeholder="{name}，乖乖睡觉..."></div>
+          <div class="form-group"><label id="label-nt-doggy-wake">小狗 - 起床提醒</label><input type="text" id="cfg-nt-doggy-wake" placeholder="{name}，太阳晒屁股啦..."></div>
+          
+          <div class="switch-row" style="margin-top: 16px; border-top: 1px dashed var(--border); padding-top: 12px;"><label>开启熬夜/赖床超时提醒</label><label class="toggle-switch"><input type="checkbox" id="cfg-notify-overtime"><span class="slider"></span></label></div>
+          <div class="flex-row" style="margin-top: 8px;">
+            <div class="form-group"><label>超时提醒间隔 (分钟)</label><input type="number" id="cfg-notify-interval" min="10" max="180" step="10" value="30"></div>
+          </div>
           <div class="form-group"><label>熬夜提醒文案</label><input type="text" id="cfg-nt-overtime-sleep" placeholder="{name}，已经熬夜 {mins} 分钟了..."></div>
           <div class="form-group"><label>赖床提醒文案</label><input type="text" id="cfg-nt-overtime-wake" placeholder="{name}，已经赖床 {mins} 分钟了..."></div>
-        </div>
-
-        <div class="config-card">
-          <div class="config-title">📅 日历回顾展示模式</div>
-          <div class="flex-row">
-            <div class="form-group">
-              <select id="cfg-history-type" onchange="toggleHistoryTypeOptions()">
-                <option value="days">最近 X 天</option><option value="month">按月份查看</option>
-              </select>
-            </div>
-            <div class="form-group" id="group-history-days">
-              <select id="cfg-history-days"><option value="7">7 天</option><option value="30">30 天</option><option value="90">90 天</option></select>
-            </div>
-            <div class="form-group" id="group-history-month" style="display: none; gap: 8px;">
-              <select id="cfg-history-year"></select>
-              <select id="cfg-history-month"></select>
-            </div>
-          </div>
         </div>
       </div>
 
       <!-- Tab 4: 互动文案 -->
       <div class="tab-content" id="tab-msgs">
         <div class="config-card">
-          <div class="config-title">👑 <span id="cfg-msg-master-title">先生</span> 的弹窗文案</div>
+          <div class="config-title">👑 <span id="cfg-msg-master-title">主人</span> 的弹窗文案</div>
           <div class="msg-entry-list">
             <button class="msg-entry-btn" onclick="openSubMsg('master_sleep_success', '休息(达标)')">
               <span class="msg-entry-title">休息(达标)</span><span class="msg-entry-count" id="cnt_master_sleep_success">0 条</span>
@@ -395,7 +410,7 @@
         </div>
 
         <div class="config-card">
-          <div class="config-title doggy-title">🎀 <span id="cfg-msg-doggy-title">宝宝</span> 的弹窗文案</div>
+          <div class="config-title doggy-title">🎀 <span id="cfg-msg-doggy-title">小狗</span> 的弹窗文案</div>
           <div class="msg-entry-list">
             <button class="msg-entry-btn" onclick="openSubMsg('doggy_sleep_success', '睡觉(达标)')">
               <span class="msg-entry-title">睡觉(达标)</span><span class="msg-entry-count" id="cnt_doggy_sleep_success">0 条</span>
@@ -413,7 +428,7 @@
         </div>
       </div>
 
-      <!-- Tab 5: 数据与同步 -->
+      <!-- Tab 5: 数据同步 -->
       <div class="tab-content" id="tab-data">
         <div class="config-card">
           <div class="config-title">🛠️ 打卡记录修正</div>
@@ -434,14 +449,14 @@
         </div>
 
         <div class="config-card">
-          <div class="config-title">☁️ GitHub 云端同步 (数据仓库)</div>
+          <div class="config-title">☁️ GitHub 云端同步</div>
           <div class="mode-tip" style="margin-bottom: 12px;">
-            推荐使用<b>双仓库分离</b>方案：网页代码放一个仓库，生成的 JSON 数据放另一个<b>私有仓库</b>。此处请填写<b>数据仓库</b>的信息，模式/身份等本地设置不上传。
+            提示：如果文件放在<b>主目录</b>，路径填 <code>records.json</code>；<br>如果放在 <code>data</code> 文件夹里，填 <code>data/records.json</code>。
           </div>
           <div class="form-group"><label>用户名</label><input type="text" id="gh-user" placeholder="yourname"></div>
           <div class="form-group"><label>数据仓库名称</label><input type="text" id="gh-repo" placeholder="dawn-duo-data"></div>
           <div class="form-group"><label>文件路径</label><input type="text" id="gh-path" placeholder="data/records.json"></div>
-          <div class="form-group"><label>Personal Access Token (细粒度)</label><input type="password" id="gh-token" placeholder="github_pat_xxx"></div>
+          <div class="form-group"><label>Personal Access Token</label><input type="password" id="gh-token" placeholder="github_pat_xxx"></div>
           <div class="flex-row" style="margin-top: 16px;">
             <button class="btn outline" onclick="syncFromGitHub()" style="flex:1;">⬇️ 立即拉取</button>
             <button class="btn primary" onclick="saveToGitHub()" style="flex:1;">⬆️ 立即上传</button>

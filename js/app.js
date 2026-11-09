@@ -17,30 +17,29 @@ function deepMerge(base, override) {
 
 function migrateConfigs(raw) {
   if (!raw || typeof raw !== 'object') return {};
-  if (raw.configVersion >= 4) return raw;
+  if (raw.configVersion >= 7) return raw;
   
   const out = Object.assign({}, raw);
-  out.configVersion = 4;
+  out.configVersion = 7;
   
   if (out.timeZones && typeof out.timeZones.master === 'string') {
-    out.timeZones = { 
-      master: { type: 'iana', value: out.timeZones.master }, 
-      doggy: { type: 'iana', value: out.timeZones.doggy } 
-    };
+    out.timeZones = { master: { type: 'iana', value: out.timeZones.master }, doggy: { type: 'iana', value: out.timeZones.doggy } };
   }
-  
   if (!out.profiles) out.profiles = { daily: {}, service: {} };
   const oldNotifyTexts = out.notifySettings && out.notifySettings.texts ? out.notifySettings.texts : null;
-  
   if (oldNotifyTexts) {
-    if (!out.profiles.daily.notifyTexts) {
-      out.profiles.daily.notifyTexts = Object.assign({}, DEFAULT_NOTIFY_TEXTS.daily, oldNotifyTexts);
-    }
-    if (!out.profiles.service.notifyTexts) {
-      out.profiles.service.notifyTexts = Object.assign({}, DEFAULT_NOTIFY_TEXTS.service);
-    }
+    if (!out.profiles.daily.notifyTexts) out.profiles.daily.notifyTexts = Object.assign({}, DEFAULT_NOTIFY_TEXTS.daily, oldNotifyTexts);
+    if (!out.profiles.service.notifyTexts) out.profiles.service.notifyTexts = Object.assign({}, DEFAULT_NOTIFY_TEXTS.service);
     delete out.notifySettings.texts; 
   }
+  if (out.showLogicalDate === undefined) out.showLogicalDate = true;
+  
+  if (!out.clockLayout) out.clockLayout = 'separate';
+  if (out.showMasterClock === undefined) out.showMasterClock = true;
+  if (out.showDoggyClock === undefined) out.showDoggyClock = true;
+  if (out.showSeconds === undefined) out.showSeconds = true;
+  if (out.showShichen === undefined) out.showShichen = false;
+  if (out.showWellness === undefined) out.showWellness = false;
   return out;
 }
 
@@ -123,6 +122,21 @@ function checkGoal(user, type, timeStr) {
   return tMins <= gMins;
 }
 
+function getDeviceInfo() {
+  const ua = navigator.userAgent;
+  if (/iPhone|iPad|iPod/i.test(ua)) return 'iOS Device';
+  if (/Android/i.test(ua)) return 'Android Device';
+  if (/Macintosh|Mac OS X/i.test(ua)) return 'Mac';
+  if (/Windows/i.test(ua)) return 'Windows PC';
+  if (/Linux/i.test(ua)) return 'Linux';
+  return 'Unknown Device';
+}
+
+function getShichenInfo(hour) {
+  let index = Math.floor((hour + 1) / 2) % 12;
+  return SHICHEN_DATA[index];
+}
+
 let toastTimer;
 function showToast(msg, type = 'success') {
   const toast = document.getElementById('toast');
@@ -133,6 +147,21 @@ function showToast(msg, type = 'success') {
   toastTimer = setTimeout(() => toast.classList.remove('show'), 2500 + msg.length * 120);
 }
 
+// ================= 开关联动逻辑 =================
+window.handleShichenToggle = function() {
+  const shichenChecked = document.getElementById('cfg-show-shichen').checked;
+  if (!shichenChecked) {
+    document.getElementById('cfg-show-wellness').checked = false;
+  }
+};
+
+window.handleWellnessToggle = function() {
+  const wellnessChecked = document.getElementById('cfg-show-wellness').checked;
+  if (wellnessChecked) {
+    document.getElementById('cfg-show-shichen').checked = true;
+  }
+};
+
 // ================= 通知核心逻辑 =================
 let lastNotifyCheck = 0;
 
@@ -142,16 +171,9 @@ function notificationSupported() {
 
 function sendNotify(key, title, body) {
   try {
-    const n = new Notification(title, {
-      body: body,
-      tag: 'dawn-' + key,
-      requireInteraction: true,
-      silent: false
-    });
+    const n = new Notification(title, { body: body, tag: 'dawn-' + key, requireInteraction: true, silent: false });
     setTimeout(() => { try { n.close(); } catch (e) {} }, 15000);
-  } catch (e) {
-    console.warn('通知发送失败', e);
-  }
+  } catch (e) { console.warn('通知发送失败', e); }
 }
 
 function saveNotifyLog() {
@@ -179,13 +201,20 @@ function checkNotifications() {
   
   const nSettings = configs.notifySettings;
   const nTexts = P().notifyTexts || DEFAULT_NOTIFY_TEXTS.daily;
-  
-  const items = [
-    { key: 'master_sleep', user: 'master', type: 'sleep', tz: configs.timeZones.master, name: mName },
-    { key: 'master_wake', user: 'master', type: 'wake', tz: configs.timeZones.master, name: mName },
-    { key: 'doggy_sleep', user: 'doggy', type: 'sleep', tz: configs.timeZones.doggy, name: dName },
-    { key: 'doggy_wake', user: 'doggy', type: 'wake', tz: configs.timeZones.doggy, name: dName }
-  ];
+
+  let items = [];
+  if (identity === 'master' || identity === 'both') {
+    items.push(
+      { key: 'master_sleep', user: 'master', type: 'sleep', tz: configs.timeZones.master, name: mName },
+      { key: 'master_wake', user: 'master', type: 'wake', tz: configs.timeZones.master, name: mName }
+    );
+  }
+  if (identity === 'doggy' || identity === 'both') {
+    items.push(
+      { key: 'doggy_sleep', user: 'doggy', type: 'sleep', tz: configs.timeZones.doggy, name: dName },
+      { key: 'doggy_wake', user: 'doggy', type: 'wake', tz: configs.timeZones.doggy, name: dName }
+    );
+  }
 
   items.forEach(it => {
     const done = db[it.user]?.[today]?.[it.type]?.done;
@@ -199,7 +228,6 @@ function checkNotifications() {
     if (offset < -720) offset += 1440;
     else if (offset > 720) offset -= 1440;
 
-    // 到达目标时间附近（提前15分钟到迟到15分钟之间，只提醒一次）
     if (offset >= -15 && offset <= 15) {
       if (!notifyLog[it.key]) {
         const body = (nTexts[it.key] || '').replace(/{name}/g, it.name);
@@ -210,11 +238,9 @@ function checkNotifications() {
       return;
     }
 
-    // 超时提醒
     if (nSettings.enableOvertime) {
       let isOvertime = false;
       let overtimeMins = 0;
-
       if (it.type === 'sleep') {
         if (offset > 30 || offset < -720) {
           isOvertime = true;
@@ -230,7 +256,6 @@ function checkNotifications() {
       if (isOvertime) {
         const lastNotifyTs = notifyLog[it.key + '_overtime'] || 0;
         const intervalMs = (nSettings.overtimeInterval || 30) * 60000;
-        
         if (nowTs - lastNotifyTs >= intervalMs) {
           let template = it.type === 'sleep' ? nTexts.overtime_sleep : nTexts.overtime_wake;
           if (!template) {
@@ -260,20 +285,25 @@ window.testNotification = async function() {
 
   const nTexts = P().notifyTexts || DEFAULT_NOTIFY_TEXTS.daily;
   const mName = getPureName(P().texts.masterName) || '主人';
+  const dName = getPureName(P().texts.doggyName) || '小狗';
   
-  let testBody = nTexts.master_sleep ? nTexts.master_sleep.replace(/{name}/g, mName) : '这是一条测试通知。';
-  if (configs.notifySettings.enableOvertime && nTexts.overtime_sleep) {
-    testBody += '\n(若超时会提醒：' + nTexts.overtime_sleep.replace(/{name}/g, mName).replace(/{mins}/g, '45') + ')';
+  let testBody = '';
+  if (identity === 'master') {
+    testBody = nTexts.master_sleep ? nTexts.master_sleep.replace(/{name}/g, mName) : '这是一条测试通知。';
+  } else if (identity === 'doggy') {
+    testBody = nTexts.doggy_sleep ? nTexts.doggy_sleep.replace(/{name}/g, dName) : '这是一条测试通知。';
+  } else {
+    testBody = '这是一条测试通知。当前是滴滴模式，所有打卡都会提醒您。';
+  }
+
+  if (configs.notifySettings.enableOvertime) {
+    let ovText = identity === 'master' ? nTexts.overtime_sleep : (identity === 'doggy' ? nTexts.overtime_sleep : '{name}，已经熬夜 {mins} 分钟了');
+    testBody += '\n(若超时会提醒：' + ovText.replace(/{name}/g, identity === 'master' ? mName : dName).replace(/{mins}/g, '45') + ')';
   }
 
   try {
     const uniqueTag = 'dawn-test-' + Date.now();
-    // 去掉了模式后缀
-    const n = new Notification('🔔 测试通知', {
-      body: testBody,
-      tag: uniqueTag,
-      requireInteraction: true
-    });
+    const n = new Notification('🔔 测试通知', { body: testBody, tag: uniqueTag, requireInteraction: true });
     setTimeout(() => { try { n.close(); } catch (e) {} }, 15000);
     showToast('测试通知已发送 🔔', 'success');
   } catch (e) {
@@ -293,61 +323,7 @@ function updateNotifyStatus() {
   el.textContent = txt;
 }
 
-// ================= 时钟与渲染 =================
-function updateClocks() {
-  try {
-    document.getElementById('time-master').textContent = getTimeInTZ(configs.timeZones.master, { hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' });
-    document.getElementById('date-master').textContent = getTimeInTZ(configs.timeZones.master, { month: 'long', day: 'numeric', weekday: 'short' });
-    document.getElementById('time-doggy').textContent = getTimeInTZ(configs.timeZones.doggy, { hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' });
-    document.getElementById('date-doggy').textContent = getTimeInTZ(configs.timeZones.doggy, { month: 'long', day: 'numeric', weekday: 'short' });
-
-    let diffHours = '--';
-    const offset1 = getUTC_Offset(configs.timeZones.master);
-    const offset2 = getUTC_Offset(configs.timeZones.doggy);
-    let diff = Math.abs(offset1 - offset2);
-    diffHours = Math.round(diff * 10) / 10;
-    if (diffHours % 1 === 0) diffHours = diffHours.toString();
-
-    let daysTogether = 0;
-    const annDate = new Date(configs.anniversary);
-    const currDate = new Date(getLogicalDateStr());
-    const d = Math.ceil(Math.abs(currDate - annDate) / (1000 * 60 * 60 * 24));
-    if (Number.isFinite(d)) daysTogether = d;
-
-    document.getElementById('diff-text').innerHTML = `相隔 <span>${diffHours}</span> 小时 · 契约已绑定 <span>${daysTogether}</span> 天 💗`;
-
-    const currentLogicalDate = getLogicalDateStr();
-    if (currentLogicalDate !== lastLogicalDate) {
-      lastLogicalDate = currentLogicalDate;
-      render();
-    }
-
-    const dateObj = new Date(lastLogicalDate);
-    if (!isNaN(dateObj.getTime())) {
-      document.getElementById('logical-date-display').textContent = `契约日: ${dateObj.getMonth()+1}月${dateObj.getDate()}日`;
-    }
-    
-    if (localStorage.getItem('dawn-duo-theme-locked') !== 'true') {
-      try {
-        const hourStr = getTimeInTZ(configs.timeZones.master, { hour: 'numeric', hourCycle: 'h23' });
-        const hour = parseInt(hourStr, 10);
-        if (!isNaN(hour)) {
-          const targetTheme = (hour >= 6 && hour < 18) ? 'light' : 'dark';
-          if (document.documentElement.getAttribute('data-theme') !== targetTheme) {
-            document.documentElement.setAttribute('data-theme', targetTheme);
-            const btn = document.getElementById('theme-toggle');
-            if (btn) btn.textContent = targetTheme === 'dark' ? '🌙' : '☀️';
-          }
-        }
-      } catch (e) {}
-    }
-
-    checkNotifications();
-  } catch(e) { console.warn("时钟更新异常", e); }
-}
-setInterval(updateClocks, 1000);
-updateClocks();
-
+// ================= 打卡与渲染 =================
 window.toggle = function(user, type) {
   const today = getLogicalDateStr();
   if (!db[user]) db[user] = {};
@@ -364,6 +340,12 @@ window.toggle = function(user, type) {
   record.done = true;
   record.time = formatCheckinTime(configs.timeZones[user]);
   record.ontime = checkGoal(user, type, record.time);
+  
+  record.meta = {
+    timestamp: Date.now(),
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    device: getDeviceInfo()
+  };
 
   const status = record.ontime ? 'success' : 'late';
   const pool = P().msgPool || {};
@@ -383,7 +365,6 @@ function saveLocalData() {
 function render() {
   try {
     const today = getLogicalDateStr();
-    
     let total = 0;
     for (const u of ['master', 'doggy']) {
       if (db[u]) {
@@ -422,7 +403,6 @@ function render() {
         }
       });
     });
-
     renderHistory();
   } catch(e) { console.warn('渲染异常', e); }
 }
@@ -503,6 +483,149 @@ function createDayBox(dateStr, showDateText = false) {
   return el;
 }
 
+// ================= 时钟与养生渲染 =================
+function updateClocks() {
+  try {
+    const container = document.getElementById('clock-container');
+    const cardMaster = document.getElementById('clock-card-master');
+    const cardDoggy = document.getElementById('clock-card-doggy');
+    
+    container.className = 'grid-clocks'; 
+    
+    const isMasterIdentity = (identity === 'master' || identity === 'both');
+    const isDoggyIdentity = (identity === 'doggy' || identity === 'both');
+    
+    const showM = configs.showMasterClock && isMasterIdentity;
+    const showD = configs.showDoggyClock && isDoggyIdentity;
+    
+    if (!showM && !showD) {
+      container.style.display = 'none';
+    } else {
+      container.style.display = '';
+      cardMaster.style.display = showM ? '' : 'none';
+      cardDoggy.style.display = showD ? '' : 'none';
+      
+      if (configs.clockLayout === 'merge') {
+        container.classList.add('merge-layout');
+        if (showM && showD) {
+          cardMaster.style.borderRadius = '20px 0 0 20px';
+          cardMaster.style.borderRight = 'none';
+          cardDoggy.style.borderRadius = '0 20px 20px 0';
+        } else if (showM && !showD) {
+          cardMaster.style.borderRadius = '20px';
+          cardMaster.style.borderRight = '1px solid var(--border)';
+        } else if (!showM && showD) {
+          cardDoggy.style.borderRadius = '20px';
+        }
+      } else {
+        container.classList.remove('merge-layout');
+        if (!showM && showD) container.style.gridTemplateColumns = '1fr';
+        else if (showM && !showD) container.style.gridTemplateColumns = '1fr';
+        else container.style.gridTemplateColumns = '1fr 1fr';
+      }
+    }
+
+    const timeOpts = { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' };
+    if (configs.showSeconds) timeOpts.second = '2-digit';
+    
+    let infoM = null, infoD = null;
+    
+    if (showM) {
+      const nowM = getTimeInTZ(configs.timeZones.master, timeOpts);
+      document.getElementById('time-master').textContent = nowM;
+      document.getElementById('date-master').textContent = getTimeInTZ(configs.timeZones.master, { month: 'long', day: 'numeric', weekday: 'short' });
+      
+      if (configs.showShichen) {
+        const hM = parseInt(nowM.split(':')[0], 10);
+        infoM = getShichenInfo(isNaN(hM) ? 0 : hM);
+        const sM = document.getElementById('shichen-master');
+        sM.style.display = 'inline-block';
+        sM.textContent = `${infoM.name} (${infoM.organ})`;
+      } else {
+        document.getElementById('shichen-master').style.display = 'none';
+      }
+    }
+
+    if (showD) {
+      const nowD = getTimeInTZ(configs.timeZones.doggy, timeOpts);
+      document.getElementById('time-doggy').textContent = nowD;
+      document.getElementById('date-doggy').textContent = getTimeInTZ(configs.timeZones.doggy, { month: 'long', day: 'numeric', weekday: 'short' });
+      
+      if (configs.showShichen) {
+        const hD = parseInt(nowD.split(':')[0], 10);
+        infoD = getShichenInfo(isNaN(hD) ? 0 : hD);
+        const sD = document.getElementById('shichen-doggy');
+        sD.style.display = 'inline-block';
+        sD.textContent = `${infoD.name} (${infoD.organ})`;
+      } else {
+        document.getElementById('shichen-doggy').style.display = 'none';
+      }
+    }
+
+    const wellnessPanel = document.getElementById('wellness-panel');
+    const wellnessText = document.getElementById('wellness-text');
+    
+    if (configs.showShichen && configs.showWellness && (infoM || infoD)) {
+      let html = '';
+      if (showM && infoM) {
+        html += `<div class="wellness-item"><span>🌿</span> <strong>${infoM.name}</strong> (${infoM.time}) · <strong>${infoM.organ}经</strong>当令 <span class="wellness-msg">${infoM.msg}</span></div>`;
+      }
+      if (showD && infoD) {
+        html += `<div class="wellness-item is-doggy"><span>🍃</span> <strong>${infoD.name}</strong> (${infoD.time}) · <strong>${infoD.organ}经</strong>当令 <span class="wellness-msg">${infoD.msg}</span></div>`;
+      }
+      wellnessText.innerHTML = html;
+      wellnessPanel.style.display = 'flex';
+    } else {
+      wellnessPanel.style.display = 'none';
+    }
+
+    let diffHours = '--';
+    const offset1 = getUTC_Offset(configs.timeZones.master);
+    const offset2 = getUTC_Offset(configs.timeZones.doggy);
+    let diff = Math.abs(offset1 - offset2);
+    diffHours = Math.round(diff * 10) / 10;
+    if (diffHours % 1 === 0) diffHours = diffHours.toString();
+
+    let daysTogether = 0;
+    const annDate = new Date(configs.anniversary);
+    const currDate = new Date(getLogicalDateStr());
+    const d = Math.ceil(Math.abs(currDate - annDate) / (1000 * 60 * 60 * 24));
+    if (Number.isFinite(d)) daysTogether = d;
+
+    document.getElementById('diff-text').innerHTML = `相隔 <span>${diffHours}</span> 小时 · 契约已绑定 <span>${daysTogether}</span> 天 💗`;
+
+    const currentLogicalDate = getLogicalDateStr();
+    if (currentLogicalDate !== lastLogicalDate) {
+      lastLogicalDate = currentLogicalDate;
+      render();
+    }
+
+    const dateObj = new Date(lastLogicalDate);
+    if (!isNaN(dateObj.getTime())) {
+      document.getElementById('logical-date-display').textContent = `契约日: ${dateObj.getMonth()+1}月${dateObj.getDate()}日`;
+    }
+    
+    if (localStorage.getItem('dawn-duo-theme-locked') !== 'true') {
+      try {
+        const hourStr = getTimeInTZ(configs.timeZones.master, { hour: 'numeric', hourCycle: 'h23' });
+        const hour = parseInt(hourStr, 10);
+        if (!isNaN(hour)) {
+          const targetTheme = (hour >= 6 && hour < 18) ? 'light' : 'dark';
+          if (document.documentElement.getAttribute('data-theme') !== targetTheme) {
+            document.documentElement.setAttribute('data-theme', targetTheme);
+            const btn = document.getElementById('theme-toggle');
+            if (btn) btn.textContent = targetTheme === 'dark' ? '🌙' : '☀️';
+          }
+        }
+      } catch (e) {}
+    }
+
+    checkNotifications();
+  } catch(e) { console.warn("时钟更新异常", e); }
+}
+setInterval(updateClocks, 1000);
+updateClocks();
+
 // ================= 主题、身份与设置逻辑 =================
 window.toggleTheme = function() {
   const html = document.documentElement;
@@ -547,12 +670,17 @@ function applyIdentity() {
     if (!showM || !showD) grid.classList.add('single');
     else grid.classList.remove('single');
   }
+  
+  updateClocks(); 
 }
 
 window.chooseIdentity = function(id) {
   if (['master', 'doggy', 'both'].indexOf(id) === -1) return;
   identity = id;
   try { localStorage.setItem(IDENTITY_KEY, id); } catch (e) {}
+  
+  document.documentElement.classList.remove('no-identity');
+  
   const modal = document.getElementById('identity-modal');
   if (modal) modal.classList.remove('show');
   document.body.style.overflow = '';
@@ -569,7 +697,10 @@ function initIdentity() {
   if (!identity) {
     const modal = document.getElementById('identity-modal');
     if (modal) { modal.classList.add('show'); document.body.style.overflow = 'hidden'; }
-  } else { applyIdentity(); }
+  } else {
+    document.documentElement.classList.remove('no-identity');
+    applyIdentity(); 
+  }
 }
 
 window.switchTab = function(e, tabId) {
@@ -612,11 +743,20 @@ function updateModeCards() {
     'label-tz-master-iana': `${masterTitle} 所在时区`, 'label-tz-doggy-iana': `${doggyTitle} 所在时区`,
     'label-tz-master-offset': `${masterTitle} 时差`, 'label-tz-doggy-offset': `${doggyTitle} 时差`,
     'label-goal-master-sleep': `${masterTitle}休息目标`, 'label-goal-master-wake': `${masterTitle}起床目标`,
-    'label-goal-doggy-sleep': `${doggyTitle}睡觉目标`, 'label-goal-doggy-wake': `${doggyTitle}起床目标`
+    'label-goal-doggy-sleep': `${doggyTitle}睡觉目标`, 'label-goal-doggy-wake': `${doggyTitle}起床目标`,
+    'label-nt-master-sleep': `${masterTitle} - 休息提醒`, 'label-nt-master-wake': `${masterTitle} - 起床提醒`,
+    'label-nt-doggy-sleep': `${doggyTitle} - 睡觉提醒`, 'label-nt-doggy-wake': `${doggyTitle} - 起床提醒`
   };
   for (const [id, text] of Object.entries(idsToUpdate)) {
     const el = document.getElementById(id); if (el) el.textContent = text;
   }
+  
+  const t = P().texts || DEFAULT_TEXTS_DAILY;
+  const dIcon = document.getElementById('mode-icon-daily');
+  const sIcon = document.getElementById('mode-icon-service');
+  if (dIcon) dIcon.textContent = t.dailyModeIcon || '💕';
+  if (sIcon) sIcon.textContent = t.serviceModeIcon || '🐕';
+  
   updateIdentityLabels(); updateIdentityCards();
 }
 
@@ -643,6 +783,9 @@ function fillTextInputs() {
   document.getElementById('cfg-master-wake-btn').value = t.masterWakeBtn || '';
   document.getElementById('cfg-doggy-sleep-btn').value = t.doggySleepBtn || '';
   document.getElementById('cfg-doggy-wake-btn').value = t.doggyWakeBtn || '';
+  
+  document.getElementById('cfg-icon-daily').value = t.dailyModeIcon || '💕';
+  document.getElementById('cfg-icon-service').value = t.serviceModeIcon || '🐕';
   
   const n = configs.notifySettings;
   document.getElementById('cfg-notify-overtime').checked = n.enableOvertime;
@@ -725,6 +868,14 @@ window.openSettings = function() {
     document.getElementById('cfg-notifications').checked = configs.notifications === true;
     document.getElementById('cfg-anniversary').value = configs.anniversary;
     document.getElementById('cfg-show-history').checked = configs.showHistory === true;
+    document.getElementById('cfg-show-logical-date').checked = configs.showLogicalDate !== false;
+
+    document.getElementById('cfg-clock-layout').value = configs.clockLayout;
+    document.getElementById('cfg-show-master-clock').checked = configs.showMasterClock;
+    document.getElementById('cfg-show-doggy-clock').checked = configs.showDoggyClock;
+    document.getElementById('cfg-show-seconds').checked = configs.showSeconds;
+    document.getElementById('cfg-show-shichen').checked = configs.showShichen;
+    document.getElementById('cfg-show-wellness').checked = configs.showWellness;
 
     document.getElementById('cfg-tz-master-type').value = configs.timeZones.master.type || 'iana';
     document.getElementById('cfg-tz-doggy-type').value = configs.timeZones.doggy.type || 'iana';
@@ -816,8 +967,15 @@ function applyConfigsToPage() {
     document.getElementById('master-goal-text').textContent = `目标: ${gm.sleep || '--:--'} / ${gm.wake || '--:--'}`;
     document.getElementById('doggy-goal-text').textContent = `目标: ${gd.sleep || '--:--'} / ${gd.wake || '--:--'}`;
 
+    const logicalDateEl = document.getElementById('logical-date-display');
+    if (configs.showLogicalDate) {
+      logicalDateEl.style.display = 'inline-block';
+    } else {
+      logicalDateEl.style.display = 'none';
+    }
+
     document.body.classList.toggle('simple-mode', configs.simpleMode);
-    applyColors(); updateIdentityLabels(); applyIdentity();
+    applyColors(); updateIdentityLabels(); updateModeCards(); applyIdentity();
   } catch(e) { console.warn('应用配置异常', e); }
 }
 
@@ -880,7 +1038,9 @@ window.saveSettings = function() {
       masterSleepBtn: document.getElementById('cfg-master-sleep-btn').value.trim() || (configs.mode === 'service' ? '主人休息' : '先生休息'),
       masterWakeBtn: document.getElementById('cfg-master-wake-btn').value.trim() || (configs.mode === 'service' ? '主人起床' : '先生起床'),
       doggySleepBtn: document.getElementById('cfg-doggy-sleep-btn').value.trim() || (configs.mode === 'service' ? '小狗睡觉' : '宝宝睡觉'),
-      doggyWakeBtn: document.getElementById('cfg-doggy-wake-btn').value.trim() || (configs.mode === 'service' ? '小狗起床' : '宝宝起床')
+      doggyWakeBtn: document.getElementById('cfg-doggy-wake-btn').value.trim() || (configs.mode === 'service' ? '小狗起床' : '宝宝起床'),
+      dailyModeIcon: document.getElementById('cfg-icon-daily').value.trim() || '💕',
+      serviceModeIcon: document.getElementById('cfg-icon-service').value.trim() || '🐕'
     };
     prof.colors = {
       master: document.getElementById('cfg-color-master').value || '#38bdf8',
@@ -921,6 +1081,14 @@ window.saveSettings = function() {
 
     configs.simpleMode = document.getElementById('cfg-simple-mode').checked === true;
     configs.showHistory = document.getElementById('cfg-show-history').checked === true;
+    configs.showLogicalDate = document.getElementById('cfg-show-logical-date').checked === true;
+
+    configs.clockLayout = document.getElementById('cfg-clock-layout').value;
+    configs.showMasterClock = document.getElementById('cfg-show-master-clock').checked;
+    configs.showDoggyClock = document.getElementById('cfg-show-doggy-clock').checked;
+    configs.showSeconds = document.getElementById('cfg-show-seconds').checked;
+    configs.showShichen = document.getElementById('cfg-show-shichen').checked;
+    configs.showWellness = document.getElementById('cfg-show-wellness').checked;
 
     const wantNotify = document.getElementById('cfg-notifications').checked === true;
     if (wantNotify) {
@@ -950,7 +1118,7 @@ window.saveSettings = function() {
     configs.historyYear = document.getElementById('cfg-history-year').value || configs.historyYear;
     configs.historyMonth = document.getElementById('cfg-history-month').value || configs.historyMonth;
 
-    configs.configVersion = 4;
+    configs.configVersion = 7;
     try { localStorage.setItem('dawn-duo-configs', JSON.stringify(configs)); } catch (e) { showToast('保存失败', 'late'); }
 
     ghConfig = {
@@ -976,9 +1144,18 @@ try { ghConfig = Object.assign(ghConfig, JSON.parse(localStorage.getItem(CONFIG_
 
 function getSyncableData() {
   const syncableConfig = JSON.parse(JSON.stringify(configs));
+  
   delete syncableConfig.mode;
   delete syncableConfig.simpleMode;
   delete syncableConfig.notifications;
+  delete syncableConfig.showLogicalDate;
+  delete syncableConfig.clockLayout;
+  delete syncableConfig.showMasterClock;
+  delete syncableConfig.showDoggyClock;
+  delete syncableConfig.showSeconds;
+  delete syncableConfig.showShichen;
+  delete syncableConfig.showWellness;
+  
   return { db: db, config: syncableConfig };
 }
 
@@ -992,11 +1169,27 @@ function applySyncData(payload) {
         const localMode = configs.mode;
         const localSimple = configs.simpleMode;
         const localNotify = configs.notifications;
+        const localLogicalDate = configs.showLogicalDate;
+        const localClockLayout = configs.clockLayout;
+        const localShowMasterClock = configs.showMasterClock;
+        const localShowDoggyClock = configs.showDoggyClock;
+        const localShowSeconds = configs.showSeconds;
+        const localShowShichen = configs.showShichen;
+        const localShowWellness = configs.showWellness;
+
         configs = deepMerge(DEFAULT_CONFIGS, payload.config); 
+        
         configs.mode = localMode;
         configs.simpleMode = localSimple;
         configs.notifications = localNotify;
-        configs.configVersion = 4;
+        configs.showLogicalDate = localLogicalDate;
+        configs.clockLayout = localClockLayout;
+        configs.showMasterClock = localShowMasterClock;
+        configs.showDoggyClock = localShowDoggyClock;
+        configs.showSeconds = localShowSeconds;
+        configs.showShichen = localShowShichen;
+        configs.showWellness = localShowWellness;
+        configs.configVersion = 7;
       }
     }
     try { localStorage.setItem('dawn-duo-configs', JSON.stringify(configs)); } catch (e) { }

@@ -1,4 +1,3 @@
-// ================= 默认文案池 =================
 const MSG_DAILY = {
   master: {
     sleep: { success: ["先生休息啦，宝宝也早点睡，晚安好梦 🌙", "先生晚安～今天辛苦了，好好休息哦 💤", "先生睡啦，宝宝把灯关好，明天见 ✨"], late: ["先生今天晚睡了，宝宝有点担心，早点休息呀 🌙", "夜深了先生，别熬太晚，宝宝等你睡觉呢 💤"] },
@@ -102,7 +101,6 @@ const DEFAULT_CONFIGS = {
   historyDays: 30,
   historyYear: '2026',
   historyMonth: '11',
-
   clockLayout: 'separate',
   showMasterClock: true,
   showDoggyClock: true,

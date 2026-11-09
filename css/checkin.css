@@ -1,0 +1,63 @@
+/* 打卡区 */
+.section-title { font-size: 1rem; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.grid-users { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; transition: all 0.3s; }
+.grid-users.single { grid-template-columns: 1fr; max-width: 400px; margin-left: auto; margin-right: auto; width: 100%; }
+
+.partner-status-panel { width: 100%; padding: 14px 20px; border-radius: 14px; font-size: 0.95rem; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: var(--shadow); animation: slideDown 0.4s ease-out; text-align: center; line-height: 1.4; }
+@keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+.partner-status-panel.sleep-status { background: linear-gradient(135deg, rgba(56, 189, 248, 0.15), rgba(56, 189, 248, 0.05)); color: var(--master-color); border: 1px solid rgba(56, 189, 248, 0.3); }
+.partner-status-panel.wake-status { background: linear-gradient(135deg, rgba(244, 114, 182, 0.15), rgba(244, 114, 182, 0.05)); color: var(--doggy-color); border: 1px solid rgba(244, 114, 182, 0.3); }
+
+.user-card { background: var(--card-bg); border-radius: 20px; padding: 32px 16px 20px; border: 1px solid var(--border); box-shadow: var(--shadow); position: relative; overflow: hidden; }
+.role-tag { position: absolute; top: 0; left: 50%; transform: translateX(-50%); font-size: 0.65rem; padding: 4px 12px; border-radius: 0 0 12px 12px; color: white; font-weight: bold; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,0.2); z-index: 2; }
+.master-card .role-tag { background: var(--master-color); }
+.doggy-card .role-tag { background: var(--doggy-color); }
+
+.user-card.read-only { opacity: 0.88; }
+.user-card.read-only::after { content: '👀 只读'; position: absolute; top: 10px; right: 12px; font-size: 0.65rem; background: var(--btn-bg); color: var(--text-muted); padding: 2px 8px; border-radius: 10px; border: 1px solid var(--border); font-weight: 600; pointer-events: none; }
+.user-card.read-only .checkin-btn { cursor: not-allowed; }
+.user-card.read-only .checkin-btn:hover { border-color: var(--border); }
+
+.user-header { text-align: center; margin-bottom: 16px; }
+.user-name { font-size: 1.1rem; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.master-card .user-name { color: var(--master-color); }
+.doggy-card .user-name { color: var(--doggy-color); }
+.user-role { font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; }
+.checkin-group { display: flex; flex-direction: column; gap: 10px; }
+.checkin-btn { background: var(--btn-bg); border: 1px solid var(--border); border-radius: 14px; padding: 14px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: space-between; color: var(--text); }
+.checkin-btn:active:not(:disabled) { transform: scale(0.96); }
+.checkin-btn:hover:not(:disabled) { border-color: var(--tab-active); }
+.checkin-btn:disabled { opacity: 0.85; }
+.btn-left { display: flex; align-items: center; gap: 10px; }
+.btn-icon { font-size: 1.3rem; }
+.btn-label { font-size: 0.9rem; font-weight: 600; }
+.btn-time { font-size: 0.75rem; color: var(--text-muted); background: var(--btn-bg); padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border); }
+.checkin-btn.active { border-color: var(--success); background: rgba(16, 185, 129, 0.05); }
+.checkin-btn.active .btn-time { color: var(--success); border-color: transparent; background: var(--success-bg); font-weight: 600; }
+.checkin-btn.late { border-color: var(--warn); background: rgba(239, 68, 68, 0.05); }
+.checkin-btn.late .btn-time { color: var(--warn); border-color: transparent; background: var(--warn-bg); font-weight: 600; }
+
+/* 统计与热力图 */
+.stat-box { background: var(--card-bg); border-radius: 20px; padding: 20px; border: 1px solid var(--border); display: flex; justify-content: space-around; text-align: center; box-shadow: var(--shadow); margin-bottom: 20px; }
+.stat-item h3 { font-size: 1.8rem; font-weight: 800; color: var(--master-color); }
+.stat-item p { font-size: 0.8rem; color: var(--text-muted); }
+.history-box { background: var(--card-bg); border-radius: 20px; padding: 20px 16px; border: 1px solid var(--border); box-shadow: var(--shadow); display: none; }
+.history-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.history-title { font-size: 0.85rem; color: var(--text-muted); font-weight: 600; }
+.history-scroll { overflow-x: auto; padding-bottom: 8px; display: flex; }
+.history-grid-days { display: flex; gap: 6px; min-width: max-content; }
+.history-grid-days .day-box { width: 24px; height: 24px; border-radius: 6px; font-size: 0.65rem; }
+.history-grid-calendar { display: none; grid-template-columns: repeat(7, 1fr); gap: 6px; width: 100%; max-width: 380px; margin: 0 auto; }
+.calendar-weekday { text-align: center; font-size: 0.75rem; color: var(--text-muted); padding-bottom: 6px; font-weight: 600; }
+.calendar-empty { aspect-ratio: 1; visibility: hidden; }
+.day-box { background: var(--empty-dot); border-radius: 6px; position: relative; display: flex; align-items: center; justify-content: center; color: var(--text-muted); aspect-ratio: 1; cursor: pointer; }
+.day-box.done-master { background: var(--master-color); color: #fff; }
+.day-box.done-doggy { background: var(--doggy-color); color: #fff; }
+.day-box.done-both { background: linear-gradient(135deg, var(--master-color) 50%, var(--doggy-color) 50%); color: #fff; }
+.day-box.half-master { background: var(--master-color); opacity: 0.4; color: #fff; }
+.day-box.half-doggy { background: var(--doggy-color); opacity: 0.4; color: #fff; }
+.day-box.half-both { background: linear-gradient(135deg, var(--master-color) 50%, var(--doggy-color) 50%); opacity: 0.4; color: #fff; }
+.empty-state { text-align: center; color: var(--text-muted); font-size: 0.85rem; padding: 20px 0; font-style: italic; }
+.history-legend { display: flex; gap: 12px; font-size: 0.7rem; color: var(--text-muted); justify-content: center; margin-top: 16px; flex-wrap: wrap;}
+.legend-item { display: flex; align-items: center; gap: 4px; }
+.legend-color { width: 12px; height: 12px; border-radius: 3px; }

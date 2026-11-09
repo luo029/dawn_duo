@@ -1,0 +1,37 @@
+/* 头部 */
+.topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+.brand h1 { font-size: 1.25rem; font-weight: 800; background: linear-gradient(45deg, var(--master-color), var(--doggy-color)); -webkit-background-clip: text; color: transparent; }
+.brand p { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
+.top-actions { display: flex; gap: 8px; }
+
+/* 时差与时钟 */
+.diff-pill { text-align: center; background: var(--card-bg); border: 1px dashed var(--border); padding: 12px; border-radius: 14px; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px; display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 16px; }
+.diff-pill span { color: var(--master-color); font-weight: bold; }
+.logical-date { font-size: 0.75rem; background: var(--btn-bg); padding: 4px 8px; border-radius: 6px; color: var(--doggy-color); border: 1px solid var(--border); display: none; }
+.grid-clocks { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+.clock-card { background: var(--card-bg); border-radius: 20px; padding: 16px; text-align: center; border: 1px solid var(--border); position: relative; overflow: hidden; box-shadow: var(--shadow); }
+.clock-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px; }
+.clock-card.master::before { background: var(--master-color); }
+.clock-card.doggy::before { background: var(--doggy-color); }
+.clock-city { font-size: 0.8rem; color: var(--text-muted); font-weight: 600; }
+.clock-time { 
+  font-family: 'DIN Alternate', 'Bahnschrift', 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 2.2rem; font-weight: 900; letter-spacing: 1px; margin: 4px 0; font-variant-numeric: tabular-nums; 
+}
+.clock-date { font-size: 0.8rem; color: var(--text-muted); }
+
+.grid-clocks.merge-layout { display: flex; justify-content: center; align-items: stretch; gap: 0; }
+.grid-clocks.merge-layout .clock-card { border-radius: 0; flex: 1; box-shadow: none; border: 1px solid var(--border); padding: 20px 10px; margin: 0; }
+.grid-clocks.merge-layout .clock-card.master { border-radius: 20px 0 0 20px; border-right: none; }
+.grid-clocks.merge-layout .clock-card.doggy { border-radius: 0 20px 20px 0; }
+.grid-clocks.merge-layout .clock-time { font-size: 1.8rem; }
+
+.shichen-badge { display: inline-block; font-size: 0.75rem; background: var(--btn-bg); color: var(--master-color); padding: 4px 10px; border-radius: 10px; border: 1px solid var(--border); margin-top: 8px; font-weight: 600; }
+.clock-card.doggy .shichen-badge { color: var(--doggy-color); }
+
+.wellness-box { background: linear-gradient(135deg, rgba(56,189,248,0.06), rgba(244,114,182,0.06)); border: 1px solid var(--border); border-radius: 16px; padding: 16px 20px; margin-top: 12px; margin-bottom: 24px; display: flex; flex-direction: column; gap: 10px; align-items: center; justify-content: center; text-align: center; box-shadow: var(--shadow); position: relative; overflow: hidden; }
+.wellness-box::before { content: ''; position: absolute; top:0; left:0; right:0; height: 3px; background: linear-gradient(90deg, var(--master-color), var(--doggy-color)); opacity: 0.6; }
+.wellness-item { font-size: 0.85rem; color: var(--text); line-height: 1.7; display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap; }
+.wellness-item strong { color: var(--master-color); font-weight: 800; font-size: 0.9rem; }
+.wellness-item.is-doggy strong { color: var(--doggy-color); }
+.wellness-msg { color: var(--text-muted); }

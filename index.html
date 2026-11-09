@@ -19,11 +19,20 @@
     } catch(e){}
   })();
 </script>
-<link rel="stylesheet" href="css/style.css">
+<!-- ================= 样式模块化引入 ================= -->
+<link rel="stylesheet" href="css/variables.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/custom-select.css">
+<link rel="stylesheet" href="css/setup.css">
+<link rel="stylesheet" href="css/layout.css">
+<link rel="stylesheet" href="css/checkin.css">
+<link rel="stylesheet" href="css/modal.css">
+<link rel="stylesheet" href="css/responsive.css">
 </head>
 <body>
 
-<!-- 1. 项圈解锁验证层 (默认隐藏，由 JS 决定是否显示) -->
+<!-- ================= 模块 1: 项圈解锁验证层 ================= -->
 <div class="setup-overlay" id="setup-overlay">
   <div class="setup-box">
     <div class="setup-emoji">🔗</div>
@@ -34,7 +43,6 @@
       <input type="password" id="setup-token" placeholder="粘贴主人的印记 (github_pat_...)" autocomplete="off">
     </div>
     
-    <!-- 进度条区域 -->
     <div class="progress-area" id="setup-progress-area">
       <div class="progress-bar-wrap">
         <div class="progress-bar" id="setup-progress-bar"></div>
@@ -46,7 +54,7 @@
   </div>
 </div>
 
-<!-- 2. 身份选择层 (Token 验证通过后显示) -->
+<!-- ================= 模块 2: 身份选择层 ================= -->
 <div class="identity-overlay" id="identity-modal">
   <div class="identity-box">
     <h2>你是谁呀？</h2>
@@ -80,8 +88,9 @@
   </div>
 </div>
 
-<!-- 3. 主界面 -->
+<!-- ================= 模块 3: 主界面 ================= -->
 <div class="wrap" id="main-wrap" style="display: none;">
+  <!-- 3.1 头部 -->
   <header class="topbar">
     <div class="brand">
       <h1 id="display-title">☀️ 契约</h1>
@@ -93,11 +102,13 @@
     </div>
   </header>
 
+  <!-- 3.2 时差栏 -->
   <div class="diff-pill">
     <span>相隔 <span id="diff-hours">--</span> 小时 · 契约已绑定 <span id="days-together">0</span> 天 💗</span>
     <span class="logical-date" id="logical-date-display">--</span>
   </div>
 
+  <!-- 3.3 时钟模块 -->
   <div class="grid-clocks" id="clock-container">
     <div class="clock-card master" id="clock-card-master">
       <div class="clock-city" id="master-city-text">📍 先生</div>
@@ -113,13 +124,13 @@
     </div>
   </div>
   
+  <!-- 3.4 养生模块 -->
   <div id="wellness-panel" class="wellness-box" style="display:none;">
     <div id="wellness-text"></div>
   </div>
 
+  <!-- 3.5 打卡模块 -->
   <div class="section-title">🔗 今日契约打卡</div>
-  
-  <!-- 独立对方状态栏 -->
   <div class="partner-status-panel" id="partner-status-panel" style="display:none;"></div>
 
   <div class="grid-users" id="grid-users">
@@ -160,6 +171,7 @@
     </div>
   </div>
 
+  <!-- 3.6 统计与历史 -->
   <div class="section-title">📊 契约统计</div>
   <div class="stat-box">
     <div class="stat-item">
@@ -192,7 +204,7 @@
 
 <div id="toast"></div>
 
-<!-- 设置弹窗 Modal -->
+<!-- ================= 模块 4: 设置弹窗 ================= -->
 <div class="modal-overlay" id="settings-modal">
   <div class="modal">
     <div class="modal-head">
@@ -209,6 +221,7 @@
     </div>
 
     <div class="modal-body">
+      <!-- 面板 4.1 基础外观 -->
       <div class="tab-content active" id="tab-general">
         <div class="config-card">
           <div class="config-title">🪪 身份与版本模式</div>
@@ -293,6 +306,7 @@
         </div>
       </div>
 
+      <!-- 面板 4.2 时钟养生 -->
       <div class="tab-content" id="tab-clock">
         <div class="config-card">
           <div class="config-title">🕰️ 时钟显示设置</div>
@@ -322,6 +336,7 @@
         </div>
       </div>
 
+      <!-- 面板 4.3 作息打卡 -->
       <div class="tab-content" id="tab-rules">
         <div class="config-card">
           <div class="config-title">⏰ 目标时间与日历</div>
@@ -472,6 +487,7 @@
         </div>
       </div>
 
+      <!-- 面板 4.4 互动文案 -->
       <div class="tab-content" id="tab-msgs">
         <div class="config-card">
           <div class="config-title">👑 <span id="cfg-msg-master-title">主人</span> 的弹窗文案</div>
@@ -510,6 +526,7 @@
         </div>
       </div>
 
+      <!-- 面板 4.5 数据同步 -->
       <div class="tab-content" id="tab-data">
         <div class="config-card">
           <div class="config-title">🛠️ 打卡记录修正 (点击切换状态)</div>
@@ -558,7 +575,7 @@
   </div>
 </div>
 
-<!-- 二级文案编辑 Modal -->
+<!-- ================= 模块 5: 二级弹窗 ================= -->
 <div class="sub-modal" id="sub-modal">
   <div class="sub-modal-box">
     <div class="sub-modal-head">
@@ -574,7 +591,6 @@
   </div>
 </div>
 
-<!-- 自定义美化时间输入 Modal -->
 <div class="sub-modal" id="custom-time-modal">
   <div class="sub-modal-box" style="max-width:320px;">
     <div class="sub-modal-head">
@@ -595,16 +611,13 @@
   </div>
 </div>
 
-<!-- 同步 Diff 弹窗 -->
 <div class="sub-modal" id="diff-modal">
   <div class="sub-modal-box diff-modal-box">
     <div class="sub-modal-head">
       <h3 id="diff-modal-title">同步差异对比</h3>
       <button class="close-btn" onclick="closeDiffModal()">✕</button>
     </div>
-    <div class="diff-scroll" id="diff-content">
-      <!-- 动态填充 -->
-    </div>
+    <div class="diff-scroll" id="diff-content"></div>
     <div class="sub-modal-foot">
       <button class="btn outline" onclick="closeDiffModal()">取消</button>
       <button class="btn primary" id="diff-confirm-btn" onclick="confirmSyncDiff()">确认同步</button>
@@ -612,7 +625,18 @@
   </div>
 </div>
 
+<!-- ================= JS 模块化引入 (严格顺序) ================= -->
 <script src="js/data.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/config.js"></script>
+<script src="js/notify.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/clock.js"></script>
+<script src="js/checkin.js"></script>
+<script src="js/settings.js"></script>
+<script src="js/sync.js"></script>
+<script src="js/export.js"></script>
+<script src="js/custom-select.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

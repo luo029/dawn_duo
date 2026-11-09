@@ -1,0 +1,52 @@
+/* Toast */
+#toast { position: fixed; top: 30px; left: 50%; transform: translateX(-50%) translateY(-30px) scale(0.9); background: var(--card-bg); color: var(--text); padding: 14px 24px; border-radius: 24px; border: 1px solid var(--border); box-shadow: 0 12px 40px rgba(0,0,0,0.3); font-size: 0.95rem; font-weight: 700; opacity: 0; pointer-events: none; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 999; text-align: center; max-width: 90vw; word-break: break-all; }
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+#toast.success { border-color: var(--doggy-color); color: var(--doggy-color); box-shadow: 0 8px 30px rgba(244, 114, 182, 0.15); }
+#toast.late { border-color: var(--warn); color: var(--warn); box-shadow: 0 8px 30px var(--warn-bg); }
+
+/* 极简模式 */
+body.simple-mode .grid-clocks, body.simple-mode .diff-pill, body.simple-mode .stat-box, body.simple-mode .history-box, body.simple-mode .section-title, body.simple-mode .brand p, body.simple-mode .wellness-box { display: none !important; }
+body.simple-mode .wrap { padding-top: 40px; }
+body.simple-mode .grid-users { margin-top: 20px; }
+body.simple-mode .user-card { padding: 30px 20px; }
+
+/* 手机端适配 */
+@media (max-width: 600px) {
+  .wrap { padding: 16px 12px; }
+  .topbar { margin-bottom: 16px; }
+  .grid-clocks { grid-template-columns: 1fr; gap: 10px; }
+  .grid-clocks.merge-layout { flex-direction: column; }
+  .grid-clocks.merge-layout .clock-card.master { border-radius: 20px 20px 0 0; border-right: 1px solid var(--border); border-bottom: none; }
+  .grid-clocks.merge-layout .clock-card.doggy { border-radius: 0 0 20px 20px; }
+  .clock-time { font-size: 2.2rem; }
+  .grid-users { grid-template-columns: 1fr; gap: 20px; }
+  .grid-users.single { max-width: 100%; padding: 0 10px; } 
+  .user-card { padding: 32px 16px 20px; border-radius: 24px; }
+  .stat-box { padding: 16px; }
+  .diff-pill { flex-direction: column; gap: 8px; padding: 12px; font-size: 0.8rem; }
+  .flex-row { flex-direction: column; gap: 0; }
+  .msg-entry-list { grid-template-columns: 1fr; }
+  .modal { border-radius: 20px; }
+  .modal-body { padding: 12px; }
+  .config-card { padding: 12px; }
+  .history-grid-calendar { gap: 4px; }
+  .history-grid-days .day-box { width: 22px; height: 22px; }
+  .identity-card { padding: 16px; gap: 12px; }
+  .id-emoji { font-size: 1.7rem; }
+  .id-pill { padding: 8px 4px; font-size: 0.75rem; gap: 4px; }
+  .id-pill-emoji { font-size: 0.95rem; }
+  .checkin-btn { padding: 16px 14px; }
+  .wellness-box { padding: 12px; margin-bottom: 16px; }
+  .wellness-item { font-size: 0.8rem; flex-direction: column; gap: 4px; }
+  .diff-summary { padding: 10px; gap: 6px; }
+  .diff-stat { font-size: 0.72rem; padding: 3px 8px; }
+}
+
+@media print {
+  body { background: white !important; color: black !important; }
+  .top-actions, .modal-overlay, #toast, .sub-modal, .btn, .checkin-group, .diff-pill, .grid-clocks, .section-title, .stat-box, .identity-overlay, .wellness-box, .partner-status-panel, .setup-overlay { display: none !important; }
+  .wrap { max-width: 100%; padding: 0; }
+  .history-box { border: none; box-shadow: none; padding: 0; display: block !important; }
+  .user-card { border-color: #ccc; }
+  .day-box { color: black !important; }
+}

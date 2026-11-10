@@ -14,8 +14,13 @@ window.exportCSV = function() {
         for (const t of ['sleep', 'wake']) {
           const rec = db[u][d]?.[t];
           if (rec && rec.done) {
-            rows.push([ d, u === 'master' ? '主人' : '小狗', t === 'sleep' ? '休息' : '起床', rec.ontime ? '按时' : '迟到', rec.time || '', rec.ontime ? '是' : '否',
-              rec.meta?.timestamp ? new Date(rec.meta.timestamp).toLocaleString() : '', rec.meta?.timezone || '', rec.meta?.device || '', rec.meta?.location || '', rec.meta?.sleepDuration ? Math.floor(rec.meta.sleepDuration / 60) : '' ]);
+            if (t === 'sleep' && rec.records && rec.records.length > 0) {
+              rec.records.forEach(r => {
+                rows.push([ d, u === 'master' ? '主人' : '小狗', r.type === 'main' ? '休息(主)' : '小睡(副)', r.ontime ? '按时' : '迟到', r.time || '', r.ontime ? '是' : '否', r.timestamp ? new Date(r.timestamp).toLocaleString() : '', r.meta?.timezone || '', r.meta?.device || '', r.meta?.location || '', '' ]);
+              });
+            } else {
+              rows.push([ d, u === 'master' ? '主人' : '小狗', t === 'sleep' ? '休息' : '起床', rec.ontime ? '按时' : '迟到', rec.time || '', rec.ontime ? '是' : '否', rec.meta?.timestamp ? new Date(rec.meta.timestamp).toLocaleString() : '', rec.meta?.timezone || '', rec.meta?.device || '', rec.meta?.location || '', rec.meta?.sleepDuration ? Math.floor(rec.meta.sleepDuration / 60) : '' ]);
+            }
           }
         }
       }
@@ -53,6 +58,7 @@ window.exportAsImage = function() {
         if (rec && rec.done) {
           ctx.fillStyle = rec.ontime ? '#10b981' : '#ef4444';
           let txt = `${rec.time} ${rec.ontime ? '✓ 按时' : '✗ 迟到'}`;
+          if (t === 'sleep' && rec.records && rec.records.length > 1) txt += ` (共${rec.records.length}次)`;
           if (t === 'wake' && rec.meta?.sleepDuration) txt += ` (睡眠: ${Math.floor(rec.meta.sleepDuration/3600)}h${Math.floor((rec.meta.sleepDuration%3600)/60)}m)`;
           ctx.fillText(txt, 140, y);
         } else { ctx.fillStyle = muted; ctx.fillText('未打卡', 140, y); }

@@ -1,25 +1,71 @@
+let currentSleepActionCtx = null;
+window.closeSleepModal = function() { document.getElementById('sleep-action-modal').classList.remove('show'); currentSleepActionCtx = null; };
+window.handleSleepAction = async function(action) {
+  if (!currentSleepActionCtx) return;
+  const { user, today, record } = currentSleepActionCtx; const yesterday = getLogicalDateStr(1); closeSleepModal();
+  if (action === 'sub') { await doCheckin(user, 'sleep', today, record, 'sub'); } 
+  else if (action === 'overwrite') { await doCheckin(user, 'sleep', today, record, 'main'); } 
+  else if (action === 'cancel') {
+    delete db[user][today].sleep;
+    if (Object.keys(db[user][today]).length === 0) delete db[user][today];
+    saveLocalData(); showToast('已取消打卡', 'late');
+  } 
+  else if (action === 'cross') {
+    const todayRecs = record.records || [];
+    if (todayRecs.length > 0) {
+      if (!db[user][yesterday]) db[user][yesterday] = {};
+      if (!db[user][yesterday].sleep) db[user][yesterday].sleep = { done: false, records: [] };
+      let yRecord = db[user][yesterday].sleep;
+      if (!yRecord.records) { yRecord.records = []; if (yRecord.done && yRecord.time) { yRecord.records.push({ time: yRecord.time, ontime: yRecord.ontime, timestamp: yRecord.meta?.timestamp || Date.now(), type: 'main' }); } }
+      todayRecs.forEach(r => { yRecord.records.push(Object.assign({}, r, { type: 'sub' })); });
+      const yMain = yRecord.records.find(r => r.type === 'main') || yRecord.records[0];
+      yRecord.done = true; yRecord.time = yMain.time; yRecord.ontime = yMain.ontime; yRecord.meta = yMain.meta;
+    }
+    delete db[user][today].sleep;
+    await doCheckin(user, 'sleep', today, null, 'main');
+    showToast('已归入昨晚，并重新打卡', 'success');
+  }
+};
 window.toggle = async function(user, type) {
   if ((identity === 'master' && user === 'doggy') || (identity === 'doggy' && user === 'master')) { showToast('这是对方的打卡，只能查看哦 👀', 'late'); return; }
   const today = getLogicalDateStr();
   if (!db[user]) db[user] = {};
   if (!db[user][today]) db[user][today] = {};
-  if (!db[user][today][type]) db[user][today][type] = { done: false };
-  const record = db[user][today][type];
-  
-  if (record.done) {
-    if (!confirm(`今日已打过【${type === 'sleep' ? '休息/睡觉' : '起床'}】卡（${record.time}）。\n\n👉 点击【确定】覆盖为当前时间（用于记录熬夜后的第二轮打卡）。\n👉 点击【取消】保留原记录。\n\n(想单独修改时间或删除，请去设置->打卡记录修正)`)) return;
+  let record = db[user][today][type];
+  if (type === 'sleep' && record && record.done) {
+    currentSleepActionCtx = { user, today, record };
+    document.getElementById('sleep-modal-desc').textContent = `你今天已经在 ${record.time} 睡过了。要如何记录呢？`;
+    document.getElementById('sleep-action-modal').classList.add('show');
+    return;
   }
-  
-  showToast('记录中...', 'success');
-  record.done = true; record.time = formatCheckinTime(configs.timeZones[user]); record.ontime = checkGoal(user, type, record.time);
-  record.meta = { timestamp: Date.now(), timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, device: getDeviceInfo(), location: "获取中..." };
-  getLocation().then(loc => { if (record.meta) { record.meta.location = loc; saveLocalData(true); } });
+  if (type === 'wake' && record && record.done) {
+    if (!confirm(`今日已打过【起床】卡（${record.time}）。\n\n👉 点击【确定】覆盖为当前时间。\n👉 点击【取消】保留原记录。`)) return;
+    record.records = [];
+  }
+  await doCheckin(user, type, today, record, 'main');
+};
+async function doCheckin(user, type, dateStr, existingRecord, sleepType = 'main') {
+  if (!db[user]) db[user] = {};
+  if (!db[user][dateStr]) db[user][dateStr] = {};
+  if (!db[user][dateStr][type]) db[user][dateStr][type] = { done: false, records: [] };
+  const record = db[user][dateStr][type];
+  if (!record.records) { record.records = []; if (record.done && record.time) { record.records.push({ time: record.time, ontime: record.ontime, timestamp: record.meta?.timestamp || Date.now(), type: 'main' }); } }
+  const timeStr = formatCheckinTime(configs.timeZones[user]);
+  const ontime = checkGoal(user, type, timeStr);
+  const meta = { timestamp: Date.now(), timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, device: getDeviceInfo(), location: "获取中..." };
+  const newRec = { time: timeStr, ontime: ontime, timestamp: meta.timestamp, meta: meta, type: sleepType };
+  if (type === 'wake') { record.records = [newRec]; record.done = true; record.time = timeStr; record.ontime = ontime; record.meta = meta; }
+  else {
+    if (sleepType === 'main') { record.records = [newRec]; record.done = true; record.time = timeStr; record.ontime = ontime; record.meta = meta; } 
+    else { record.records.push(newRec); if (record.records.length === 1) { record.done = true; record.time = timeStr; record.ontime = ontime; record.meta = meta; } }
+  }
+  getLocation().then(loc => { newRec.meta.location = loc; saveLocalData(true); });
   if (type === 'wake') {
-    let sleepRec = db[user][today].sleep;
+    let sleepRec = db[user][dateStr].sleep;
     if (!sleepRec || !sleepRec.done) sleepRec = db[user]?.[getLogicalDateStr(1)]?.sleep;
-    if (sleepRec && sleepRec.done && sleepRec.meta?.timestamp) {
-      const wakeTs = record.meta.timestamp; const sleepTs = sleepRec.meta.timestamp;
-      if (wakeTs > sleepTs) { record.meta.sleepDuration = Math.floor((wakeTs - sleepTs) / 1000); record.meta.sleepStart = sleepTs; }
+    if (sleepRec && sleepRec.done && sleepRec.records) {
+      const validSleeps = sleepRec.records.filter(r => r.timestamp && r.timestamp < newRec.timestamp);
+      if (validSleeps.length > 0) { validSleeps.sort((a, b) => b.timestamp - a.timestamp); const closestSleep = validSleeps[0]; record.meta.sleepDuration = Math.floor((newRec.timestamp - closestSleep.timestamp) / 1000); record.meta.sleepStart = closestSleep.timestamp; }
     }
   }
   const status = record.ontime ? 'success' : 'late'; const pool = P().msgPool || {}; const arr = pool?.[user]?.[type]?.[status] || [];
@@ -51,7 +97,12 @@ function render() {
         if (!btn || !timeLabel) return;
         const record = db[user]?.[today]?.[type];
         btn.classList.remove('active', 'late');
-        if (record && record.done) { btn.classList.add(record.ontime ? 'active' : 'late'); timeLabel.textContent = record.time || '已打卡'; } else timeLabel.textContent = '未打卡';
+        if (record && record.done) {
+          btn.classList.add(record.ontime ? 'active' : 'late');
+          let timeStr = record.time || '已打卡';
+          if (type === 'sleep' && record.records && record.records.length > 1) timeStr += ` (共${record.records.length}次)`;
+          timeLabel.textContent = timeStr;
+        } else timeLabel.textContent = '未打卡';
       });
     });
     updatePartnerStatusPanel(); renderHistory();

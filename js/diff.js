@@ -24,6 +24,8 @@ function calculateDiff(localData, remoteData, isUpload) {
             ntKeys.forEach(k => { const lv = lNt[k], rv = rNt[k]; if (JSON.stringify(lv) !== JSON.stringify(rv)) { const label = CONFIG_KEY_MAP[`notifyTexts.${k}`] || `通知 ${k}`, target = isUpload ? lv : rv; cfgDiff.push({ type: 'modify', text: `[${modeName}] ${label}：修改 -> ${target}` }); } });
             if (!isObjectEqual(lProf.msgPool || {}, rProf.msgPool || {})) cfgDiff.push({ type: 'modify', text: `[${modeName}] 互动弹窗文案池 发生更新` });
             if (!isObjectEqual(lProf.progressTexts || {}, rProf.progressTexts || {})) cfgDiff.push({ type: 'modify', text: `[${modeName}] 加载进度条文案 发生更新` });
+            if (!isObjectEqual(lProf.sleepTexts || {}, rProf.sleepTexts || {})) cfgDiff.push({ type: 'modify', text: `[${modeName}] 多段睡眠文案 发生更新` });
+            if (!isObjectEqual(lProf.wakeTexts || {}, rProf.wakeTexts || {})) cfgDiff.push({ type: 'modify', text: `[${modeName}] 起床弹窗文案 发生更新` });
         });
     }
     if (localData.config && localData.config.goals) { ['master', 'doggy'].forEach(user => { ['sleep', 'wake'].forEach(type => { const lv = localData.config.goals[user]?.[type], rv = remoteData.config?.goals[user]?.[type]; if (lv !== rv) { const label = CONFIG_KEY_MAP[`goals.${user}.${type}`], target = isUpload ? lv : rv; cfgDiff.push({ type: 'modify', text: `${label}：修改 -> ${target}` }); } }); }); }

@@ -1,9 +1,16 @@
 let currentSleepActionCtx = null;
+let currentWakeActionCtx = null;
 window.closeSleepModal = function() { document.getElementById('sleep-action-modal').classList.remove('show'); currentSleepActionCtx = null; };
+window.closeWakeModal = function() { document.getElementById('wake-action-modal').classList.remove('show'); currentWakeActionCtx = null; };
+window.handleWakeAction = async function(action) {
+  if (!currentWakeActionCtx) return;
+  const { user, today, record } = currentWakeActionCtx; closeWakeModal();
+  if (action === 'overwrite') { record.records = []; await doCheckin(user, 'wake', today, record, 'main'); }
+};
 window.handleSleepAction = async function(action) {
   if (!currentSleepActionCtx) return;
   const { user, today, record } = currentSleepActionCtx; const yesterday = getLogicalDateStr(1); closeSleepModal();
-  if (action === 'sub') { await doCheckin(user, 'sleep', today, record, 'sub'); } 
+  if (action === 'sub') { await doCheckin(user, 'sleep', today, record, 'sub'); if (db[user][today]?.wake) { delete db[user][today].wake; saveLocalData(); } } 
   else if (action === 'overwrite') { await doCheckin(user, 'sleep', today, record, 'main'); } 
   else if (action === 'cancel') {
     delete db[user][today].sleep;
@@ -22,6 +29,7 @@ window.handleSleepAction = async function(action) {
       yRecord.done = true; yRecord.time = yMain.time; yRecord.ontime = yMain.ontime; yRecord.meta = yMain.meta;
     }
     delete db[user][today].sleep;
+    if (db[user][today]?.wake) delete db[user][today].wake;
     await doCheckin(user, 'sleep', today, null, 'main');
     showToast('已归入昨晚，并重新打卡', 'success');
   }
@@ -34,13 +42,35 @@ window.toggle = async function(user, type) {
   let record = db[user][today][type];
   if (type === 'sleep' && record && record.done) {
     currentSleepActionCtx = { user, today, record };
-    document.getElementById('sleep-modal-desc').textContent = `你今天已经在 ${record.time} 睡过了。要如何记录呢？`;
+    const role = identity === 'both' ? 'both' : (identity || 'master');
+    const prof = P();
+    const sTexts = prof.sleepTexts?.[role] || (configs.mode === 'service' ? DEFAULT_SLEEP_TEXTS_SERVICE[role] : DEFAULT_SLEEP_TEXTS_DAILY[role]) || {};
+    
+    document.getElementById('sleep-modal-title').textContent = sTexts.title || '今日已打过卡';
+    document.getElementById('sleep-modal-desc').innerHTML = (sTexts.desc || '今天已经在 {time} 休息过了，如何记录？').replace(/{time}/g, `<span class="time-highlight">${record.time}</span>`);
+    
+    document.getElementById('btn-sleep-sub').innerHTML = `<span class="icon">➕</span>${sTexts.sub || '新增小睡'}`;
+    document.getElementById('btn-sleep-cross').innerHTML = `<span class="icon">🌙</span>${sTexts.cross || '算作昨晚熬夜'}`;
+    document.getElementById('btn-sleep-overwrite').innerHTML = `<span class="icon">✏️</span>${sTexts.overwrite || '覆盖当前记录'}`;
+    document.getElementById('btn-sleep-cancel').innerHTML = `<span class="icon">🗑️</span>${sTexts.cancel || '取消打卡'}`;
+    
     document.getElementById('sleep-action-modal').classList.add('show');
     return;
   }
   if (type === 'wake' && record && record.done) {
-    if (!confirm(`今日已打过【起床】卡（${record.time}）。\n\n👉 点击【确定】覆盖为当前时间。\n👉 点击【取消】保留原记录。`)) return;
-    record.records = [];
+    currentWakeActionCtx = { user, today, record };
+    const role = identity === 'both' ? 'both' : (identity || 'master');
+    const prof = P();
+    const wTexts = prof.wakeTexts?.[role] || (configs.mode === 'service' ? DEFAULT_WAKE_TEXTS_SERVICE[role] : DEFAULT_WAKE_TEXTS_DAILY[role]) || {};
+    
+    document.getElementById('wake-modal-title').textContent = wTexts.title || '今日已起床';
+    document.getElementById('wake-modal-desc').innerHTML = (wTexts.desc || '今天已经在 {time} 起过床了，如何记录？').replace(/{time}/g, `<span class="time-highlight">${record.time}</span>`);
+    
+    document.getElementById('btn-wake-confirm').innerHTML = `<span class="icon">✅</span>${wTexts.confirm || '覆盖当前记录'}`;
+    document.getElementById('btn-wake-cancel').innerHTML = `<span class="icon">❌</span>${wTexts.cancel || '保留原记录'}`;
+    
+    document.getElementById('wake-action-modal').classList.add('show');
+    return;
   }
   await doCheckin(user, type, today, record, 'main');
 };

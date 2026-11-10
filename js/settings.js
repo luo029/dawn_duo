@@ -6,8 +6,6 @@ function updateIdentityLabels() {
   setText('id-name-master', m); setText('id-desc-master', `只显示 ${m} 的打卡页面`);
   setText('id-name-doggy', d); setText('id-desc-doggy', `只显示 ${d} 的打卡页面`);
   setText('id-pill-label-master', m); setText('id-pill-label-doggy', d);
-  setText('label-partner-master-title', m); setText('label-partner-doggy-title', d);
-  setText('label-status-master-title', m); setText('label-status-doggy-title', d);
 }
 
 function updateIdentityCards() {
@@ -113,9 +111,7 @@ function updateModeCards() {
   const isService = configs.mode === 'service';
   const masterTitle = isService ? '主人' : '先生';
   const doggyTitle = isService ? '小狗' : '宝宝';
-  const tl = document.getElementById('cfg-text-mode-label'); if (tl) tl.textContent = modeLabel();
-  const ntl = document.getElementById('cfg-nt-mode-label'); if (ntl) ntl.textContent = modeLabel();
-
+  
   const idsToUpdate = {
     'cfg-title-master': masterTitle, 'cfg-title-doggy': doggyTitle,
     'cfg-msg-master-title': masterTitle, 'cfg-msg-doggy-title': doggyTitle,
@@ -124,8 +120,6 @@ function updateModeCards() {
     'label-tz-master-offset': `${masterTitle} 时差`, 'label-tz-doggy-offset': `${doggyTitle} 时差`,
     'label-goal-master-sleep': `${masterTitle}休息目标`, 'label-goal-master-wake': `${masterTitle}起床目标`,
     'label-goal-doggy-sleep': `${doggyTitle}睡觉目标`, 'label-goal-doggy-wake': `${doggyTitle}起床目标`,
-    'label-nt-master-sleep': `${masterTitle} - 休息提醒`, 'label-nt-master-wake': `${masterTitle} - 起床提醒`,
-    'label-nt-doggy-sleep': `${doggyTitle} - 睡觉提醒`, 'label-nt-doggy-wake': `${doggyTitle} - 起床提醒`
   };
   for (const [id, text] of Object.entries(idsToUpdate)) {
     const el = document.getElementById(id); if (el) el.textContent = text;
@@ -148,60 +142,171 @@ window.setMode = function(mode) {
 
 function fillTextInputs() {
   const t = P().texts || DEFAULT_TEXTS_DAILY;
-  document.getElementById('cfg-title').value = t.title || '';
-  document.getElementById('cfg-subtitle').value = t.subtitle || '';
-  document.getElementById('cfg-master-name').value = t.masterName || '';
-  document.getElementById('cfg-master-tag').value = t.masterTag || '';
-  document.getElementById('cfg-master-region').value = t.masterRegion || '';
-  document.getElementById('cfg-doggy-name').value = t.doggyName || '';
-  document.getElementById('cfg-doggy-tag').value = t.doggyTag || '';
-  document.getElementById('cfg-doggy-region').value = t.doggyRegion || '';
-  document.getElementById('cfg-master-sleep-btn').value = t.masterSleepBtn || '';
-  document.getElementById('cfg-master-wake-btn').value = t.masterWakeBtn || '';
-  document.getElementById('cfg-doggy-sleep-btn').value = t.doggySleepBtn || '';
-  document.getElementById('cfg-doggy-wake-btn').value = t.doggyWakeBtn || '';
-  document.getElementById('cfg-icon-daily').value = t.dailyModeIcon || '💕';
-  document.getElementById('cfg-icon-service').value = t.serviceModeIcon || '🐕';
+  const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+  const setChk = (id, val) => { const el = document.getElementById(id); if (el) el.checked = val; };
   
-  const n = configs.notifySettings;
-  document.getElementById('cfg-notify-overtime').checked = n.enableOvertime;
-  document.getElementById('cfg-notify-interval').value = n.overtimeInterval;
-  const pn = document.getElementById('cfg-notify-partner'); if (pn) pn.checked = n.partnerNotify !== false;
+  setVal('cfg-title', t.title || '');
+  setVal('cfg-subtitle', t.subtitle || '');
+  setVal('cfg-master-name', t.masterName || '');
+  setVal('cfg-master-tag', t.masterTag || '');
+  setVal('cfg-master-region', t.masterRegion || '');
+  setVal('cfg-doggy-name', t.doggyName || '');
+  setVal('cfg-doggy-tag', t.doggyTag || '');
+  setVal('cfg-doggy-region', t.doggyRegion || '');
+  setVal('cfg-master-sleep-btn', t.masterSleepBtn || '');
+  setVal('cfg-master-wake-btn', t.masterWakeBtn || '');
+  setVal('cfg-doggy-sleep-btn', t.doggySleepBtn || '');
+  setVal('cfg-doggy-wake-btn', t.doggyWakeBtn || '');
+  setVal('cfg-icon-daily', t.dailyModeIcon || '💕');
+  setVal('cfg-icon-service', t.serviceModeIcon || '🐕');
   
-  const nt = P().notifyTexts || DEFAULT_NOTIFY_TEXTS.daily;
-  document.getElementById('cfg-nt-master-sleep').value = nt.master_sleep || '';
-  document.getElementById('cfg-nt-master-wake').value = nt.master_wake || '';
-  document.getElementById('cfg-nt-doggy-sleep').value = nt.doggy_sleep || '';
-  document.getElementById('cfg-nt-doggy-wake').value = nt.doggy_wake || '';
-  document.getElementById('cfg-nt-overtime-sleep').value = nt.overtime_sleep || '';
-  document.getElementById('cfg-nt-overtime-wake').value = nt.overtime_wake || '';
+  const n = configs.notifySettings || {};
+  setChk('cfg-notify-overtime', n.enableOvertime);
+  setVal('cfg-notify-interval', n.overtimeInterval || 30);
   
-  const pMS = document.getElementById('cfg-nt-partner-master-sleep'); if (pMS) pMS.value = nt.partner_master_sleep || '';
-  const pMW = document.getElementById('cfg-nt-partner-master-wake'); if (pMW) pMW.value = nt.partner_master_wake || '';
-  const pDS = document.getElementById('cfg-nt-partner-doggy-sleep'); if (pDS) pDS.value = nt.partner_doggy_sleep || '';
-  const pDW = document.getElementById('cfg-nt-partner-doggy-wake'); if (pDW) pDW.value = nt.partner_doggy_wake || '';
-
-  const sMS = document.getElementById('cfg-status-master-sleep'); if (sMS) sMS.value = nt.status_master_sleep || '';
-  const sMW = document.getElementById('cfg-status-master-wake'); if (sMW) sMW.value = nt.status_master_wake || '';
-  const sDS = document.getElementById('cfg-status-doggy-sleep'); if (sDS) sDS.value = nt.status_doggy_sleep || '';
-  const sDW = document.getElementById('cfg-status-doggy-wake'); if (sDW) sDW.value = nt.status_doggy_wake || '';
-
-  const bp = configs.backendPush || { title: '🌅 契约提醒', body: '该起床 / 该休息了，记得打开契约打卡哦。' };
-  document.getElementById('cfg-push-title').value = bp.title || '';
-  document.getElementById('cfg-push-body').value = bp.body || '';
-
-  document.getElementById('cfg-show-partner-card').checked = configs.showPartnerCard !== false;
-  document.getElementById('cfg-show-partner-status').checked = configs.showPartnerStatus !== false;
+  setChk('cfg-show-partner-card', configs.showPartnerCard !== false);
+  setChk('cfg-show-partner-status', configs.showPartnerStatus !== false);
+  setChk('cfg-auto-sync', ghConfig.autoSync !== false);
+  setVal('cfg-sync-interval', ghConfig.syncInterval !== undefined ? String(ghConfig.syncInterval) : '5');
+  setChk('cfg-sync-prompt', ghConfig.syncPrompt !== false);
   
-  const as = document.getElementById('cfg-auto-sync'); if (as) as.checked = ghConfig.autoSync !== false;
-  togglePartnerNotifyInputs();
+  if (window.togglePartnerNotifyInputs) window.togglePartnerNotifyInputs();
 }
 
 function updateColorInputs() {
   const c = P().colors || DEFAULT_CONFIGS.profiles.daily.colors;
-  document.getElementById('cfg-color-master').value = c.master || '#38bdf8';
-  document.getElementById('cfg-color-doggy').value = c.doggy || '#f472b6';
+  const elMaster = document.getElementById('cfg-color-master'); if (elMaster) elMaster.value = c.master || '#38bdf8';
+  const elDoggy = document.getElementById('cfg-color-doggy'); if (elDoggy) elDoggy.value = c.doggy || '#f472b6';
 }
+
+let currentNotifyKey = '';
+
+window.openNotifyTextModal = function(key) {
+  currentNotifyKey = key;
+  const nTexts = P().notifyTexts || DEFAULT_NOTIFY_TEXTS.daily;
+  let arr = nTexts[key];
+  
+  if (typeof arr === 'string') arr = arr ? [arr] : [];
+  if (!Array.isArray(arr)) arr = [];
+
+  const nameMap = {
+    master_sleep: '主人 - 到点休息', master_wake: '主人 - 到点起床',
+    doggy_sleep: '小狗 - 到点睡觉', doggy_wake: '小狗 - 到点起床',
+    overtime_sleep: '熬夜超时警告', overtime_wake: '赖床超时警告',
+    partner_master_sleep: '对方 - 主人休息', partner_master_wake: '对方 - 主人起床',
+    partner_doggy_sleep: '对方 - 小狗休息', partner_doggy_wake: '对方 - 小狗起床',
+    status_master_sleep: '状态栏 - 主人休息中', status_master_wake: '状态栏 - 主人已醒',
+    status_doggy_sleep: '状态栏 - 小狗休息中', status_doggy_wake: '状态栏 - 小狗已醒'
+  };
+  const titleEl = document.getElementById('notify-text-modal-title');
+  if (titleEl) titleEl.textContent = `编辑：${nameMap[key] || key}`;
+  
+  const chkRandom = document.getElementById('notify-text-random');
+  if (chkRandom) chkRandom.checked = arr.length > 1;
+
+  const listEl = document.getElementById('notify-text-list');
+  if (!listEl) return;
+  listEl.innerHTML = '';
+  if (arr.length === 0) arr = [''];
+  arr.forEach(text => addNotifyTextItem(text));
+
+  const modal = document.getElementById('notify-text-modal');
+  if (modal) modal.classList.add('show');
+};
+
+window.closeNotifyTextModal = function() {
+  const modal = document.getElementById('notify-text-modal');
+  if (modal) modal.classList.remove('show');
+};
+
+window.addNotifyTextItem = function(text = '') {
+  const listEl = document.getElementById('notify-text-list');
+  if (!listEl) return;
+  const row = document.createElement('div'); row.className = 'msg-item';
+  const input = document.createElement('input'); input.type = 'text'; input.value = text; input.placeholder = '输入文案，支持 {name} 和 {time}';
+  const delBtn = document.createElement('button'); delBtn.className = 'btn-del'; delBtn.type = 'button'; delBtn.textContent = '✕'; delBtn.onclick = () => row.remove();
+  row.appendChild(input); row.appendChild(delBtn); listEl.appendChild(row);
+};
+
+window.saveNotifyTextModal = function() {
+  const listEl = document.getElementById('notify-text-list');
+  if (!listEl) return;
+  const inputs = listEl.querySelectorAll('input');
+  const newArr = Array.from(inputs).map(inp => inp.value.trim()).filter(v => v !== '');
+  
+  const isRandom = document.getElementById('notify-text-random').checked;
+  if (!isRandom && newArr.length > 1) newArr.splice(1);
+
+  const prof = P();
+  if (!prof.notifyTexts) prof.notifyTexts = {};
+  prof.notifyTexts[currentNotifyKey] = newArr.length > 0 ? newArr : [''];
+  
+  try { localStorage.setItem('dawn-duo-configs', JSON.stringify(configs)); } catch (e) {}
+  closeNotifyTextModal();
+  if (window.debounceSync) debounceSync();
+  showToast('文案已保存', 'success');
+};
+
+window.openBackendPushModal = function() {
+  const bp = configs.backendPush || DEFAULT_CONFIGS.backendPush;
+  const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+  setVal('cfg-push-master-title', bp.masterTitle || '');
+  setVal('cfg-push-master-body', bp.masterBody || '');
+  setVal('cfg-push-doggy-title', bp.doggyTitle || '');
+  setVal('cfg-push-doggy-body', bp.doggyBody || '');
+  const modal = document.getElementById('backend-push-modal');
+  if (modal) modal.classList.add('show');
+};
+
+window.closeBackendPushModal = function() {
+  if (!configs.backendPush) configs.backendPush = {};
+  const getVal = (id, fallback) => { const el = document.getElementById(id); return el ? el.value.trim() : fallback; };
+  
+  configs.backendPush.masterTitle = getVal('cfg-push-master-title', '👑 主人的专属提醒');
+  configs.backendPush.masterBody = getVal('cfg-push-master-body', '该休息了哦。');
+  configs.backendPush.doggyTitle = getVal('cfg-push-doggy-title', '🎀 小狗的专属提醒');
+  configs.backendPush.doggyBody = getVal('cfg-push-doggy-body', '去睡觉吧。');
+  
+  try { localStorage.setItem('dawn-duo-configs', JSON.stringify(configs)); } catch (e) {}
+  const modal = document.getElementById('backend-push-modal');
+  if (modal) modal.classList.remove('show');
+  if (window.debounceSync) debounceSync();
+  showToast('后台文案已保存', 'success');
+};
+
+window.openProgressTextModal = function() {
+  const pt = P().progressTexts || DEFAULT_CONFIGS.profiles.daily.progressTexts;
+  const setVal = (id, val) => { const el = document.getElementById(id); if (el) { el.value = val; el.placeholder = '默认'; } };
+  setVal('cfg-prog-connect', pt.connect || '');
+  setVal('cfg-prog-auth', pt.auth || '');
+  setVal('cfg-prog-sync', pt.sync || '');
+  setVal('cfg-prog-cancel', pt.cancel || '');
+  setVal('cfg-prog-success', pt.success || '');
+  
+  const tipEl = document.getElementById('prog-text-tip');
+  if (tipEl) tipEl.innerHTML = `当前修改的是 <b>[${modeLabel()}]</b> 模式下的加载文案。<br>你可以使用 <b>{name}</b>，它会自动替换成你或对方的称呼（如先生/小狗）。`;
+  
+  const modal = document.getElementById('progress-text-modal');
+  if (modal) modal.classList.add('show');
+};
+
+window.closeProgressTextModal = function() {
+  const prof = P();
+  if (!prof.progressTexts) prof.progressTexts = {};
+  const getVal = (id, fallback) => { const el = document.getElementById(id); return el ? el.value.trim() : fallback; };
+  
+  prof.progressTexts.connect = getVal('cfg-prog-connect', DEFAULT_CONFIGS.profiles.daily.progressTexts.connect);
+  prof.progressTexts.auth = getVal('cfg-prog-auth', DEFAULT_CONFIGS.profiles.daily.progressTexts.auth);
+  prof.progressTexts.sync = getVal('cfg-prog-sync', DEFAULT_CONFIGS.profiles.daily.progressTexts.sync);
+  prof.progressTexts.cancel = getVal('cfg-prog-cancel', DEFAULT_CONFIGS.profiles.daily.progressTexts.cancel);
+  prof.progressTexts.success = getVal('cfg-prog-success', DEFAULT_CONFIGS.profiles.daily.progressTexts.success);
+  
+  try { localStorage.setItem('dawn-duo-configs', JSON.stringify(configs)); } catch (e) {}
+  const modal = document.getElementById('progress-text-modal');
+  if (modal) modal.classList.remove('show');
+  if (window.debounceSync) debounceSync();
+  showToast('加载文案已保存', 'success');
+};
 
 let currentMsgKey = '';
 const MSG_KEYS = ['master_sleep_success', 'master_sleep_late', 'master_wake_success', 'master_wake_late', 'doggy_sleep_success', 'doggy_sleep_late', 'doggy_wake_success', 'doggy_wake_late'];
@@ -219,19 +324,28 @@ window.openSubMsg = function(key, title) {
   currentMsgKey = key;
   const t = P().texts || DEFAULT_TEXTS_DAILY;
   const name = key.startsWith('master') ? t.masterName : t.doggyName;
-  document.getElementById('sub-modal-title').textContent = `${getPureName(name)} - ${title} (${modeLabel()})`;
+  const titleEl = document.getElementById('sub-modal-title');
+  if (titleEl) titleEl.textContent = `${getPureName(name)} - ${title} (${modeLabel()})`;
+  
   const [user, type, status] = key.split('_');
   const arr = (P().msgPool || {})?.[user]?.[type]?.[status] || [];
   const listEl = document.getElementById('sub-msg-list');
+  if (!listEl) return;
   listEl.innerHTML = '';
   arr.forEach(text => addSubMsgItem(text));
-  document.getElementById('sub-modal').classList.add('show');
+  
+  const modal = document.getElementById('sub-modal');
+  if (modal) modal.classList.add('show');
 };
 
-window.closeSubMsg = function() { document.getElementById('sub-modal').classList.remove('show'); };
+window.closeSubMsg = function() { 
+  const modal = document.getElementById('sub-modal');
+  if (modal) modal.classList.remove('show'); 
+};
 
 window.addSubMsgItem = function(text = '') {
   const listEl = document.getElementById('sub-msg-list');
+  if (!listEl) return;
   const row = document.createElement('div'); row.className = 'msg-item';
   const input = document.createElement('input'); input.type = 'text'; input.value = text; input.placeholder = '输入一条新文案...';
   const delBtn = document.createElement('button'); delBtn.className = 'btn-del'; delBtn.type = 'button'; delBtn.textContent = '✕'; delBtn.onclick = () => row.remove();
@@ -240,6 +354,7 @@ window.addSubMsgItem = function(text = '') {
 
 window.saveSubMsg = function() {
   const listEl = document.getElementById('sub-msg-list');
+  if (!listEl) return;
   const inputs = listEl.querySelectorAll('input');
   const newArr = Array.from(inputs).map(inp => inp.value.trim()).filter(v => v !== '');
   const [user, type, status] = currentMsgKey.split('_');
@@ -250,34 +365,27 @@ window.saveSubMsg = function() {
   prof.msgPool[user][type][status] = newArr;
   updateMsgCounts(); closeSubMsg();
   try { localStorage.setItem('dawn-duo-configs', JSON.stringify(configs)); } catch (e) { }
-  debounceSync();
+  if (window.debounceSync) debounceSync();
 };
 
 let parsedImportLines = [];
-
 window.readLibraryFile = function(event) {
   const file = event.target.files[0];
   if (!file) return;
   const reader = new FileReader();
-  
   reader.onload = function(e) {
     try {
       const content = e.target.result;
       let lines = [];
-      
       if (file.name.endsWith('.json')) {
         try {
           const parsed = JSON.parse(content);
           if (Array.isArray(parsed)) lines = parsed;
-          else if (typeof parsed === 'object') {
-             const vals = Object.values(parsed).flat(3).filter(v => typeof v === 'string');
-             lines = vals;
-          }
+          else if (typeof parsed === 'object') lines = Object.values(parsed).flat(3).filter(v => typeof v === 'string');
         } catch(err) { showToast('JSON 解析失败', 'late'); return; }
       } else {
         lines = content.split(/\r?\n/).map(s => s.trim()).filter(s => s.length > 0);
       }
-
       if (lines.length === 0) return showToast('文件中未找到有效文字', 'late');
       
       const pool = P().msgPool || {};
@@ -289,23 +397,17 @@ window.readLibraryFile = function(event) {
           }
         }
       }
-
       parsedImportLines = lines.map(text => {
         let isDuplicate = false;
         for (const existing of allExistingTexts) {
-          if (getSimilarity(text, existing) >= 0.7) {
-            isDuplicate = true;
-            break;
-          }
+          if (getSimilarity(text, existing) >= 0.7) { isDuplicate = true; break; }
         }
         return { text, isDuplicate };
       });
-
       renderImportPreview();
-      document.getElementById('import-lib-modal').classList.add('show');
-    } catch (err) {
-      showToast('文件读取失败', 'late');
-    }
+      const modal = document.getElementById('import-lib-modal');
+      if (modal) modal.classList.add('show');
+    } catch (err) { showToast('文件读取失败', 'late'); }
   };
   reader.readAsText(file);
   event.target.value = '';
@@ -313,76 +415,52 @@ window.readLibraryFile = function(event) {
 
 function renderImportPreview() {
   const listEl = document.getElementById('import-lib-preview-list');
+  if (!listEl) return;
   listEl.innerHTML = '';
-  
   let dupCount = 0;
   const fragment = document.createDocumentFragment();
-  
   parsedImportLines.forEach((item, index) => {
     if (item.isDuplicate) dupCount++;
-    
     const row = document.createElement('div');
     row.className = `import-item-row ${item.isDuplicate ? 'duplicate' : ''}`;
-    
     const chk = document.createElement('input');
-    chk.type = 'checkbox';
-    chk.checked = !item.isDuplicate;
-    chk.disabled = item.isDuplicate;
-    chk.dataset.index = index;
-    
-    const txt = document.createElement('span');
-    txt.className = 'import-text';
-    txt.textContent = item.text;
-    txt.style.flex = '1';
-    
-    row.appendChild(chk);
-    row.appendChild(txt);
-    
+    chk.type = 'checkbox'; chk.checked = !item.isDuplicate; chk.disabled = item.isDuplicate; chk.dataset.index = index;
+    const txt = document.createElement('span'); txt.className = 'import-text'; txt.textContent = item.text; txt.style.flex = '1';
+    row.appendChild(chk); row.appendChild(txt);
     if (item.isDuplicate) {
-      const badge = document.createElement('span');
-      badge.className = 'import-badge';
-      badge.textContent = '高度重复';
-      row.appendChild(badge);
+      const badge = document.createElement('span'); badge.className = 'import-badge'; badge.textContent = '高度重复'; row.appendChild(badge);
     }
-    
     fragment.appendChild(row);
   });
-  
   listEl.appendChild(fragment);
-  
-  if (dupCount > 0) {
-    showToast(`发现 ${dupCount} 条重复文案，已自动为您取消勾选`, 'late');
-  }
+  if (dupCount > 0) showToast(`发现 ${dupCount} 条重复文案，已自动为您取消勾选`, 'late');
 }
 
 window.closeImportLibModal = function() {
-  document.getElementById('import-lib-modal').classList.remove('show');
+  const modal = document.getElementById('import-lib-modal');
+  if (modal) modal.classList.remove('show');
   parsedImportLines = [];
 };
 
 window.confirmImportLibrary = function() {
-  const targetKey = document.getElementById('import-target-pool').value;
+  const targetKeyEl = document.getElementById('import-target-pool');
+  if (!targetKeyEl) return;
+  const targetKey = targetKeyEl.value;
   const [user, type, status] = targetKey.split('_');
-  
   const listEl = document.getElementById('import-lib-preview-list');
+  if (!listEl) return;
   const checkedBoxes = listEl.querySelectorAll('input[type="checkbox"]:checked');
-  
   if (checkedBoxes.length === 0) return showToast('请至少勾选一条要导入的文案', 'late');
-  
   const toAdd = Array.from(checkedBoxes).map(chk => parsedImportLines[Number(chk.dataset.index)].text);
-  
   const prof = P();
   if (!prof.msgPool) prof.msgPool = {};
   if (!prof.msgPool[user]) prof.msgPool[user] = {};
   if (!prof.msgPool[user][type]) prof.msgPool[user][type] = {};
   if (!prof.msgPool[user][type][status]) prof.msgPool[user][type][status] = [];
-  
   prof.msgPool[user][type][status].push(...toAdd);
-  
   try { localStorage.setItem('dawn-duo-configs', JSON.stringify(configs)); } catch (e) {}
-  updateMsgCounts();
-  closeImportLibModal();
-  debounceSync();
+  updateMsgCounts(); closeImportLibModal(); 
+  if (window.debounceSync) debounceSync();
   showToast(`成功导入 ${toAdd.length} 条文案 💗`, 'success');
 };
 
@@ -390,107 +468,124 @@ window.openSettings = function() {
   try {
     fillTextInputs(); updateColorInputs(); updateMsgCounts(); updateModeCards();
     
-    document.getElementById('cfg-simple-mode').checked = configs.simpleMode === true;
-    document.getElementById('cfg-notifications').checked = configs.notifications === true;
-    document.getElementById('cfg-anniversary').value = configs.anniversary;
-    document.getElementById('cfg-show-history').checked = configs.showHistory === true;
-    document.getElementById('cfg-show-logical-date').checked = configs.showLogicalDate !== false;
+    const setChk = (id, val) => { const el = document.getElementById(id); if (el) el.checked = val; };
+    const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
 
-    document.getElementById('cfg-clock-layout').value = configs.clockLayout;
-    document.getElementById('cfg-show-master-clock').checked = configs.showMasterClock;
-    document.getElementById('cfg-show-doggy-clock').checked = configs.showDoggyClock;
-    document.getElementById('cfg-show-seconds').checked = configs.showSeconds;
-    document.getElementById('cfg-show-shichen').checked = configs.showShichen;
-    document.getElementById('cfg-show-wellness').checked = configs.showWellness;
+    setChk('cfg-simple-mode', configs.simpleMode === true);
+    setChk('cfg-notifications', configs.notifications === true);
+    setVal('cfg-anniversary', configs.anniversary);
+    setChk('cfg-show-history', configs.showHistory === true);
+    setChk('cfg-show-logical-date', configs.showLogicalDate !== false);
 
-    document.getElementById('cfg-tz-master-type').value = configs.timeZones.master.type || 'iana';
-    document.getElementById('cfg-tz-doggy-type').value = configs.timeZones.doggy.type || 'iana';
-    if (configs.timeZones.master.type === 'offset') document.getElementById('cfg-tz-master-offset').value = configs.timeZones.master.value;
-    else document.getElementById('cfg-tz-master-iana').value = configs.timeZones.master.value;
-    if (configs.timeZones.doggy.type === 'offset') document.getElementById('cfg-tz-doggy-offset').value = configs.timeZones.doggy.value;
-    else document.getElementById('cfg-tz-doggy-iana').value = configs.timeZones.doggy.value;
+    setVal('cfg-clock-layout', configs.clockLayout);
+    setChk('cfg-show-master-clock', configs.showMasterClock);
+    setChk('cfg-show-doggy-clock', configs.showDoggyClock);
+    setChk('cfg-show-seconds', configs.showSeconds);
+    setChk('cfg-show-shichen', configs.showShichen);
+    setChk('cfg-show-wellness', configs.showWellness);
+
+    setVal('cfg-tz-master-type', configs.timeZones.master.type || 'iana');
+    setVal('cfg-tz-doggy-type', configs.timeZones.doggy.type || 'iana');
+    if (configs.timeZones.master.type === 'offset') setVal('cfg-tz-master-offset', configs.timeZones.master.value);
+    else setVal('cfg-tz-master-iana', configs.timeZones.master.value);
+    if (configs.timeZones.doggy.type === 'offset') setVal('cfg-tz-doggy-offset', configs.timeZones.doggy.value);
+    else setVal('cfg-tz-doggy-iana', configs.timeZones.doggy.value);
     toggleTzInput('master'); toggleTzInput('doggy');
 
-    document.getElementById('cfg-goal-master-sleep').value = configs.goals.master.sleep;
-    document.getElementById('cfg-goal-master-wake').value = configs.goals.master.wake;
-    document.getElementById('cfg-goal-doggy-sleep').value = configs.goals.doggy.sleep;
-    document.getElementById('cfg-goal-doggy-wake').value = configs.goals.doggy.wake;
+    setVal('cfg-goal-master-sleep', configs.goals.master.sleep);
+    setVal('cfg-goal-master-wake', configs.goals.master.wake);
+    setVal('cfg-goal-doggy-sleep', configs.goals.doggy.sleep);
+    setVal('cfg-goal-doggy-wake', configs.goals.doggy.wake);
 
-    document.getElementById('cfg-history-type').value = configs.historyType;
-    document.getElementById('cfg-history-days').value = String(configs.historyDays);
+    setVal('cfg-history-type', configs.historyType);
+    setVal('cfg-history-days', String(configs.historyDays));
 
     let startYear = new Date().getFullYear();
     try { const y = new Date(configs.anniversary).getFullYear(); if (Number.isFinite(y)) startYear = y; } catch (e) { }
     const endYear = new Date().getFullYear() + 1;
-    const yearSelect = document.getElementById('cfg-history-year'); yearSelect.innerHTML = '';
-    let yearOptions = '';
-    for (let y = startYear; y <= endYear; y++) yearOptions += `<option value="${y}">${y} 年</option>`;
-    yearSelect.innerHTML = yearOptions;
-    yearSelect.value = configs.historyYear; if (!yearSelect.value) yearSelect.selectedIndex = 0;
+    const yearSelect = document.getElementById('cfg-history-year'); 
+    if (yearSelect) {
+      yearSelect.innerHTML = '';
+      let yearOptions = '';
+      for (let y = startYear; y <= endYear; y++) yearOptions += `<option value="${y}">${y} 年</option>`;
+      yearSelect.innerHTML = yearOptions;
+      yearSelect.value = configs.historyYear; if (!yearSelect.value) yearSelect.selectedIndex = 0;
+    }
 
-    const monthSelect = document.getElementById('cfg-history-month'); monthSelect.innerHTML = '';
-    let monthOptions = '';
-    for (let m = 1; m <= 12; m++) monthOptions += `<option value="${String(m).padStart(2,'0')}">${m} 月</option>`;
-    monthSelect.innerHTML = monthOptions;
-    monthSelect.value = configs.historyMonth; if (!monthSelect.value) monthSelect.selectedIndex = 0;
+    const monthSelect = document.getElementById('cfg-history-month'); 
+    if (monthSelect) {
+      monthSelect.innerHTML = '';
+      let monthOptions = '';
+      for (let m = 1; m <= 12; m++) monthOptions += `<option value="${String(m).padStart(2,'0')}">${m} 月</option>`;
+      monthSelect.innerHTML = monthOptions;
+      monthSelect.value = configs.historyMonth; if (!monthSelect.value) monthSelect.selectedIndex = 0;
+    }
 
     toggleHistoryTypeOptions();
     const fixDateInput = document.getElementById('cfg-fix-date');
-    if (!fixDateInput.value) fixDateInput.value = getLogicalDateStr();
+    if (fixDateInput && !fixDateInput.value) fixDateInput.value = getLogicalDateStr();
     renderFixPanel();
 
     updateNotifyStatus(); updateIdentityCards();
+    if (window.updateBackendPushStatus) window.updateBackendPushStatus();
     
     if (window.refreshCustomSelects) window.refreshCustomSelects();
 
-    document.getElementById('settings-modal').classList.add('show');
+    const modal = document.getElementById('settings-modal');
+    if (modal) modal.classList.add('show');
     document.body.style.overflow = 'hidden';
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-    document.querySelector('.tab-btn').classList.add('active');
-    document.getElementById('tab-general').classList.add('active');
-  } catch(e) { showToast('打开设置面板失败', 'late'); }
+    const firstTabBtn = document.querySelector('.tab-btn');
+    if (firstTabBtn) firstTabBtn.classList.add('active');
+    const firstTab = document.getElementById('tab-general');
+    if (firstTab) firstTab.classList.add('active');
+  } catch(e) { 
+    console.error('打开设置面板时发生详细错误：', e);
+    showToast('打开设置面板失败: ' + e.message, 'late'); 
+  }
 };
 
-window.closeSettings = function() { document.getElementById('settings-modal').classList.remove('show'); document.body.style.overflow = ''; };
+window.closeSettings = function() { 
+  const modal = document.getElementById('settings-modal');
+  if (modal) modal.classList.remove('show'); 
+  document.body.style.overflow = ''; 
+};
 
 function applyConfigsToPage() {
   try {
     const t = P().texts || DEFAULT_TEXTS_DAILY;
     document.title = t.title || '';
-    document.getElementById('display-title').textContent = t.title || '';
-    document.getElementById('display-subtitle').textContent = t.subtitle || '';
+    const setText = (id, txt, disp) => { const el = document.getElementById(id); if (el) { el.textContent = txt; if (disp !== undefined) el.style.display = disp; } };
 
-    const masterNameEl = document.getElementById('display-master-name');
-    const masterTagEl = document.getElementById('display-master-tag');
-    const doggyNameEl = document.getElementById('display-doggy-name');
-    const doggyTagEl = document.getElementById('display-doggy-tag');
+    setText('display-title', t.title || '');
+    setText('display-subtitle', t.subtitle || '');
 
-    if (t.masterName) { masterNameEl.style.display = 'flex'; masterNameEl.textContent = t.masterName; } else masterNameEl.style.display = 'none';
-    if (t.masterTag) { masterTagEl.style.display = 'block'; masterTagEl.textContent = t.masterTag; } else masterTagEl.style.display = 'none';
-    if (t.doggyName) { doggyNameEl.style.display = 'flex'; doggyNameEl.textContent = t.doggyName; } else doggyNameEl.style.display = 'none';
-    if (t.doggyTag) { doggyTagEl.style.display = 'block'; doggyTagEl.textContent = t.doggyTag; } else doggyTagEl.style.display = 'none';
+    setText('display-master-name', t.masterName, t.masterName ? 'flex' : 'none');
+    setText('display-master-tag', t.masterTag, t.masterTag ? 'block' : 'none');
+    setText('display-doggy-name', t.doggyName, t.doggyName ? 'flex' : 'none');
+    setText('display-doggy-tag', t.doggyTag, t.doggyTag ? 'block' : 'none');
 
-    document.getElementById('display-master-sleep-btn').textContent = t.masterSleepBtn || '休息';
-    document.getElementById('display-master-wake-btn').textContent = t.masterWakeBtn || '起床';
-    document.getElementById('display-doggy-sleep-btn').textContent = t.doggySleepBtn || '睡觉';
-    document.getElementById('display-doggy-wake-btn').textContent = t.doggyWakeBtn || '起床';
+    setText('display-master-sleep-btn', t.masterSleepBtn || '休息');
+    setText('display-master-wake-btn', t.masterWakeBtn || '起床');
+    setText('display-doggy-sleep-btn', t.doggySleepBtn || '睡觉');
+    setText('display-doggy-wake-btn', t.doggyWakeBtn || '起床');
 
     const masterPure = getPureName(t.masterName) || (configs.mode === 'service' ? '主人' : '先生');
     const doggyPure = getPureName(t.doggyName) || (configs.mode === 'service' ? '小狗' : '宝宝');
     
-    document.getElementById('legend-master-text').textContent = masterPure + '满勤';
-    document.getElementById('legend-doggy-text').textContent = doggyPure + '满勤';
-    document.getElementById('master-city-text').textContent = `📍 ${masterPure}${t.masterRegion ? ` (${t.masterRegion})` : ''}`;
-    document.getElementById('doggy-city-text').textContent = `📍 ${doggyPure}${t.doggyRegion ? ` (${t.doggyRegion})` : ''}`;
+    setText('legend-master-text', masterPure + '满勤');
+    setText('legend-doggy-text', doggyPure + '满勤');
+    setText('master-city-text', `📍 ${masterPure}${t.masterRegion ? ` (${t.masterRegion})` : ''}`);
+    setText('doggy-city-text', `📍 ${doggyPure}${t.doggyRegion ? ` (${t.doggyRegion})` : ''}`);
 
     const gm = configs.goals?.master || DEFAULT_CONFIGS.goals.master;
     const gd = configs.goals?.doggy || DEFAULT_CONFIGS.goals.doggy;
-    document.getElementById('master-goal-text').textContent = `目标: ${gm.sleep || '--:--'} / ${gm.wake || '--:--'}`;
-    document.getElementById('doggy-goal-text').textContent = `目标: ${gd.sleep || '--:--'} / ${gd.wake || '--:--'}`;
+    setText('master-goal-text', `目标: ${gm.sleep || '--:--'} / ${gm.wake || '--:--'}`);
+    setText('doggy-goal-text', `目标: ${gd.sleep || '--:--'} / ${gd.wake || '--:--'}`);
 
     const logicalDateEl = document.getElementById('logical-date-display');
-    logicalDateEl.style.display = configs.showLogicalDate ? 'inline-block' : 'none';
+    if (logicalDateEl) logicalDateEl.style.display = configs.showLogicalDate ? 'inline-block' : 'none';
 
     document.body.classList.toggle('simple-mode', configs.simpleMode);
     applyColors(); updateIdentityLabels(); updateModeCards(); applyIdentity();
@@ -506,11 +601,20 @@ function applyColors() {
 let currentFixTarget = null;
 window.openCustomTimeModal = function(user, type, label, dateStr, currentTime) {
   currentFixTarget = { user, type, label, dateStr };
-  document.getElementById('custom-time-title').textContent = `修改 ${label} 打卡时间`;
-  document.getElementById('custom-time-input').value = currentTime || configs.goals?.[user]?.[type] || '23:00';
-  document.getElementById('custom-time-modal').classList.add('show');
+  const titleEl = document.getElementById('custom-time-title');
+  if (titleEl) titleEl.textContent = `修改 ${label} 打卡时间`;
+  const inputEl = document.getElementById('custom-time-input');
+  if (inputEl) inputEl.value = currentTime || configs.goals?.[user]?.[type] || '23:00';
+  const modal = document.getElementById('custom-time-modal');
+  if (modal) modal.classList.add('show');
 };
-window.closeCustomTimeModal = function() { document.getElementById('custom-time-modal').classList.remove('show'); currentFixTarget = null; };
+
+window.closeCustomTimeModal = function() { 
+  const modal = document.getElementById('custom-time-modal');
+  if (modal) modal.classList.remove('show'); 
+  currentFixTarget = null; 
+};
+
 window.submitCustomTime = function(action) {
   if (!currentFixTarget) return;
   const { user, type, dateStr } = currentFixTarget;
@@ -522,7 +626,9 @@ window.submitCustomTime = function(action) {
     if (Object.keys(db[user][dateStr]).length === 0) delete db[user][dateStr];
     showToast('已取消打卡', 'late');
   } else {
-    const timeVal = document.getElementById('custom-time-input').value;
+    const inputEl = document.getElementById('custom-time-input');
+    if (!inputEl) return;
+    const timeVal = inputEl.value;
     if (!/^\d{1,2}:\d{2}$/.test(timeVal)) { showToast('请输入有效的时间格式 (HH:mm)', 'late'); return; }
     const parts = timeVal.split(':');
     const timeFormatted = parts[0].padStart(2, '0') + ':' + parts[1];
@@ -534,8 +640,10 @@ window.submitCustomTime = function(action) {
 };
 
 function renderFixPanel() {
-  const dateStr = document.getElementById('cfg-fix-date').value;
+  const dateEl = document.getElementById('cfg-fix-date');
   const panel = document.getElementById('fix-panel');
+  if (!dateEl || !panel) return;
+  const dateStr = dateEl.value;
   if (!dateStr) { panel.innerHTML = ''; return; }
   const t = P().texts || DEFAULT_TEXTS_DAILY;
   const masterShort = getPureName(t.masterName) || (configs.mode === 'service' ? '主人' : '先生');
@@ -575,62 +683,50 @@ function renderFixPanel() {
 
 window.saveSettings = function(skipSync) {
   try {
+    const getVal = (id, fallback) => { const el = document.getElementById(id); return el ? el.value.trim() : fallback; };
+    const getChk = (id, fallback) => { const el = document.getElementById(id); return el ? el.checked : fallback; };
+
     const prof = P();
     prof.texts = {
-      title: document.getElementById('cfg-title').value.trim(), subtitle: document.getElementById('cfg-subtitle').value.trim(),
-      masterName: document.getElementById('cfg-master-name').value.trim(), masterTag: document.getElementById('cfg-master-tag').value.trim(),
-      masterRegion: document.getElementById('cfg-master-region').value.trim(), doggyName: document.getElementById('cfg-doggy-name').value.trim(),
-      doggyTag: document.getElementById('cfg-doggy-tag').value.trim(), doggyRegion: document.getElementById('cfg-doggy-region').value.trim(),
-      masterSleepBtn: document.getElementById('cfg-master-sleep-btn').value.trim() || (configs.mode === 'service' ? '主人休息' : '先生休息'),
-      masterWakeBtn: document.getElementById('cfg-master-wake-btn').value.trim() || (configs.mode === 'service' ? '主人起床' : '先生起床'),
-      doggySleepBtn: document.getElementById('cfg-doggy-sleep-btn').value.trim() || (configs.mode === 'service' ? '小狗睡觉' : '宝宝睡觉'),
-      doggyWakeBtn: document.getElementById('cfg-doggy-wake-btn').value.trim() || (configs.mode === 'service' ? '小狗起床' : '宝宝起床'),
-      dailyModeIcon: document.getElementById('cfg-icon-daily').value.trim() || '💕', serviceModeIcon: document.getElementById('cfg-icon-service').value.trim() || '🐕'
+      title: getVal('cfg-title', ''), subtitle: getVal('cfg-subtitle', ''),
+      masterName: getVal('cfg-master-name', ''), masterTag: getVal('cfg-master-tag', ''),
+      masterRegion: getVal('cfg-master-region', ''), doggyName: getVal('cfg-doggy-name', ''),
+      doggyTag: getVal('cfg-doggy-tag', ''), doggyRegion: getVal('cfg-doggy-region', ''),
+      masterSleepBtn: getVal('cfg-master-sleep-btn', '') || (configs.mode === 'service' ? '主人休息' : '先生休息'),
+      masterWakeBtn: getVal('cfg-master-wake-btn', '') || (configs.mode === 'service' ? '主人起床' : '先生起床'),
+      doggySleepBtn: getVal('cfg-doggy-sleep-btn', '') || (configs.mode === 'service' ? '小狗睡觉' : '宝宝睡觉'),
+      doggyWakeBtn: getVal('cfg-doggy-wake-btn', '') || (configs.mode === 'service' ? '小狗起床' : '宝宝起床'),
+      dailyModeIcon: getVal('cfg-icon-daily', '') || '💕', serviceModeIcon: getVal('cfg-icon-service', '') || '🐕'
     };
-    prof.colors = { master: document.getElementById('cfg-color-master').value || '#38bdf8', doggy: document.getElementById('cfg-color-doggy').value || '#f472b6' };
+    prof.colors = { master: getVal('cfg-color-master', '#38bdf8'), doggy: getVal('cfg-color-doggy', '#f472b6') };
 
-    const readTimeInput = (id, fallback) => { const v = document.getElementById(id).value; return /^\d{2}:\d{2}$/.test(v) ? v : fallback; };
+    const readTimeInput = (id, fallback) => { const v = getVal(id, ''); return /^\d{2}:\d{2}$/.test(v) ? v : fallback; };
     const prevGoals = configs.goals;
     configs.goals = {
       master: { sleep: readTimeInput('cfg-goal-master-sleep', prevGoals.master.sleep), wake: readTimeInput('cfg-goal-master-wake', prevGoals.master.wake) },
       doggy: { sleep: readTimeInput('cfg-goal-doggy-sleep', prevGoals.doggy.sleep), wake: readTimeInput('cfg-goal-doggy-wake', prevGoals.doggy.wake) }
     };
 
-    configs.timeZones.master = { type: document.getElementById('cfg-tz-master-type').value, value: document.getElementById('cfg-tz-master-type').value === 'iana' ? document.getElementById('cfg-tz-master-iana').value : (document.getElementById('cfg-tz-master-offset').value || '0') };
-    configs.timeZones.doggy = { type: document.getElementById('cfg-tz-doggy-type').value, value: document.getElementById('cfg-tz-doggy-type').value === 'iana' ? document.getElementById('cfg-tz-doggy-iana').value : (document.getElementById('cfg-tz-doggy-offset').value || '0') };
+    configs.timeZones.master = { type: getVal('cfg-tz-master-type', 'iana'), value: getVal('cfg-tz-master-type', 'iana') === 'iana' ? getVal('cfg-tz-master-iana', 'Asia/Shanghai') : (getVal('cfg-tz-master-offset', '0') || '0') };
+    configs.timeZones.doggy = { type: getVal('cfg-tz-doggy-type', 'iana'), value: getVal('cfg-tz-doggy-type', 'iana') === 'iana' ? getVal('cfg-tz-doggy-iana', 'America/New_York') : (getVal('cfg-tz-doggy-offset', '0') || '0') };
 
-    configs.notifySettings.enableOvertime = document.getElementById('cfg-notify-overtime').checked;
-    const intv = parseInt(document.getElementById('cfg-notify-interval').value, 10);
+    configs.notifySettings.enableOvertime = getChk('cfg-notify-overtime', false);
+    const intv = parseInt(getVal('cfg-notify-interval', '30'), 10);
     configs.notifySettings.overtimeInterval = Number.isFinite(intv) && intv >= 10 ? intv : 30;
-    configs.notifySettings.partnerNotify = document.getElementById('cfg-notify-partner').checked;
-    
-    prof.notifyTexts = {
-      master_sleep: document.getElementById('cfg-nt-master-sleep').value.trim(), master_wake: document.getElementById('cfg-nt-master-wake').value.trim(),
-      doggy_sleep: document.getElementById('cfg-nt-doggy-sleep').value.trim(), doggy_wake: document.getElementById('cfg-nt-doggy-wake').value.trim(),
-      overtime_sleep: document.getElementById('cfg-nt-overtime-sleep').value.trim(), overtime_wake: document.getElementById('cfg-nt-overtime-wake').value.trim(),
-      partner_master_sleep: document.getElementById('cfg-nt-partner-master-sleep').value.trim(), partner_master_wake: document.getElementById('cfg-nt-partner-master-wake').value.trim(),
-      partner_doggy_sleep: document.getElementById('cfg-nt-partner-doggy-sleep').value.trim(), partner_doggy_wake: document.getElementById('cfg-nt-partner-doggy-wake').value.trim(),
-      status_master_sleep: document.getElementById('cfg-status-master-sleep').value.trim(), status_master_wake: document.getElementById('cfg-status-master-wake').value.trim(),
-      status_doggy_sleep: document.getElementById('cfg-status-doggy-sleep').value.trim(), status_doggy_wake: document.getElementById('cfg-status-doggy-wake').value.trim()
-    };
 
-    if (!configs.backendPush) configs.backendPush = {};
-    configs.backendPush.title = document.getElementById('cfg-push-title').value.trim() || '🌅 契约提醒';
-    configs.backendPush.body = document.getElementById('cfg-push-body').value.trim() || '该起床 / 该休息了，记得打开契约打卡哦。';
+    configs.simpleMode = getChk('cfg-simple-mode', false) === true;
+    configs.showHistory = getChk('cfg-show-history', false) === true;
+    configs.showLogicalDate = getChk('cfg-show-logical-date', true) === true;
+    configs.showPartnerCard = getChk('cfg-show-partner-card', true) === true;
+    configs.showPartnerStatus = getChk('cfg-show-partner-status', true) === true;
+    configs.clockLayout = getVal('cfg-clock-layout', 'separate');
+    configs.showMasterClock = getChk('cfg-show-master-clock', true);
+    configs.showDoggyClock = getChk('cfg-show-doggy-clock', true);
+    configs.showSeconds = getChk('cfg-show-seconds', true);
+    configs.showShichen = getChk('cfg-show-shichen', false);
+    configs.showWellness = getChk('cfg-show-wellness', false);
 
-    configs.simpleMode = document.getElementById('cfg-simple-mode').checked === true;
-    configs.showHistory = document.getElementById('cfg-show-history').checked === true;
-    configs.showLogicalDate = document.getElementById('cfg-show-logical-date').checked === true;
-    configs.showPartnerCard = document.getElementById('cfg-show-partner-card').checked === true;
-    configs.showPartnerStatus = document.getElementById('cfg-show-partner-status').checked === true;
-    configs.clockLayout = document.getElementById('cfg-clock-layout').value;
-    configs.showMasterClock = document.getElementById('cfg-show-master-clock').checked;
-    configs.showDoggyClock = document.getElementById('cfg-show-doggy-clock').checked;
-    configs.showSeconds = document.getElementById('cfg-show-seconds').checked;
-    configs.showShichen = document.getElementById('cfg-show-shichen').checked;
-    configs.showWellness = document.getElementById('cfg-show-wellness').checked;
-
-    const wantNotify = document.getElementById('cfg-notifications').checked === true;
+    const wantNotify = getChk('cfg-notifications', false) === true;
     if (wantNotify) {
       if (!notificationSupported()) { configs.notifications = false; showToast('当前浏览器不支持系统通知', 'late'); }
       else if (Notification.permission === 'granted') { configs.notifications = true; }
@@ -638,7 +734,7 @@ window.saveSettings = function(skipSync) {
       else {
         configs.notifications = true;
         Notification.requestPermission().then(p => {
-          if (p === 'granted') { configs.notifications = true; showToast('通知已开启 🔔', 'success'); }
+          if (p === 'granted') { configs.notifications = true; showToast('页面通知已开启 🔔', 'success'); }
           else { configs.notifications = false; showToast('通知权限被拒绝', 'late'); }
           try { localStorage.setItem('dawn-duo-configs', JSON.stringify(configs)); } catch (e) {}
           updateNotifyStatus();
@@ -646,21 +742,29 @@ window.saveSettings = function(skipSync) {
       }
     } else configs.notifications = false;
 
-    configs.anniversary = document.getElementById('cfg-anniversary').value || configs.anniversary || DEFAULT_CONFIGS.anniversary;
-    configs.historyType = document.getElementById('cfg-history-type').value === 'month' ? 'month' : 'days';
-    const hd = parseInt(document.getElementById('cfg-history-days').value, 10);
+    configs.anniversary = getVal('cfg-anniversary', '') || configs.anniversary || DEFAULT_CONFIGS.anniversary;
+    configs.historyType = getVal('cfg-history-type', 'days') === 'month' ? 'month' : 'days';
+    const hd = parseInt(getVal('cfg-history-days', '30'), 10);
     configs.historyDays = [7, 30, 90, 365].includes(hd) ? hd : 30;
-    configs.historyYear = document.getElementById('cfg-history-year').value || configs.historyYear;
-    configs.historyMonth = document.getElementById('cfg-history-month').value || configs.historyMonth;
-    configs.configVersion = 8;
+    configs.historyYear = getVal('cfg-history-year', '') || configs.historyYear;
+    configs.historyMonth = getVal('cfg-history-month', '') || configs.historyMonth;
+    configs.configVersion = 12;
     try { localStorage.setItem('dawn-duo-configs', JSON.stringify(configs)); } catch (e) { showToast('保存失败', 'late'); }
 
-    ghConfig.autoSync = document.getElementById('cfg-auto-sync').checked;
+    ghConfig.autoSync = getChk('cfg-auto-sync', true);
+    ghConfig.syncInterval = parseInt(getVal('cfg-sync-interval', '5'), 10) || 0;
+    ghConfig.syncPrompt = getChk('cfg-sync-prompt', true);
     try { localStorage.setItem(CONFIG_KEY, JSON.stringify(ghConfig)); } catch (e) { }
 
     applyConfigsToPage(); updateClocks(); render(); updateNotifyStatus();
     showToast('设置已保存！💗', 'success');
     closeSettings();
-    if (!skipSync) debounceSync();
-  } catch (e) { showToast('保存时发生错误', 'late'); }
+    
+    if (window.startSyncTimer) window.startSyncTimer();
+    
+    if (!skipSync && window.debounceSync) debounceSync();
+  } catch (e) { 
+    console.error(e);
+    showToast('保存时发生错误', 'late'); 
+  }
 };

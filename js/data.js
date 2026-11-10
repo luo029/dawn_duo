@@ -22,36 +22,36 @@ const MSG_SERVICE = {
 
 const DEFAULT_NOTIFY_TEXTS = {
   daily: {
-    master_sleep: '{name}，到点啦，该休息了哦~', 
-    master_wake: '{name}，早安，该起床啦！', 
-    doggy_sleep: '{name}，乖乖睡觉的时间到了哦~', 
-    doggy_wake: '{name}，太阳晒屁股啦，起床吧！', 
-    overtime_sleep: '{name}，已经熬夜 {mins} 分钟了，该睡觉了！', 
-    overtime_wake: '{name}，已经赖床 {mins} 分钟了，快起床吧！',
-    partner_master_sleep: '👑 {name} 已休息啦 🌙 ({time})', 
-    partner_master_wake: '👑 {name} 已起床啦 ☀️ ({time})',
-    partner_doggy_sleep: '🎀 {name} 已休息啦 🌙 ({time})', 
-    partner_doggy_wake: '🎀 {name} 已起床啦 ☀️ ({time})',
-    status_master_sleep: '🌙 {name} 已经休息啦 ({time})',
-    status_master_wake: '☀️ {name} 已经醒来啦 ({time})',
-    status_doggy_sleep: '🌙 {name} 已经休息啦 ({time})',
-    status_doggy_wake: '☀️ {name} 已经醒来啦 ({time})'
+    master_sleep: ['{name}，到点啦，该休息了哦~'], 
+    master_wake: ['{name}，早安，该起床啦！'], 
+    doggy_sleep: ['{name}，乖乖睡觉的时间到了哦~'], 
+    doggy_wake: ['{name}，太阳晒屁股啦，起床吧！'], 
+    overtime_sleep: ['{name}，已经熬夜 {mins} 分钟了，该睡觉了！'], 
+    overtime_wake: ['{name}，已经赖床 {mins} 分钟了，快起床吧！'],
+    partner_master_sleep: ['👑 {name} 已休息啦 🌙 ({time})'], 
+    partner_master_wake: ['👑 {name} 已起床啦 ☀️ ({time})'],
+    partner_doggy_sleep: ['🎀 {name} 已休息啦 🌙 ({time})'], 
+    partner_doggy_wake: ['🎀 {name} 已起床啦 ☀️ ({time})'],
+    status_master_sleep: ['🌙 {name} 已经休息啦 ({time})'],
+    status_master_wake: ['☀️ {name} 已经醒来啦 ({time})'],
+    status_doggy_sleep: ['🌙 {name} 已经休息啦 ({time})'],
+    status_doggy_wake: ['☀️ {name} 已经醒来啦 ({time})']
   },
   service: {
-    master_sleep: '{name}，该休息了。', 
-    master_wake: '{name}，该起床了。', 
-    doggy_sleep: '{name}，该睡觉了。', 
-    doggy_wake: '{name}，该起来了。', 
-    overtime_sleep: '{name}，已经熬夜 {mins} 分钟了。', 
-    overtime_wake: '{name}，已经赖床 {mins} 分钟了。',
-    partner_master_sleep: '👑 {name} 已休息。({time})', 
-    partner_master_wake: '👑 {name} 已起床。({time})',
-    partner_doggy_sleep: '🎀 {name} 已休息。({time})', 
-    partner_doggy_wake: '🎀 {name} 已起床。({time})',
-    status_master_sleep: '🌙 主人已安寝，小狗请保持安静 ({time})',
-    status_master_wake: '☀️ 主人已苏醒，准备迎接新的一天 ({time})',
-    status_doggy_sleep: '🌙 小狗已乖乖入梦 ({time})',
-    status_doggy_wake: '☀️ 小狗已醒来，等待主人 ({time})'
+    master_sleep: ['{name}，该休息了。'], 
+    master_wake: ['{name}，该起床了。'], 
+    doggy_sleep: ['{name}，该睡觉了。'], 
+    doggy_wake: ['{name}，该起来了。'], 
+    overtime_sleep: ['{name}，已经熬夜 {mins} 分钟了。'], 
+    overtime_wake: ['{name}，已经赖床 {mins} 分钟了。'],
+    partner_master_sleep: ['👑 {name} 已休息。({time})'], 
+    partner_master_wake: ['👑 {name} 已起床。({time})'],
+    partner_doggy_sleep: ['🎀 {name} 已休息。({time})'], 
+    partner_doggy_wake: ['🎀 {name} 已起床。({time})'],
+    status_master_sleep: ['🌙 {name} 已安寝 ({time})'],
+    status_master_wake: ['☀️ {name} 已苏醒 ({time})'],
+    status_doggy_sleep: ['🌙 {name} 已入睡 ({time})'],
+    status_doggy_wake: ['☀️ {name} 已醒来 ({time})']
   }
 };
 
@@ -80,8 +80,24 @@ const SHICHEN_DATA = [
   { name: '亥时', time: '21:00-23:00', organ: '三焦', msg: '三焦经当令，准备入睡，泡脚助眠。' }
 ];
 
+const DEFAULT_PROGRESS_DAILY = {
+  connect: '正在连接云端...',
+  auth: '正在验证身份...',
+  sync: '正在同步数据...',
+  cancel: '正在断开连接...',
+  success: '同步成功~'
+};
+
+const DEFAULT_PROGRESS_SERVICE = {
+  connect: '正在连接终端...',
+  auth: '正在验证契约...',
+  sync: '正在同步契约数据...',
+  cancel: '正在切断连接...',
+  success: '契约已生效。'
+};
+
 const DEFAULT_CONFIGS = {
-  configVersion: 8,
+  configVersion: 12,
   mode: 'service',
   simpleMode: false,
   notifications: false,
@@ -89,10 +105,27 @@ const DEFAULT_CONFIGS = {
   showPartnerStatus: true,
   showLogicalDate: true,
   notifySettings: { enableOvertime: false, overtimeInterval: 30, partnerNotify: true },
-  backendPush: { title: '🌅 契约提醒', body: '该起床 / 该休息了，记得打开契约打卡哦。' },
+  backendPush: { 
+    masterTitle: '👑 主人的专属提醒', 
+    masterBody: '该休息了哦。',
+    doggyTitle: '🎀 小狗的专属提醒',
+    doggyBody: '去睡觉吧。'
+  },
   profiles: {
-    daily: { texts: DEFAULT_TEXTS_DAILY, colors: { master: '#38bdf8', doggy: '#f472b6' }, msgPool: MSG_DAILY, notifyTexts: DEFAULT_NOTIFY_TEXTS.daily },
-    service: { texts: DEFAULT_TEXTS_SERVICE, colors: { master: '#a855f7', doggy: '#fb7185' }, msgPool: MSG_SERVICE, notifyTexts: DEFAULT_NOTIFY_TEXTS.service }
+    daily: { 
+      texts: DEFAULT_TEXTS_DAILY, 
+      colors: { master: '#38bdf8', doggy: '#f472b6' }, 
+      msgPool: MSG_DAILY, 
+      notifyTexts: DEFAULT_NOTIFY_TEXTS.daily,
+      progressTexts: DEFAULT_PROGRESS_DAILY
+    },
+    service: { 
+      texts: DEFAULT_TEXTS_SERVICE, 
+      colors: { master: '#a855f7', doggy: '#fb7185' }, 
+      msgPool: MSG_SERVICE, 
+      notifyTexts: DEFAULT_NOTIFY_TEXTS.service,
+      progressTexts: DEFAULT_PROGRESS_SERVICE
+    }
   },
   goals: { master: { sleep: '23:00', wake: '07:00' }, doggy: { sleep: '22:30', wake: '07:30' } },
   timeZones: { master: { type: 'iana', value: 'Asia/Shanghai' }, doggy: { type: 'iana', value: 'America/New_York' } },

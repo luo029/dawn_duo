@@ -16,9 +16,9 @@ function deepMerge(base, override) {
 
 function migrateConfigs(raw) {
   if (!raw || typeof raw !== 'object') return {};
-  if (raw.configVersion >= 8) return raw;
+  if (raw.configVersion >= 12) return raw;
   const out = Object.assign({}, raw);
-  out.configVersion = 8;
+  out.configVersion = 12;
   out.mode = 'service';
   if (out.timeZones && typeof out.timeZones.master === 'string') {
     out.timeZones = { master: { type: 'iana', value: out.timeZones.master }, doggy: { type: 'iana', value: out.timeZones.doggy } };
@@ -39,6 +39,14 @@ function migrateConfigs(raw) {
   if (out.showSeconds === undefined) out.showSeconds = true;
   if (out.showShichen === undefined) out.showShichen = false;
   if (out.showWellness === undefined) out.showWellness = false;
+  
+  // 强制重置旧版进度条文案
+  const oldProgress = out.progressTexts;
+  delete out.progressTexts;
+  if (oldProgress) {
+    if (!out.profiles.daily.progressTexts) out.profiles.daily.progressTexts = Object.assign({}, DEFAULT_PROGRESS_DAILY, oldProgress);
+    if (!out.profiles.service.progressTexts) out.profiles.service.progressTexts = Object.assign({}, DEFAULT_PROGRESS_SERVICE, oldProgress);
+  }
   return out;
 }
 
@@ -48,6 +56,8 @@ let configs = deepMerge(DEFAULT_CONFIGS, savedConfigs);
 if (!configs.profiles) configs.profiles = deepMerge(DEFAULT_CONFIGS.profiles, {});
 if (!configs.profiles.daily.notifyTexts) configs.profiles.daily.notifyTexts = Object.assign({}, DEFAULT_NOTIFY_TEXTS.daily);
 if (!configs.profiles.service.notifyTexts) configs.profiles.service.notifyTexts = Object.assign({}, DEFAULT_NOTIFY_TEXTS.service);
+if (!configs.profiles.daily.progressTexts) configs.profiles.daily.progressTexts = Object.assign({}, DEFAULT_PROGRESS_DAILY);
+if (!configs.profiles.service.progressTexts) configs.profiles.service.progressTexts = Object.assign({}, DEFAULT_PROGRESS_SERVICE);
 if (!configs.notifySettings) configs.notifySettings = { enableOvertime: false, overtimeInterval: 30, partnerNotify: true };
 if (configs.notifySettings.partnerNotify === undefined) configs.notifySettings.partnerNotify = true;
 
@@ -60,11 +70,13 @@ try { identity = localStorage.getItem(IDENTITY_KEY) || ''; } catch (e) { identit
 if (['master', 'doggy', 'both'].indexOf(identity) === -1) identity = '';
 
 const CONFIG_KEY = 'dawn-duo-gh-config';
-let ghConfig = { user: 'luo029', repo: 'dawn_duo_data', path: 'records.json', configPath: 'config.json', token: '', autoSync: true };
+let ghConfig = { user: 'luo029', repo: 'dawn_duo_data', path: 'records.json', configPath: 'config.json', token: '', autoSync: true, syncInterval: 5, syncPrompt: true };
 try { 
   const savedGh = JSON.parse(localStorage.getItem(CONFIG_KEY)) || {};
   ghConfig.token = savedGh.token || ''; 
   ghConfig.autoSync = savedGh.autoSync !== false;
+  ghConfig.syncInterval = savedGh.syncInterval !== undefined ? Number(savedGh.syncInterval) : 5;
+  ghConfig.syncPrompt = savedGh.syncPrompt !== false;
 } catch (e) { }
 
 let db = { master: {}, doggy: {} };

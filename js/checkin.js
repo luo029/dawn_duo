@@ -69,7 +69,8 @@ function render() {
         }
       }
     }
-    document.getElementById('stat-total').textContent = total;
+    const elTotal = document.getElementById('stat-total');
+    if (elTotal) elTotal.textContent = total;
 
     let streak = 0;
     for (let i = 0; i < 365; i++) {
@@ -78,7 +79,8 @@ function render() {
       const dScore = (db.doggy?.[dateStr]?.sleep?.done ? 1 : 0) + (db.doggy?.[dateStr]?.wake?.done ? 1 : 0);
       if (mScore > 0 || dScore > 0) streak++; else if (i > 0) break;
     }
-    document.getElementById('stat-streak').textContent = streak;
+    const elStreak = document.getElementById('stat-streak');
+    if (elStreak) elStreak.textContent = streak;
 
     ['master', 'doggy'].forEach(user => {
       ['sleep', 'wake'].forEach(type => {
@@ -112,11 +114,13 @@ function updatePartnerStatusPanel() {
   
   if (rec?.sleep?.done && !rec?.wake?.done) {
     panel.style.display = 'flex'; panel.className = 'partner-status-panel sleep-status';
-    const tpl = nTexts[`status_${partnerUser}_sleep`] || `🌙 {name} 已经休息啦 ({time})`;
+    const rawTpl = nTexts[`status_${partnerUser}_sleep`] || `🌙 {name} 已经休息啦 ({time})`;
+    const tpl = getRandomText(rawTpl) || `🌙 {name} 已经休息啦 ({time})`;
     panel.innerHTML = tpl.replace(/{name}/g, pName).replace(/{time}/g, rec.sleep.time || '已休息');
   } else if (rec?.wake?.done) {
     panel.style.display = 'flex'; panel.className = 'partner-status-panel wake-status';
-    const tpl = nTexts[`status_${partnerUser}_wake`] || `☀️ {name} 已经醒来啦 ({time})`;
+    const rawTpl = nTexts[`status_${partnerUser}_wake`] || `☀️ {name} 已经醒来啦 ({time})`;
+    const tpl = getRandomText(rawTpl) || `☀️ {name} 已经醒来啦 ({time})`;
     panel.innerHTML = tpl.replace(/{name}/g, pName).replace(/{time}/g, rec.wake.time || '已起床');
   } else panel.style.display = 'none';
 }
@@ -127,6 +131,7 @@ function renderHistory() {
   const viewCal = document.getElementById('history-grid-calendar');
   const emptyState = document.getElementById('history-empty');
 
+  if (!box || !viewDays || !viewCal || !emptyState) return;
   if (!configs.showHistory) { box.style.display = 'none'; return; }
   box.style.display = 'block';
 
@@ -141,13 +146,19 @@ function renderHistory() {
   if (configs.historyType === 'days') {
     viewDays.style.display = 'flex'; viewCal.style.display = 'none';
     const days = Number(configs.historyDays) || 30;
-    document.getElementById('history-title-text').textContent = `最近 ${days} 天打卡回顾`;
+    const titleEl = document.getElementById('history-title-text');
+    if (titleEl) titleEl.textContent = `最近 ${days} 天打卡回顾`;
+    
     const grid = document.getElementById('history-grid-days');
-    grid.innerHTML = '';
-    for (let i = days - 1; i >= 0; i--) grid.appendChild(createDayBox(getLogicalDateStr(i), false));
+    if (grid) {
+      grid.innerHTML = '';
+      for (let i = days - 1; i >= 0; i--) grid.appendChild(createDayBox(getLogicalDateStr(i), false));
+    }
   } else {
     viewDays.style.display = 'none'; viewCal.style.display = 'grid';
-    document.getElementById('history-title-text').textContent = `${configs.historyYear} 年 ${configs.historyMonth} 月打卡回顾`;
+    const titleEl = document.getElementById('history-title-text');
+    if (titleEl) titleEl.textContent = `${configs.historyYear} 年 ${configs.historyMonth} 月打卡回顾`;
+    
     viewCal.innerHTML = '';
     ['日','一','二','三','四','五','六'].forEach(day => { viewCal.innerHTML += `<div class="calendar-weekday">${day}</div>`; });
 

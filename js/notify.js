@@ -12,6 +12,14 @@ function saveNotifyLog() {
   try { localStorage.setItem('dawn-duo-notify-log', JSON.stringify(notifyLog)); } catch (e) {}
 }
 
+function getRandomText(textArr) {
+  if (Array.isArray(textArr)) {
+    if (textArr.length === 0) return '';
+    return textArr[Math.floor(Math.random() * textArr.length)];
+  }
+  return textArr || '';
+}
+
 function checkNotifications() {
   if (!configs.notifications || !notificationSupported() || Notification.permission !== 'granted') return;
   const nowTs = Date.now();
@@ -51,7 +59,8 @@ function checkNotifications() {
 
     if (offset >= -15 && offset <= 15) {
       if (!notifyLog[it.key]) {
-        const body = (nTexts[it.key] || '').replace(/{name}/g, it.name);
+        const rawText = getRandomText(nTexts[it.key]);
+        const body = rawText.replace(/{name}/g, it.name);
         sendNotify(it.key, '🔔 契约提醒', body);
         notifyLog[it.key] = true;
         saveNotifyLog();
@@ -68,9 +77,9 @@ function checkNotifications() {
         const lastNotifyTs = notifyLog[it.key + '_overtime'] || 0;
         const intervalMs = (nSettings.overtimeInterval || 30) * 60000;
         if (nowTs - lastNotifyTs >= intervalMs) {
-          let template = it.type === 'sleep' ? nTexts.overtime_sleep : nTexts.overtime_wake;
-          if (!template) template = it.type === 'sleep' ? '{name}，已经熬夜 {mins} 分钟了，该睡觉了！' : '{name}，已经赖床 {mins} 分钟了，快起床吧！';
-          const body = template.replace(/{name}/g, it.name).replace(/{mins}/g, overtimeMins);
+          let rawText = getRandomText(it.type === 'sleep' ? nTexts.overtime_sleep : nTexts.overtime_wake);
+          if (!rawText) rawText = it.type === 'sleep' ? '{name}，已经熬夜 {mins} 分钟了，该睡觉了！' : '{name}，已经赖床 {mins} 分钟了，快起床吧！';
+          const body = rawText.replace(/{name}/g, it.name).replace(/{mins}/g, overtimeMins);
           sendNotify(it.key + '_overtime', it.type === 'sleep' ? '🌙 熬夜警告' : '☀️ 赖床警告', body);
           notifyLog[it.key + '_overtime'] = nowTs;
           saveNotifyLog();
@@ -105,10 +114,10 @@ function detectPartnerCheckin(remoteDb) {
     if (notifyLog[logKey]) return;
     
     const tplKey = `partner_${partnerKey}_${type}`;
-    const tpl = nTexts[tplKey] || `{name} 已${type === 'sleep' ? '休息' : '起床'} ({time})`;
+    const rawText = getRandomText(nTexts[tplKey]) || `{name} 已${type === 'sleep' ? '休息' : '起床'} ({time})`;
     const time = remoteRec[type]?.time || '';
     
-    const body = tpl.replace(/{name}/g, partnerName).replace(/{time}/g, time);
+    const body = rawText.replace(/{name}/g, partnerName).replace(/{time}/g, time);
     const title = type === 'sleep' ? (partnerKey === 'master' ? '👑 主人已休息' : '🎀 小狗已休息') : (partnerKey === 'master' ? '👑 主人已起床' : '🎀 小狗已起床');
       
     sendNotify(logKey, title, body);
@@ -128,7 +137,7 @@ window.testNotification = async function() {
   const nTexts = P().notifyTexts || DEFAULT_NOTIFY_TEXTS.daily;
   const mName = getPureName(P().texts.masterName) || '先生';
   const dName = getPureName(P().texts.doggyName) || '小狗';
-  let testBody = (identity === 'master') ? nTexts.master_sleep?.replace(/{name}/g, mName) : (identity === 'doggy' ? nTexts.doggy_sleep?.replace(/{name}/g, dName) : '这是一条测试通知。');
+  let testBody = (identity === 'master') ? getRandomText(nTexts.master_sleep)?.replace(/{name}/g, mName) : (identity === 'doggy' ? getRandomText(nTexts.doggy_sleep)?.replace(/{name}/g, dName) : '这是一条测试通知。');
   try {
     new Notification('🔔 测试通知', { body: testBody || '测试', tag: 'dawn-test-' + Date.now(), requireInteraction: true });
     showToast('测试通知已发送 🔔', 'success');
@@ -141,15 +150,18 @@ function updateNotifyStatus() {
   if (!notificationSupported()) { el.textContent = '⚠️ 当前浏览器不支持系统通知。'; return; }
   if (!window.isSecureContext) { el.innerHTML = '⚠️ 当前非 HTTPS/localhost 环境，浏览器会拦截通知。'; return; }
   let txt = '';
-  if (Notification.permission === 'granted') txt = '✅ 通知权限已授予，到点会自动提醒。';
+  if (Notification.permission === 'granted') txt = '✅ 页面通知权限已授予，到点会自动提醒。';
   else if (Notification.permission === 'denied') txt = '❌ 通知权限已被拒绝，请手动在地址栏左侧修改。';
-  else txt = 'ℹ️ 尚未授权，请点击下方按钮授权。';
+  else txt = 'ℹ️ 尚未授权，请开启页面通知开关。';
   el.textContent = txt;
 }
 
 window.togglePartnerNotifyInputs = function() {
-  const isChecked = document.getElementById('cfg-notify-partner').checked;
+  const partnerCheckbox = document.getElementById('cfg-notify-partner');
+  if (!partnerCheckbox) return;
+  const isChecked = partnerCheckbox.checked;
   const container = document.getElementById('partner-notify-inputs');
+  if (!container) return;
   const inputs = container.querySelectorAll('input');
   inputs.forEach(inp => {
     inp.disabled = !isChecked;
@@ -168,23 +180,172 @@ function urlBase64ToUint8Array(base64String) {
   return new Uint8Array([...rawData].map(char => char.charCodeAt(0)));
 }
 
-window.subscribeToPush = async function () {
+window.updateBackendPushStatus = async function() {
+  const statusEl = document.getElementById('backend-push-status');
+  const toggleEl = document.getElementById('cfg-backend-push');
+  if (!statusEl || !toggleEl) return;
+
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-    return showToast('当前浏览器不支持 Web Push', 'late');
+    statusEl.textContent = '⚠️ 当前浏览器不支持后台推送';
+    toggleEl.checked = false;
+    toggleEl.disabled = true;
+    return;
+  }
+
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    const subscription = await registration.pushManager.getSubscription();
+    if (subscription) {
+      const t = P().texts || DEFAULT_TEXTS_DAILY;
+      const mName = getPureName(t.masterName) || '先生';
+      const dName = getPureName(t.doggyName) || '宝宝';
+      let displayId = '默认';
+      if (identity === 'master') displayId = mName;
+      else if (identity === 'doggy') displayId = dName;
+      else if (identity === 'both') displayId = '联合身份';
+      
+      statusEl.textContent = `✅ 当前设备已绑定后台推送（身份: ${displayId}）`;
+      toggleEl.checked = true;
+    } else {
+      statusEl.textContent = 'ℹ️ 当前设备尚未绑定后台推送';
+      toggleEl.checked = false;
+    }
+  } catch (e) {
+    statusEl.textContent = '⚠️ 检查状态失败：' + e.message;
+    toggleEl.checked = false;
+  }
+};
+
+function showPushProgress(key) {
+  const area = document.getElementById('push-action-progress');
+  const textEl = document.getElementById('push-action-text');
+  const bar = document.getElementById('push-action-bar');
+  if (!area || !textEl || !bar) return;
+  area.style.display = 'block';
+  
+  let txt = key;
+  const pt = P().progressTexts || {};
+  if (pt[key]) txt = pt[key];
+  
+  const t = P().texts || DEFAULT_TEXTS_DAILY;
+  const mName = getPureName(t.masterName) || '先生';
+  const dName = getPureName(t.doggyName) || '小狗';
+  const myName = identity === 'master' ? mName : (identity === 'doggy' ? dName : '你们');
+  
+  txt = txt.replace(/{name}/g, myName);
+  
+  textEl.textContent = txt;
+  bar.style.width = '20%';
+}
+
+function updatePushProgress(text, percent) {
+  const textEl = document.getElementById('push-action-text');
+  const bar = document.getElementById('push-action-bar');
+  if (textEl) textEl.textContent = text;
+  if (bar) bar.style.width = percent + '%';
+}
+
+function hidePushProgress() {
+  const area = document.getElementById('push-action-progress');
+  const bar = document.getElementById('push-action-bar');
+  if (area) area.style.display = 'none';
+  if (bar) bar.style.width = '0%';
+}
+
+window.handleBackendPushToggle = async function() {
+  const toggleEl = document.getElementById('cfg-backend-push');
+  if (toggleEl.checked) {
+    await subscribeToPush();
+  } else {
+    await unsubscribeFromPush();
+  }
+};
+
+window.subscribeToPush = async function () {
+  showPushProgress('connect');
+  
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    hidePushProgress();
+    showToast('当前浏览器不支持 Web Push', 'late');
+    return document.getElementById('cfg-backend-push').checked = false;
   }
 
   const permission = await Notification.requestPermission();
   if (permission !== 'granted') {
-    return showToast('通知权限被拒绝，无法接收后台提醒', 'late');
+    hidePushProgress();
+    showToast('通知权限被拒绝，无法接收后台提醒', 'late');
+    return document.getElementById('cfg-backend-push').checked = false;
   }
 
   try {
+    const pt = P().progressTexts || {};
+    updatePushProgress(pt.auth || '正在请求授权...', 50);
     const registration = await navigator.serviceWorker.ready;
     const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array('BCFx4JLqFVNZ2MExV8ZX5IKI1NvwWRsRp-Ennufze3bCXDdfKWicy6MiMAIcBpFcDurOOjvLFU3RlkHGkMzoLIg'),
     });
 
+    updatePushProgress(pt.sync || '正在同步云端...', 80);
+    const WORKER_URL = 'https://push-subscribe.luo029.workers.dev/';
+    const WEBHOOK_SECRET = 'doggy';
+
+    const t = P().texts || DEFAULT_TEXTS_DAILY;
+    let customIdentity = identity || 'both';
+    if (identity === 'master') customIdentity = getPureName(t.masterName) || '主人';
+    if (identity === 'doggy') customIdentity = getPureName(t.doggyName) || '小狗';
+
+    const res = await fetch(WORKER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        secret: WEBHOOK_SECRET,
+        subscription: subscription.toJSON(),
+        identity: customIdentity 
+      }),
+    });
+
+    if (res.ok) {
+      updatePushProgress(pt.success || '✅ 授权并订阅成功！', 100);
+      showToast('✅ 系统通知已开启，后台也能收到提醒了', 'success');
+      setTimeout(hidePushProgress, 1000);
+      updateBackendPushStatus();
+    } else {
+      hidePushProgress();
+      showToast('订阅信息保存失败，请稍后重试', 'late');
+      document.getElementById('cfg-backend-push').checked = false;
+    }
+  } catch (e) {
+    hidePushProgress();
+    showToast('订阅发生错误：' + e.message, 'late');
+    document.getElementById('cfg-backend-push').checked = false;
+  }
+};
+
+window.unsubscribeFromPush = async function () {
+  showPushProgress('cancel');
+
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    hidePushProgress();
+    showToast('当前浏览器不支持 Web Push', 'late');
+    return;
+  }
+
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    const subscription = await registration.pushManager.getSubscription();
+    
+    if (!subscription) {
+      hidePushProgress();
+      updateBackendPushStatus();
+      return showToast('当前设备未开启后台推送', 'late');
+    }
+
+    const endpoint = subscription.endpoint;
+    await subscription.unsubscribe();
+
+    const pt = P().progressTexts || {};
+    updatePushProgress(pt.sync || '正在清理云端记录...', 60);
     const WORKER_URL = 'https://push-subscribe.luo029.workers.dev/';
     const WEBHOOK_SECRET = 'doggy';
 
@@ -193,17 +354,23 @@ window.subscribeToPush = async function () {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         secret: WEBHOOK_SECRET,
-        subscription: subscription.toJSON(),
+        action: 'unsubscribe',
+        endpoint: endpoint
       }),
     });
 
     if (res.ok) {
-      showToast('✅ 系统通知已开启，后台也能收到提醒了', 'success');
-      localStorage.setItem('push-subscribed', 'true');
+      updatePushProgress(pt.success || '🚫 已取消订阅', 100);
+      showToast('🚫 已取消后台推送，云端记录已清除', 'success');
+      setTimeout(hidePushProgress, 1000);
     } else {
-      showToast('订阅信息保存失败，请稍后重试', 'late');
+      hidePushProgress();
+      showToast('本地已取消，但云端记录清理失败', 'late');
     }
+    updateBackendPushStatus();
   } catch (e) {
-    showToast('订阅发生错误：' + e.message, 'late');
+    hidePushProgress();
+    showToast('取消订阅发生错误：' + e.message, 'late');
+    updateBackendPushStatus();
   }
 };

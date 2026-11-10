@@ -8,6 +8,7 @@
 <link rel="apple-touch-icon" href="icon-512.png">
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="契约">
 
@@ -412,75 +413,82 @@
         </div>
 
         <div class="config-card">
-          <div class="config-title">🔔 系统通知与提醒</div>
+          <div class="config-title">🔔 页面内通知 (需网页打开)</div>
           <div class="switch-row">
-            <label>开启系统通知</label>
-            <label class="toggle-switch">
-              <input type="checkbox" id="cfg-notifications">
-              <span class="slider"></span>
-            </label>
+            <label>开启页面内通知</label>
+            <label class="toggle-switch"><input type="checkbox" id="cfg-notifications"><span class="slider"></span></label>
           </div>
           <div id="notify-status" class="tip-text" style="margin-bottom: 8px;"></div>
-          <button class="btn outline" onclick="testNotification()" style="width: 100%; font-size: 0.8rem; padding: 8px; margin-bottom: 8px;">🔔 发送测试通知</button>
+          <button class="btn outline" onclick="testNotification()" style="width: 100%; font-size: 0.8rem; padding: 8px;">🔔 测试页面通知</button>
           
-          <button class="btn outline" onclick="subscribeToPush()" style="width: 100%; font-size: 0.8rem; padding: 8px; margin-bottom: 12px; border-color: var(--master-color); color: var(--master-color);">📡 授权并订阅后台推送</button>
-          
-          <div class="config-title" style="margin-top: 16px; border-bottom: none; font-size: 0.8rem; padding-bottom: 0;">(<span id="cfg-nt-mode-label">日常</span>模式) 到点提醒文案</div>
-          <div class="form-group"><label id="label-nt-master-sleep">主人 - 休息提醒</label><input type="text" id="cfg-nt-master-sleep" placeholder="{name}，到点啦..."></div>
-          <div class="form-group"><label id="label-nt-master-wake">主人 - 起床提醒</label><input type="text" id="cfg-nt-master-wake" placeholder="{name}，早安..."></div>
-          <div class="form-group"><label id="label-nt-doggy-sleep">小狗 - 睡觉提醒</label><input type="text" id="cfg-nt-doggy-sleep" placeholder="{name}，乖乖睡觉..."></div>
-          <div class="form-group"><label id="label-nt-doggy-wake">小狗 - 起床提醒</label><input type="text" id="cfg-nt-doggy-wake" placeholder="{name}，太阳晒屁股啦..."></div>
-          
-          <div class="switch-row" style="margin-top: 16px; border-top: 1px dashed var(--border); padding-top: 12px;"><label>开启熬夜/赖床超时提醒</label><label class="toggle-switch"><input type="checkbox" id="cfg-notify-overtime"><span class="slider"></span></label></div>
-          <div class="flex-row" style="margin-top: 8px;">
-            <div class="form-group"><label>超时提醒间隔 (分钟)</label><input type="number" id="cfg-notify-interval" min="10" max="180" step="10" value="30"></div>
+          <div class="switch-row" style="margin-top: 12px;">
+            <label>开启熬夜/赖床超时提醒</label>
+            <label class="toggle-switch"><input type="checkbox" id="cfg-notify-overtime"><span class="slider"></span></label>
           </div>
-          <div class="form-group"><label>熬夜提醒文案</label><input type="text" id="cfg-nt-overtime-sleep" placeholder="{name}，已经熬夜 {mins} 分钟了..."></div>
-          <div class="form-group"><label>赖床提醒文案</label><input type="text" id="cfg-nt-overtime-wake" placeholder="{name}，已经赖床 {mins} 分钟了..."></div>
+          <div class="form-group" style="margin-top: 8px;">
+            <label>超时重复提醒间隔 (分钟)</label>
+            <input type="number" id="cfg-notify-interval" value="30" min="10" step="10">
+          </div>
 
-          <div class="switch-row" style="margin-top: 16px; border-top: 1px dashed var(--border); padding-top: 12px;">
-            <label>对方打卡通知</label>
-            <label class="toggle-switch"><input type="checkbox" id="cfg-notify-partner" onchange="togglePartnerNotifyInputs()"><span class="slider"></span></label>
+          <div class="config-title" style="margin-top: 16px; border-bottom: 1px dashed var(--border); padding-bottom: 10px; font-size: 0.85rem;">📢 页面内到点提醒文案</div>
+          <div class="flex-row" style="gap: 8px;">
+            <button class="btn outline" style="flex:1; padding: 8px; font-size: 0.75rem;" onclick="openNotifyTextModal('master_sleep')">设置主人休息</button>
+            <button class="btn outline" style="flex:1; padding: 8px; font-size: 0.75rem;" onclick="openNotifyTextModal('master_wake')">设置主人起床</button>
           </div>
-          <div class="mode-tip" style="margin-top: 6px;">身份选为"主人"或"小狗"时，同步到对方新打卡后会发出系统通知（需页面处于打开状态）。</div>
-          
-          <div id="partner-notify-inputs" style="margin-top: 12px;">
-            <div class="config-card" style="padding: 12px; margin-bottom: 8px; border-color: rgba(56, 189, 248, 0.3); background: rgba(56, 189, 248, 0.02);">
-              <div class="config-title" style="font-size: 0.8rem; color: var(--master-color); border-bottom: none; margin-bottom: 8px; padding-bottom: 0;">👑 <span id="label-partner-master-title">主人</span> 打卡通知</div>
-              <div class="flex-row">
-                 <div class="form-group"><label>休息提醒</label><input type="text" id="cfg-nt-partner-master-sleep" placeholder="👑 {name} 已休息啦 🌙 ({time})"></div>
-                 <div class="form-group"><label>起床提醒</label><input type="text" id="cfg-nt-partner-master-wake" placeholder="👑 {name} 已起床啦 ☀️ ({time})"></div>
-              </div>
-            </div>
-            <div class="config-card" style="padding: 12px; border-color: rgba(244, 114, 182, 0.3); background: rgba(244, 114, 182, 0.02);">
-              <div class="config-title doggy-title" style="font-size: 0.8rem; border-bottom: none; margin-bottom: 8px; padding-bottom: 0;">🎀 <span id="label-partner-doggy-title">小狗</span> 打卡通知</div>
-              <div class="flex-row">
-                 <div class="form-group"><label>休息提醒</label><input type="text" id="cfg-nt-partner-doggy-sleep" placeholder="🎀 {name} 已休息啦 🌙 ({time})"></div>
-                 <div class="form-group"><label>起床提醒</label><input type="text" id="cfg-nt-partner-doggy-wake" placeholder="🎀 {name} 已起床啦 ☀️ ({time})"></div>
-              </div>
-            </div>
+          <div class="flex-row" style="gap: 8px; margin-top: 8px;">
+            <button class="btn outline" style="flex:1; padding: 8px; font-size: 0.75rem;" onclick="openNotifyTextModal('doggy_sleep')">设置小狗睡觉</button>
+            <button class="btn outline" style="flex:1; padding: 8px; font-size: 0.75rem;" onclick="openNotifyTextModal('doggy_wake')">设置小狗起床</button>
+          </div>
+
+          <div class="config-title" style="margin-top: 16px; border-bottom: 1px dashed var(--border); padding-bottom: 10px; font-size: 0.85rem;">📢 熬夜/赖床超时提醒文案</div>
+          <div class="flex-row" style="gap: 8px;">
+            <button class="btn outline" style="flex:1; padding: 8px; font-size: 0.75rem;" onclick="openNotifyTextModal('overtime_sleep')">设置熬夜提醒</button>
+            <button class="btn outline" style="flex:1; padding: 8px; font-size: 0.75rem;" onclick="openNotifyTextModal('overtime_wake')">设置赖床提醒</button>
+          </div>
+
+          <div class="config-title" style="margin-top: 16px; border-bottom: 1px dashed var(--border); padding-bottom: 10px; font-size: 0.85rem;">📢 对方打卡通知文案</div>
+          <div class="flex-row" style="gap: 8px;">
+            <button class="btn outline" style="flex:1; padding: 8px; font-size: 0.75rem;" onclick="openNotifyTextModal('partner_master_sleep')">设置主人休息</button>
+            <button class="btn outline" style="flex:1; padding: 8px; font-size: 0.75rem;" onclick="openNotifyTextModal('partner_master_wake')">设置主人起床</button>
+          </div>
+          <div class="flex-row" style="gap: 8px; margin-top: 8px;">
+            <button class="btn outline" style="flex:1; padding: 8px; font-size: 0.75rem;" onclick="openNotifyTextModal('partner_doggy_sleep')">设置小狗休息</button>
+            <button class="btn outline" style="flex:1; padding: 8px; font-size: 0.75rem;" onclick="openNotifyTextModal('partner_doggy_wake')">设置小狗起床</button>
           </div>
 
           <div class="config-title" style="margin-top: 16px; border-bottom: 1px dashed var(--border); padding-bottom: 10px; font-size: 0.85rem;">📢 独立状态栏文案</div>
-          <div class="config-card" style="padding: 12px; margin-bottom: 8px; border-color: rgba(56, 189, 248, 0.3); background: rgba(56, 189, 248, 0.02);">
-            <div class="config-title" style="font-size: 0.8rem; color: var(--master-color); border-bottom: none; margin-bottom: 8px; padding-bottom: 0;">👑 <span id="label-status-master-title">主人</span> 状态文案</div>
-            <div class="flex-row">
-                <div class="form-group"><label>休息状态</label><input type="text" id="cfg-status-master-sleep" placeholder="🌙 {name} 已经休息啦 ({time})"></div>
-                <div class="form-group"><label>起床状态</label><input type="text" id="cfg-status-master-wake" placeholder="☀️ {name} 已经醒来啦 ({time})"></div>
-            </div>
+          <div class="flex-row" style="gap: 8px;">
+            <button class="btn outline" style="flex:1; padding: 8px; font-size: 0.75rem;" onclick="openNotifyTextModal('status_master_sleep')">主人休息中</button>
+            <button class="btn outline" style="flex:1; padding: 8px; font-size: 0.75rem;" onclick="openNotifyTextModal('status_master_wake')">主人已醒来</button>
           </div>
-          <div class="config-card" style="padding: 12px; border-color: rgba(244, 114, 182, 0.3); background: rgba(244, 114, 182, 0.02);">
-            <div class="config-title doggy-title" style="font-size: 0.8rem; border-bottom: none; margin-bottom: 8px; padding-bottom: 0;">🎀 <span id="label-status-doggy-title">小狗</span> 状态文案</div>
-            <div class="flex-row">
-                <div class="form-group"><label>休息状态</label><input type="text" id="cfg-status-doggy-sleep" placeholder="🌙 {name} 已经休息啦 ({time})"></div>
-                <div class="form-group"><label>起床状态</label><input type="text" id="cfg-status-doggy-wake" placeholder="☀️ {name} 已经醒来啦 ({time})"></div>
-            </div>
+          <div class="flex-row" style="gap: 8px; margin-top: 8px;">
+            <button class="btn outline" style="flex:1; padding: 8px; font-size: 0.75rem;" onclick="openNotifyTextModal('status_doggy_sleep')">小狗休息中</button>
+            <button class="btn outline" style="flex:1; padding: 8px; font-size: 0.75rem;" onclick="openNotifyTextModal('status_doggy_wake')">小狗已醒来</button>
           </div>
 
-          <div class="config-title" style="margin-top: 16px; border-bottom: 1px dashed var(--border); padding-bottom: 10px; font-size: 0.85rem;">📡 后台系统推送文案</div>
-          <div class="mode-tip" style="margin-bottom: 12px;">通过 GitHub Actions 发送，即便网页关闭也能在手机上收到。</div>
-          <div class="form-group"><label>推送标题</label><input type="text" id="cfg-push-title" placeholder="🌅 契约提醒"></div>
-          <div class="form-group"><label>推送内容</label><input type="text" id="cfg-push-body" placeholder="该起床 / 该休息了，记得打开契约打卡哦。"></div>
+        </div>
+
+        <div class="config-card" style="border-color: rgba(56, 189, 248, 0.4);">
+          <div class="config-title" style="color: var(--master-color); border-bottom-color: rgba(56, 189, 248, 0.3);">☁️ 后台云端推送 (设备关闭可收)</div>
+          
+          <div class="switch-row" style="margin-bottom: 8px;">
+            <label>开启后台推送</label>
+            <label class="toggle-switch"><input type="checkbox" id="cfg-backend-push" onchange="handleBackendPushToggle()"><span class="slider"></span></label>
+          </div>
+          <div id="backend-push-status" class="tip-text" style="margin-bottom: 12px;">正在检查订阅状态...</div>
+
+          <div class="progress-area" id="push-action-progress" style="display: none; margin-bottom: 12px;">
+            <div class="progress-bar-wrap">
+              <div class="progress-bar" id="push-action-bar" style="width: 0%;"></div>
+            </div>
+            <div class="progress-text" id="push-action-text">正在处理...</div>
+          </div>
+
+          <div class="config-title" style="margin-top: 16px; border-bottom: none; font-size: 0.8rem; padding-bottom: 0;">📡 后台推送文案设置</div>
+          <div class="flex-row" style="gap: 8px; margin-top: 8px;">
+            <button class="btn outline" style="flex:1; padding: 8px; font-size: 0.75rem; border-color: rgba(56, 189, 248, 0.4); color: var(--master-color);" onclick="openBackendPushModal()">✏️ 编辑后台推送文案</button>
+            <button class="btn outline" style="flex:1; padding: 8px; font-size: 0.75rem;" onclick="openProgressTextModal()">✏️ 编辑加载文案</button>
+          </div>
 
         </div>
       </div>
@@ -558,9 +566,36 @@
             <label>开启自动拉取/推送</label>
             <label class="toggle-switch"><input type="checkbox" id="cfg-auto-sync"><span class="slider"></span></label>
           </div>
+          <div class="flex-row" style="margin-bottom: 12px;">
+            <div class="form-group">
+              <label>自动拉取间隔</label>
+              <select id="cfg-sync-interval">
+                <option value="0">关闭</option>
+                <option value="1">1 分钟</option>
+                <option value="5">5 分钟</option>
+                <option value="15">15 分钟</option>
+                <option value="30">30 分钟</option>
+                <option value="60">1 小时</option>
+              </select>
+            </div>
+            <div class="form-group" style="display:flex; align-items:center;">
+              <label style="margin-bottom:0; display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:600; font-size:0.85rem; margin-top:20px;">
+                <input type="checkbox" id="cfg-sync-prompt" style="width:16px; height:16px; accent-color: var(--tab-active);">
+                差异时弹窗询问
+              </label>
+            </div>
+          </div>
           <div class="mode-tip" style="margin-bottom: 12px;">
             已绑定专属私有仓库：<b>luo029/dawn_duo_data</b><br>Token 已保存在本机，可直接进行拉取或上传。
           </div>
+
+          <div class="progress-area" id="sync-action-progress" style="display: none; margin-bottom: 12px;">
+            <div class="progress-bar-wrap">
+              <div class="progress-bar" id="sync-action-bar" style="width: 0%;"></div>
+            </div>
+            <div class="progress-text" id="sync-action-text">正在处理...</div>
+          </div>
+
           <div class="flex-row" style="margin-top: 16px;">
             <button class="btn outline" onclick="syncFromGitHub()" style="flex:1;">⬇️ 立即拉取</button>
             <button class="btn primary" onclick="saveToGitHub()" style="flex:1;">⬆️ 立即上传</button>
@@ -577,6 +612,74 @@
 
     <div class="modal-foot">
       <button class="btn primary" onclick="saveSettings()">保存设置</button>
+    </div>
+  </div>
+</div>
+
+<!-- 通用通知文案编辑弹窗 -->
+<div class="sub-modal" id="notify-text-modal">
+  <div class="sub-modal-box" style="max-width: 480px;">
+    <div class="sub-modal-head">
+      <h3 id="notify-text-modal-title">编辑通知文案</h3>
+      <button class="close-btn" onclick="closeNotifyTextModal()">✕</button>
+    </div>
+    <div style="padding: 0 16px 12px; border-bottom: 1px dashed var(--border); display: flex; justify-content: space-between; align-items: center;">
+      <div class="tip-text" style="margin:0;">若有多条，每次随机抽取一条发送</div>
+      <label class="toggle-switch" style="transform: scale(0.8);"><input type="checkbox" id="notify-text-random"><span class="slider"></span></label>
+    </div>
+    <div class="sub-msg-scroll" id="notify-text-list" style="padding: 12px 16px;"></div>
+    <div style="padding: 0 16px 12px;">
+      <button class="btn-add" onclick="addNotifyTextItem()">➕ 添加一条文案</button>
+    </div>
+    <div class="sub-modal-foot">
+      <button class="btn outline" onclick="closeNotifyTextModal()">取消</button>
+      <button class="btn primary" onclick="saveNotifyTextModal()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 后台推送文案弹窗 -->
+<div class="sub-modal" id="backend-push-modal">
+  <div class="sub-modal-box" style="max-width: 480px;">
+    <div class="sub-modal-head">
+      <h3>编辑后台推送文案</h3>
+      <button class="close-btn" onclick="closeBackendPushModal()">✕</button>
+    </div>
+    <div class="sub-msg-scroll" style="padding: 16px;">
+      <div class="config-card" style="padding: 12px; margin-bottom: 8px; border-color: rgba(56, 189, 248, 0.3);">
+        <div class="config-title" style="font-size: 0.8rem; color: var(--master-color); border-bottom: none; margin-bottom: 8px; padding-bottom: 0;">👑 主人 后台推送</div>
+        <div class="form-group"><label>推送标题</label><input type="text" id="cfg-push-master-title" placeholder="👑 主人的专属提醒"></div>
+        <div class="form-group"><label>推送内容</label><input type="text" id="cfg-push-master-body" placeholder="该起床 / 该休息了哦。"></div>
+      </div>
+      <div class="config-card" style="padding: 12px; border-color: rgba(244, 114, 182, 0.3);">
+        <div class="config-title doggy-title" style="font-size: 0.8rem; border-bottom: none; margin-bottom: 8px; padding-bottom: 0;">🎀 小狗 后台推送</div>
+        <div class="form-group"><label>推送标题</label><input type="text" id="cfg-push-doggy-title" placeholder="🎀 小狗的专属提醒"></div>
+        <div class="form-group"><label>推送内容</label><input type="text" id="cfg-push-doggy-body" placeholder="乖乖睡觉 / 起床啦。"></div>
+      </div>
+    </div>
+    <div class="sub-modal-foot">
+      <button class="btn primary" onclick="closeBackendPushModal()">完成</button>
+    </div>
+  </div>
+</div>
+
+<!-- 进度条文案弹窗 -->
+<div class="sub-modal" id="progress-text-modal">
+  <div class="sub-modal-box" style="max-width: 400px;">
+    <div class="sub-modal-head">
+      <h3>编辑加载文案</h3>
+      <button class="close-btn" onclick="closeProgressTextModal()">✕</button>
+    </div>
+    <div class="sub-msg-scroll" style="padding: 16px;">
+      <div class="tip-text" id="prog-text-tip" style="margin-bottom: 12px; padding: 8px; background: rgba(156, 143, 166, 0.1); border-radius: 6px; border: 1px dashed var(--border); line-height: 1.5;"></div>
+      <div class="form-group"><label>连接/请求授权时</label><input type="text" id="cfg-prog-connect"></div>
+      <div class="form-group"><label>校验/同步中</label><input type="text" id="cfg-prog-auth"></div>
+      <div class="form-group"><label>云端数据交互时</label><input type="text" id="cfg-prog-sync"></div>
+      <div class="form-group"><label>取消/清理时</label><input type="text" id="cfg-prog-cancel"></div>
+      <div class="form-group"><label>成功完成时</label><input type="text" id="cfg-prog-success"></div>
+    </div>
+    <div class="sub-modal-foot">
+      <button class="btn primary" onclick="closeProgressTextModal()">完成</button>
     </div>
   </div>
 </div>
@@ -653,9 +756,10 @@
       <button class="close-btn" onclick="closeDiffModal()">✕</button>
     </div>
     <div class="diff-scroll" id="diff-content"></div>
-    <div class="sub-modal-foot">
-      <button class="btn outline" onclick="closeDiffModal()">取消</button>
-      <button class="btn primary" id="diff-confirm-btn" onclick="confirmSyncDiff()">确认同步</button>
+    <div class="sub-modal-foot" style="flex-wrap: wrap; gap: 8px;">
+      <button class="btn outline" onclick="closeDiffModal()" style="flex:1;">取消</button>
+      <button class="btn warning outline" id="diff-force-btn" onclick="confirmSyncDiff(true)" style="flex:1; color: var(--warn); border-color: var(--warn);">💥 强制覆盖本地</button>
+      <button class="btn primary" id="diff-confirm-btn" onclick="confirmSyncDiff(false)" style="flex:1 1 100%;">合并/应用差异</button>
     </div>
   </div>
 </div>

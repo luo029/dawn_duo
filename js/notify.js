@@ -72,6 +72,7 @@ window.testNotification = async function() {
 };
 function updateNotifyStatus() {
     const el = document.getElementById('notify-status'); if (!el) return;
+    let txt = '';
     if (!notificationSupported()) { el.textContent = '⚠️ 不支持通知。'; return; } if (!window.isSecureContext) { el.innerHTML = '⚠️ 需 HTTPS 环境。'; return; }
     if (Notification.permission === 'granted') txt = '✅ 权限已授予。'; else if (Notification.permission === 'denied') txt = '❌ 权限被拒绝。'; else txt = 'ℹ️ 未授权。'; el.textContent = txt;
 }

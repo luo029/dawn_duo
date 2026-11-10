@@ -89,6 +89,7 @@ const DEFAULT_CONFIGS = {
   showPartnerStatus: true,
   showLogicalDate: true,
   notifySettings: { enableOvertime: false, overtimeInterval: 30, partnerNotify: true },
+  backendPush: { title: '🌅 契约提醒', body: '该起床 / 该休息了，记得打开契约打卡哦。' },
   profiles: {
     daily: { texts: DEFAULT_TEXTS_DAILY, colors: { master: '#38bdf8', doggy: '#f472b6' }, msgPool: MSG_DAILY, notifyTexts: DEFAULT_NOTIFY_TEXTS.daily },
     service: { texts: DEFAULT_TEXTS_SERVICE, colors: { master: '#a855f7', doggy: '#fb7185' }, msgPool: MSG_SERVICE, notifyTexts: DEFAULT_NOTIFY_TEXTS.service }

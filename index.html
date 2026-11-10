@@ -4,17 +4,9 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <title>契约打卡</title>
-<!-- 替换为  图标 -->
-<!-- 1. 网页标签页图标（使用透明背景的 icon.png） -->
 <link rel="icon" type="image/png" href="icon.png">
-
-<!-- 2. 苹果 iOS 添加到主屏幕图标（使用白底背景的 icon-512.png） -->
 <link rel="apple-touch-icon" href="icon-512.png">
-
-<!-- 3. PWA 配置文件引入 -->
 <link rel="manifest" href="manifest.json">
-
-<!-- 4. iOS 全屏与应用名称配置 -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="契约">
@@ -33,7 +25,6 @@
     } catch(e){}
   })();
 </script>
-<!-- ================= 样式模块化引入 ================= -->
 <link rel="stylesheet" href="css/variables.css">
 <link rel="stylesheet" href="css/base.css">
 <link rel="stylesheet" href="css/components.css">
@@ -46,7 +37,6 @@
 </head>
 <body>
 
-<!-- ================= 模块 1: 项圈解锁验证层 ================= -->
 <div class="setup-overlay" id="setup-overlay">
   <div class="setup-box">
     <div class="setup-emoji">🔗</div>
@@ -68,7 +58,6 @@
   </div>
 </div>
 
-<!-- ================= 模块 2: 身份选择层 ================= -->
 <div class="identity-overlay" id="identity-modal">
   <div class="identity-box">
     <h2>你是谁呀？</h2>
@@ -102,9 +91,7 @@
   </div>
 </div>
 
-<!-- ================= 模块 3: 主界面 ================= -->
 <div class="wrap" id="main-wrap" style="display: none;">
-  <!-- 3.1 头部 -->
   <header class="topbar">
     <div class="brand">
       <h1 id="display-title">☀️ 契约</h1>
@@ -116,13 +103,11 @@
     </div>
   </header>
 
-  <!-- 3.2 时差栏 -->
   <div class="diff-pill">
     <span>相隔 <span id="diff-hours">--</span> 小时 · 契约已绑定 <span id="days-together">0</span> 天 💗</span>
     <span class="logical-date" id="logical-date-display">--</span>
   </div>
 
-  <!-- 3.3 时钟模块 -->
   <div class="grid-clocks" id="clock-container">
     <div class="clock-card master" id="clock-card-master">
       <div class="clock-city" id="master-city-text">📍 先生</div>
@@ -138,12 +123,10 @@
     </div>
   </div>
   
-  <!-- 3.4 养生模块 -->
   <div id="wellness-panel" class="wellness-box" style="display:none;">
     <div id="wellness-text"></div>
   </div>
 
-  <!-- 3.5 打卡模块 -->
   <div class="section-title">🔗 今日契约打卡</div>
   <div class="partner-status-panel" id="partner-status-panel" style="display:none;"></div>
 
@@ -185,7 +168,6 @@
     </div>
   </div>
 
-  <!-- 3.6 统计与历史 -->
   <div class="section-title">📊 契约统计</div>
   <div class="stat-box">
     <div class="stat-item">
@@ -218,7 +200,6 @@
 
 <div id="toast"></div>
 
-<!-- ================= 模块 4: 设置弹窗 ================= -->
 <div class="modal-overlay" id="settings-modal">
   <div class="modal">
     <div class="modal-head">
@@ -235,7 +216,6 @@
     </div>
 
     <div class="modal-body">
-      <!-- 面板 4.1 基础外观 -->
       <div class="tab-content active" id="tab-general">
         <div class="config-card">
           <div class="config-title">🪪 身份与版本模式</div>
@@ -320,7 +300,6 @@
         </div>
       </div>
 
-      <!-- 面板 4.2 时钟养生 -->
       <div class="tab-content" id="tab-clock">
         <div class="config-card">
           <div class="config-title">🕰️ 时钟显示设置</div>
@@ -350,7 +329,6 @@
         </div>
       </div>
 
-      <!-- 面板 4.3 作息打卡 -->
       <div class="tab-content" id="tab-rules">
         <div class="config-card">
           <div class="config-title">⏰ 目标时间与日历</div>
@@ -443,7 +421,9 @@
             </label>
           </div>
           <div id="notify-status" class="tip-text" style="margin-bottom: 8px;"></div>
-          <button class="btn outline" onclick="testNotification()" style="width: 100%; font-size: 0.8rem; padding: 8px;">🔔 发送测试通知</button>
+          <button class="btn outline" onclick="testNotification()" style="width: 100%; font-size: 0.8rem; padding: 8px; margin-bottom: 8px;">🔔 发送测试通知</button>
+          
+          <button class="btn outline" onclick="subscribeToPush()" style="width: 100%; font-size: 0.8rem; padding: 8px; margin-bottom: 12px; border-color: var(--master-color); color: var(--master-color);">📡 授权并订阅后台推送</button>
           
           <div class="config-title" style="margin-top: 16px; border-bottom: none; font-size: 0.8rem; padding-bottom: 0;">(<span id="cfg-nt-mode-label">日常</span>模式) 到点提醒文案</div>
           <div class="form-group"><label id="label-nt-master-sleep">主人 - 休息提醒</label><input type="text" id="cfg-nt-master-sleep" placeholder="{name}，到点啦..."></div>
@@ -481,7 +461,6 @@
             </div>
           </div>
 
-          <!-- 独立状态栏文案 -->
           <div class="config-title" style="margin-top: 16px; border-bottom: 1px dashed var(--border); padding-bottom: 10px; font-size: 0.85rem;">📢 独立状态栏文案</div>
           <div class="config-card" style="padding: 12px; margin-bottom: 8px; border-color: rgba(56, 189, 248, 0.3); background: rgba(56, 189, 248, 0.02);">
             <div class="config-title" style="font-size: 0.8rem; color: var(--master-color); border-bottom: none; margin-bottom: 8px; padding-bottom: 0;">👑 <span id="label-status-master-title">主人</span> 状态文案</div>
@@ -498,10 +477,14 @@
             </div>
           </div>
 
+          <div class="config-title" style="margin-top: 16px; border-bottom: 1px dashed var(--border); padding-bottom: 10px; font-size: 0.85rem;">📡 后台系统推送文案</div>
+          <div class="mode-tip" style="margin-bottom: 12px;">通过 GitHub Actions 发送，即便网页关闭也能在手机上收到。</div>
+          <div class="form-group"><label>推送标题</label><input type="text" id="cfg-push-title" placeholder="🌅 契约提醒"></div>
+          <div class="form-group"><label>推送内容</label><input type="text" id="cfg-push-body" placeholder="该起床 / 该休息了，记得打开契约打卡哦。"></div>
+
         </div>
       </div>
 
-      <!-- 面板 4.4 互动文案 -->
       <div class="tab-content" id="tab-msgs">
         <div class="config-card">
           <div class="config-title">👑 <span id="cfg-msg-master-title">主人</span> 的弹窗文案</div>
@@ -540,7 +523,6 @@
         </div>
       </div>
 
-      <!-- 面板 4.5 数据同步 -->
       <div class="tab-content" id="tab-data">
         <div class="config-card">
           <div class="config-title">📥 互动文案库导入</div>
@@ -599,7 +581,6 @@
   </div>
 </div>
 
-<!-- ================= 模块 5: 二级弹窗 ================= -->
 <div class="sub-modal" id="sub-modal">
   <div class="sub-modal-box">
     <div class="sub-modal-head">
@@ -615,7 +596,6 @@
   </div>
 </div>
 
-<!-- 导入文库预览弹窗 -->
 <div class="sub-modal" id="import-lib-modal">
   <div class="sub-modal-box" style="max-width: 520px;">
     <div class="sub-modal-head">
@@ -638,7 +618,6 @@
       </div>
     </div>
     <div style="padding: 12px 16px; overflow-y: auto; flex: 1; max-height: 50vh;" id="import-lib-preview-list">
-      <!-- 预览列表 -->
     </div>
     <div class="sub-modal-foot">
       <button class="btn outline" onclick="closeImportLibModal()">取消</button>
@@ -681,7 +660,6 @@
   </div>
 </div>
 
-<!-- ================= JS 模块化引入 (严格顺序) ================= -->
 <script src="js/data.js"></script>
 <script src="js/utils.js"></script>
 <script src="js/config.js"></script>

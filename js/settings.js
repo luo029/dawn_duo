@@ -79,7 +79,6 @@ window.chooseIdentity = function(id) {
   autoPullOnLoad(false);
 };
 
-// 优化 Tab 切换逻辑，使用 requestAnimationFrame 避免强制回流卡顿
 window.switchTab = function(e, tabId) {
   const targetBtn = e.currentTarget || e.target;
   const targetContent = document.getElementById(tabId);
@@ -187,6 +186,10 @@ function fillTextInputs() {
   const sDS = document.getElementById('cfg-status-doggy-sleep'); if (sDS) sDS.value = nt.status_doggy_sleep || '';
   const sDW = document.getElementById('cfg-status-doggy-wake'); if (sDW) sDW.value = nt.status_doggy_wake || '';
 
+  const bp = configs.backendPush || { title: '🌅 契约提醒', body: '该起床 / 该休息了，记得打开契约打卡哦。' };
+  document.getElementById('cfg-push-title').value = bp.title || '';
+  document.getElementById('cfg-push-body').value = bp.body || '';
+
   document.getElementById('cfg-show-partner-card').checked = configs.showPartnerCard !== false;
   document.getElementById('cfg-show-partner-status').checked = configs.showPartnerStatus !== false;
   
@@ -250,7 +253,6 @@ window.saveSubMsg = function() {
   debounceSync();
 };
 
-// ================= 文库导入逻辑 =================
 let parsedImportLines = [];
 
 window.readLibraryFile = function(event) {
@@ -314,7 +316,7 @@ function renderImportPreview() {
   listEl.innerHTML = '';
   
   let dupCount = 0;
-  const fragment = document.createDocumentFragment(); // 使用文档片段优化 DOM 插入性能
+  const fragment = document.createDocumentFragment();
   
   parsedImportLines.forEach((item, index) => {
     if (item.isDuplicate) dupCount++;
@@ -343,10 +345,10 @@ function renderImportPreview() {
       row.appendChild(badge);
     }
     
-    fragment.appendChild(row); // 先放入片段
+    fragment.appendChild(row);
   });
   
-  listEl.appendChild(fragment); // 一次性渲染
+  listEl.appendChild(fragment);
   
   if (dupCount > 0) {
     showToast(`发现 ${dupCount} 条重复文案，已自动为您取消勾选`, 'late');
@@ -611,6 +613,10 @@ window.saveSettings = function(skipSync) {
       status_master_sleep: document.getElementById('cfg-status-master-sleep').value.trim(), status_master_wake: document.getElementById('cfg-status-master-wake').value.trim(),
       status_doggy_sleep: document.getElementById('cfg-status-doggy-sleep').value.trim(), status_doggy_wake: document.getElementById('cfg-status-doggy-wake').value.trim()
     };
+
+    if (!configs.backendPush) configs.backendPush = {};
+    configs.backendPush.title = document.getElementById('cfg-push-title').value.trim() || '🌅 契约提醒';
+    configs.backendPush.body = document.getElementById('cfg-push-body').value.trim() || '该起床 / 该休息了，记得打开契约打卡哦。';
 
     configs.simpleMode = document.getElementById('cfg-simple-mode').checked === true;
     configs.showHistory = document.getElementById('cfg-show-history').checked === true;

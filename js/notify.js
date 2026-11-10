@@ -160,3 +160,50 @@ window.togglePartnerNotifyInputs = function() {
     }
   });
 };
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  return new Uint8Array([...rawData].map(char => char.charCodeAt(0)));
+}
+
+window.subscribeToPush = async function () {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    return showToast('当前浏览器不支持 Web Push', 'late');
+  }
+
+  const permission = await Notification.requestPermission();
+  if (permission !== 'granted') {
+    return showToast('通知权限被拒绝，无法接收后台提醒', 'late');
+  }
+
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    const subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array('BCFx4JLqFVNZ2MExV8ZX5IKI1NvwWRsRp-Ennufze3bCXDdfKWicy6MiMAIcBpFcDurOOjvLFU3RlkHGkMzoLIg'),
+    });
+
+    const WORKER_URL = 'https://push-subscribe.luo029.workers.dev/';
+    const WEBHOOK_SECRET = 'doggy';
+
+    const res = await fetch(WORKER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        secret: WEBHOOK_SECRET,
+        subscription: subscription.toJSON(),
+      }),
+    });
+
+    if (res.ok) {
+      showToast('✅ 系统通知已开启，后台也能收到提醒了', 'success');
+      localStorage.setItem('push-subscribed', 'true');
+    } else {
+      showToast('订阅信息保存失败，请稍后重试', 'late');
+    }
+  } catch (e) {
+    showToast('订阅发生错误：' + e.message, 'late');
+  }
+};

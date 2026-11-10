@@ -111,3 +111,14 @@ window.handleShichenToggle = function() {
 window.handleWellnessToggle = function() {
   if (document.getElementById('cfg-show-wellness').checked) document.getElementById('cfg-show-shichen').checked = true;
 };
+
+// 计算字符串相似度 (Jaccard 相似度算法)
+function getSimilarity(str1, str2) {
+  if (!str1 || !str2) return 0;
+  if (str1 === str2) return 1;
+  const set1 = new Set(str1.replace(/\s+/g, '').split(''));
+  const set2 = new Set(str2.replace(/\s+/g, '').split(''));
+  const intersection = new Set([...set1].filter(x => set2.has(x)));
+  const union = new Set([...set1, ...set2]);
+  return intersection.size / union.size;
+}

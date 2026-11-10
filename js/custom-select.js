@@ -82,15 +82,6 @@ function initCustomSelects() {
       
       wrapper.classList.toggle('open');
     });
-
-    select.addEventListener('change', () => {
-      window.refreshCustomSelects();
-    });
-
-    const observer = new MutationObserver(() => {
-      renderOptions(select, optionsList, trigger);
-    });
-    observer.observe(select, { childList: true, subtree: true });
   });
   
   if (!window.hasCustomSelectListener) {

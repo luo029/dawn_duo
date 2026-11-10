@@ -19,9 +19,6 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="契约">
 
-
-
-
 <script>
   (function() {
     const savedTheme = localStorage.getItem('dawn-duo-theme') || 'dark';
@@ -546,6 +543,16 @@
       <!-- 面板 4.5 数据同步 -->
       <div class="tab-content" id="tab-data">
         <div class="config-card">
+          <div class="config-title">📥 互动文案库导入</div>
+          <div class="mode-tip" style="margin-bottom: 12px;">
+            支持导入 .txt / .md / .json 文件。<br>
+            txt 和 md 将按行读取，系统会自动检索本地库中相似度大于 70% 的文案并进行过滤提示。
+          </div>
+          <button class="btn outline" style="width: 100%;" onclick="document.getElementById('import-lib-file').click()">📂 选择文件导入文库</button>
+          <input type="file" id="import-lib-file" accept=".txt,.md,.json" style="display: none;" onchange="readLibraryFile(event)">
+        </div>
+
+        <div class="config-card">
           <div class="config-title">🛠️ 打卡记录修正 (点击切换状态)</div>
           <div class="form-group"><input type="date" id="cfg-fix-date" onchange="renderFixPanel()"></div>
           <div class="fix-panel" id="fix-panel"></div>
@@ -558,7 +565,7 @@
             <button class="btn outline" onclick="exportCSV()" style="flex: 1 1 45%;">📊 导出 CSV</button>
             <button class="btn outline" onclick="exportAsImage()" style="flex: 1 1 45%;">🖼️ 导出图片</button>
             <button class="btn outline" onclick="window.print()" style="flex: 1 1 45%;">🖨️ 打印/PDF</button>
-            <button class="btn outline" style="flex: 1 1 100%;" onclick="document.getElementById('import-file').click()">📥 导入 JSON</button>
+            <button class="btn outline" style="flex: 1 1 100%;" onclick="document.getElementById('import-file').click()">📥 导入全量备份 JSON</button>
             <input type="file" id="import-file" accept=".json" style="display: none;" onchange="importData(event)">
           </div>
         </div>
@@ -604,6 +611,38 @@
     <div class="sub-modal-foot">
       <button class="btn outline" onclick="closeSubMsg()">取消</button>
       <button class="btn primary" onclick="saveSubMsg()">确认</button>
+    </div>
+  </div>
+</div>
+
+<!-- 导入文库预览弹窗 -->
+<div class="sub-modal" id="import-lib-modal">
+  <div class="sub-modal-box" style="max-width: 520px;">
+    <div class="sub-modal-head">
+      <h3>📥 文库导入预览</h3>
+      <button class="close-btn" onclick="closeImportLibModal()">✕</button>
+    </div>
+    <div style="padding: 12px 16px; border-bottom: 1px solid var(--border); background: var(--settings-bg);">
+      <div class="form-group" style="margin-bottom: 0;">
+        <label>导入到哪个文案池？</label>
+        <select id="import-target-pool">
+          <option value="master_sleep_success">👑 主人 - 休息(达标)</option>
+          <option value="master_sleep_late">👑 主人 - 休息(晚睡)</option>
+          <option value="master_wake_success">👑 主人 - 起床(达标)</option>
+          <option value="master_wake_late">👑 主人 - 起床(赖床)</option>
+          <option value="doggy_sleep_success">🎀 小狗 - 睡觉(达标)</option>
+          <option value="doggy_sleep_late">🎀 小狗 - 睡觉(晚睡)</option>
+          <option value="doggy_wake_success">🎀 小狗 - 起床(达标)</option>
+          <option value="doggy_wake_late">🎀 小狗 - 起床(赖床)</option>
+        </select>
+      </div>
+    </div>
+    <div style="padding: 12px 16px; overflow-y: auto; flex: 1; max-height: 50vh;" id="import-lib-preview-list">
+      <!-- 预览列表 -->
+    </div>
+    <div class="sub-modal-foot">
+      <button class="btn outline" onclick="closeImportLibModal()">取消</button>
+      <button class="btn primary" onclick="confirmImportLibrary()">确认导入选中项</button>
     </div>
   </div>
 </div>

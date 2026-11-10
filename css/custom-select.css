@@ -8,7 +8,7 @@
 .custom-select-trigger {
     width: 100%; padding: 10px 14px; border-radius: 10px; border: 1.5px solid var(--border);
     background: var(--input-bg); color: var(--text); font-size: 0.85rem; 
-    cursor: pointer; transition: all 0.2s; outline: none;
+    cursor: pointer; transition: border-color 0.2s; outline: none;
     display: flex; justify-content: space-between; align-items: center;
     box-sizing: border-box;
 }
@@ -17,7 +17,7 @@
     width: 14px; height: 14px;
     background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239c8fa6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
     background-repeat: no-repeat; background-position: center; background-size: contain;
-    transition: transform 0.3s;
+    transition: transform 0.2s;
     flex-shrink: 0;
 }
 .custom-select-wrapper.open .custom-select-trigger::after {
@@ -26,7 +26,6 @@
 .custom-select-wrapper.open .custom-select-trigger, 
 .custom-select-trigger:focus {
     border-color: var(--tab-active);
-    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15);
 }
 .custom-select-options {
     position: absolute;
@@ -36,14 +35,14 @@
     background: var(--card-bg);
     border: 1px solid var(--border);
     border-radius: 12px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     z-index: 1000;
     max-height: 220px;
     overflow-y: auto;
     opacity: 0;
     visibility: hidden;
-    transform: translateY(-10px);
-    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    /* 移除了 translateY 动画，改为纯透明度切换，大幅减轻 Chrome 渲染压力 */
+    transition: opacity 0.2s, visibility 0.2s;
     padding: 6px;
     box-sizing: border-box;
 }
@@ -51,12 +50,10 @@
 .custom-select-wrapper.drop-up .custom-select-options {
     top: auto;
     bottom: calc(100% + 6px);
-    transform: translateY(10px);
 }
 .custom-select-wrapper.open .custom-select-options {
     opacity: 1;
     visibility: visible;
-    transform: translateY(0);
 }
 .custom-select-option {
     padding: 10px 12px;
@@ -64,7 +61,7 @@
     color: var(--text);
     cursor: pointer;
     border-radius: 8px;
-    transition: background 0.2s, color 0.2s;
+    transition: background 0.1s, color 0.1s;
     margin-bottom: 2px;
 }
 .custom-select-option:last-child {

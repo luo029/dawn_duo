@@ -79,12 +79,19 @@ window.chooseIdentity = function(id) {
   autoPullOnLoad(false);
 };
 
+// 优化 Tab 切换逻辑，使用 requestAnimationFrame 避免强制回流卡顿
 window.switchTab = function(e, tabId) {
   const targetBtn = e.currentTarget || e.target;
-  document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-  document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-  targetBtn.classList.add('active');
-  document.getElementById(tabId).classList.add('active');
+  const targetContent = document.getElementById(tabId);
+  if (!targetContent) return;
+
+  requestAnimationFrame(() => {
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+    
+    targetBtn.classList.add('active');
+    targetContent.classList.add('active');
+  });
 };
 
 window.toggleHistoryTypeOptions = function() {
@@ -243,6 +250,140 @@ window.saveSubMsg = function() {
   debounceSync();
 };
 
+// ================= 文库导入逻辑 =================
+let parsedImportLines = [];
+
+window.readLibraryFile = function(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  
+  reader.onload = function(e) {
+    try {
+      const content = e.target.result;
+      let lines = [];
+      
+      if (file.name.endsWith('.json')) {
+        try {
+          const parsed = JSON.parse(content);
+          if (Array.isArray(parsed)) lines = parsed;
+          else if (typeof parsed === 'object') {
+             const vals = Object.values(parsed).flat(3).filter(v => typeof v === 'string');
+             lines = vals;
+          }
+        } catch(err) { showToast('JSON 解析失败', 'late'); return; }
+      } else {
+        lines = content.split(/\r?\n/).map(s => s.trim()).filter(s => s.length > 0);
+      }
+
+      if (lines.length === 0) return showToast('文件中未找到有效文字', 'late');
+      
+      const pool = P().msgPool || {};
+      const allExistingTexts = [];
+      for (const u of ['master', 'doggy']) {
+        for (const t of ['sleep', 'wake']) {
+          for (const s of ['success', 'late']) {
+            if (pool[u]?.[t]?.[s]) allExistingTexts.push(...pool[u][t][s]);
+          }
+        }
+      }
+
+      parsedImportLines = lines.map(text => {
+        let isDuplicate = false;
+        for (const existing of allExistingTexts) {
+          if (getSimilarity(text, existing) >= 0.7) {
+            isDuplicate = true;
+            break;
+          }
+        }
+        return { text, isDuplicate };
+      });
+
+      renderImportPreview();
+      document.getElementById('import-lib-modal').classList.add('show');
+    } catch (err) {
+      showToast('文件读取失败', 'late');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+};
+
+function renderImportPreview() {
+  const listEl = document.getElementById('import-lib-preview-list');
+  listEl.innerHTML = '';
+  
+  let dupCount = 0;
+  const fragment = document.createDocumentFragment(); // 使用文档片段优化 DOM 插入性能
+  
+  parsedImportLines.forEach((item, index) => {
+    if (item.isDuplicate) dupCount++;
+    
+    const row = document.createElement('div');
+    row.className = `import-item-row ${item.isDuplicate ? 'duplicate' : ''}`;
+    
+    const chk = document.createElement('input');
+    chk.type = 'checkbox';
+    chk.checked = !item.isDuplicate;
+    chk.disabled = item.isDuplicate;
+    chk.dataset.index = index;
+    
+    const txt = document.createElement('span');
+    txt.className = 'import-text';
+    txt.textContent = item.text;
+    txt.style.flex = '1';
+    
+    row.appendChild(chk);
+    row.appendChild(txt);
+    
+    if (item.isDuplicate) {
+      const badge = document.createElement('span');
+      badge.className = 'import-badge';
+      badge.textContent = '高度重复';
+      row.appendChild(badge);
+    }
+    
+    fragment.appendChild(row); // 先放入片段
+  });
+  
+  listEl.appendChild(fragment); // 一次性渲染
+  
+  if (dupCount > 0) {
+    showToast(`发现 ${dupCount} 条重复文案，已自动为您取消勾选`, 'late');
+  }
+}
+
+window.closeImportLibModal = function() {
+  document.getElementById('import-lib-modal').classList.remove('show');
+  parsedImportLines = [];
+};
+
+window.confirmImportLibrary = function() {
+  const targetKey = document.getElementById('import-target-pool').value;
+  const [user, type, status] = targetKey.split('_');
+  
+  const listEl = document.getElementById('import-lib-preview-list');
+  const checkedBoxes = listEl.querySelectorAll('input[type="checkbox"]:checked');
+  
+  if (checkedBoxes.length === 0) return showToast('请至少勾选一条要导入的文案', 'late');
+  
+  const toAdd = Array.from(checkedBoxes).map(chk => parsedImportLines[Number(chk.dataset.index)].text);
+  
+  const prof = P();
+  if (!prof.msgPool) prof.msgPool = {};
+  if (!prof.msgPool[user]) prof.msgPool[user] = {};
+  if (!prof.msgPool[user][type]) prof.msgPool[user][type] = {};
+  if (!prof.msgPool[user][type][status]) prof.msgPool[user][type][status] = [];
+  
+  prof.msgPool[user][type][status].push(...toAdd);
+  
+  try { localStorage.setItem('dawn-duo-configs', JSON.stringify(configs)); } catch (e) {}
+  updateMsgCounts();
+  closeImportLibModal();
+  debounceSync();
+  showToast(`成功导入 ${toAdd.length} 条文案 💗`, 'success');
+};
+
 window.openSettings = function() {
   try {
     fillTextInputs(); updateColorInputs(); updateMsgCounts(); updateModeCards();
@@ -280,11 +421,15 @@ window.openSettings = function() {
     try { const y = new Date(configs.anniversary).getFullYear(); if (Number.isFinite(y)) startYear = y; } catch (e) { }
     const endYear = new Date().getFullYear() + 1;
     const yearSelect = document.getElementById('cfg-history-year'); yearSelect.innerHTML = '';
-    for (let y = startYear; y <= endYear; y++) yearSelect.innerHTML += `<option value="${y}">${y} 年</option>`;
+    let yearOptions = '';
+    for (let y = startYear; y <= endYear; y++) yearOptions += `<option value="${y}">${y} 年</option>`;
+    yearSelect.innerHTML = yearOptions;
     yearSelect.value = configs.historyYear; if (!yearSelect.value) yearSelect.selectedIndex = 0;
 
     const monthSelect = document.getElementById('cfg-history-month'); monthSelect.innerHTML = '';
-    for (let m = 1; m <= 12; m++) monthSelect.innerHTML += `<option value="${String(m).padStart(2,'0')}">${m} 月</option>`;
+    let monthOptions = '';
+    for (let m = 1; m <= 12; m++) monthOptions += `<option value="${String(m).padStart(2,'0')}">${m} 月</option>`;
+    monthSelect.innerHTML = monthOptions;
     monthSelect.value = configs.historyMonth; if (!monthSelect.value) monthSelect.selectedIndex = 0;
 
     toggleHistoryTypeOptions();
@@ -294,7 +439,6 @@ window.openSettings = function() {
 
     updateNotifyStatus(); updateIdentityCards();
     
-    // 刷新自定义下拉框 UI
     if (window.refreshCustomSelects) window.refreshCustomSelects();
 
     document.getElementById('settings-modal').classList.add('show');

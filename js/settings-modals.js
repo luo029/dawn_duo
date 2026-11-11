@@ -11,4 +11,42 @@ window.getSettingsModalsHTML = () => `
 <div class="sub-modal" id="custom-time-modal"><div class="sub-modal-box" style="max-width:320px;"><div class="sub-modal-head"><h3 id="custom-time-title" style="font-size:1rem;">修改打卡时间</h3><button class="close-btn" onclick="closeCustomTimeModal()">✕</button></div><div style="padding: 10px 0;"><div class="form-group"><label>打卡具体时间 (24小时制)</label><input type="time" id="custom-time-input" style="font-size:1.2rem; text-align:center; padding:10px;"></div></div><div class="sub-modal-foot" style="flex-wrap:wrap; gap:8px;"><button class="btn danger outline" onclick="submitCustomTime('clear')" style="flex:1 1 100%; padding:8px; font-size:0.8rem;">🗑️ 取消打卡</button><button class="btn outline" onclick="closeCustomTimeModal()" style="flex:1;">取消</button><button class="btn primary" onclick="submitCustomTime('save')" style="flex:1;">保存</button></div></div></div>
 <div class="sub-modal" id="diff-modal"><div class="sub-modal-box diff-modal-box"><div class="sub-modal-head"><h3 id="diff-modal-title">同步差异对比</h3><button class="close-btn" onclick="closeDiffModal()">✕</button></div><div style="padding: 10px 20px; border-bottom: 1px solid var(--border); display: flex; gap: 12px; align-items: center; background: var(--settings-bg);"><label style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem; cursor: pointer; font-weight: 600;"><input type="checkbox" id="diff-select-all" checked onchange="toggleAllDiff(this.checked)" style="width: 16px; height: 16px; accent-color: var(--tab-active);">全选差异</label><button class="btn outline" style="font-size: 0.75rem; padding: 4px 10px;" onclick="toggleAllDiff(true)">全选</button><button class="btn outline" style="font-size: 0.75rem; padding: 4px 10px;" onclick="toggleAllDiff(false)">全不选</button></div><div class="diff-scroll" id="diff-content"></div><div class="sub-modal-foot" style="flex-wrap: wrap; gap: 8px;"><button class="btn outline" onclick="closeDiffModal()" style="flex:1;">取消</button><button class="btn primary" id="diff-confirm-btn" onclick="confirmSyncDiff(false)" style="flex:1 1 100%;">应用选中差异</button></div></div></div>
 <div class="sub-modal" id="custom-confirm-modal"><div class="sub-modal-box" style="max-width: 320px; padding: 24px; display: flex; flex-direction: column; text-align: center;"><div style="font-size: 1.15rem; margin-bottom: 12px; color: var(--text); font-weight: 700;" id="custom-confirm-title">确认操作</div><div class="sleep-desc-box" id="custom-confirm-desc" style="margin-bottom: 20px; text-align: left;"></div><div style="display: flex; gap: 10px;"><button class="btn outline" style="flex: 1; padding: 12px; border-radius: 10px; font-weight: 600;" onclick="closeCustomConfirm()">取消</button><button class="btn" id="custom-confirm-btn" style="flex: 1; padding: 12px; border-radius: 10px; font-weight: 600; background: var(--warn); color: white; border: none;">确定</button></div></div></div>
+<div class="sub-modal" id="export-options-modal">
+  <div class="sub-modal-box" style="max-width: 360px; padding: 24px; display: flex; flex-direction: column; text-align: left;">
+    <div style="font-size: 1.15rem; margin-bottom: 16px; color: var(--text); font-weight: 800; text-align: center;" id="export-opt-title">📤 导出选项</div>
+    <div class="form-group" style="margin-bottom: 16px;">
+      <label>导出对象</label>
+      <select id="export-opt-user">
+        <option value="both">双方</option>
+        <option value="master" id="export-opt-master">主人</option>
+        <option value="doggy" id="export-opt-doggy">小狗</option>
+      </select>
+    </div>
+    <div class="form-group" style="margin-bottom: 24px;">
+      <label>时间范围</label>
+      <select id="export-opt-days">
+        <option value="7">最近 7 天</option>
+        <option value="14">最近 14 天</option>
+        <option value="30">最近 30 天</option>
+        <option value="all">全部历史记录</option>
+      </select>
+    </div>
+    <div style="display: flex; gap: 10px;">
+      <button class="btn outline" style="flex: 1; padding: 12px; border-radius: 10px; font-weight: 600;" onclick="document.getElementById('export-options-modal').classList.remove('show')">取消</button>
+      <button class="btn primary" style="flex: 1; padding: 12px; border-radius: 10px; font-weight: 600;" onclick="confirmExportOptions()">开始导出</button>
+    </div>
+  </div>
+</div>
+<div class="sub-modal" id="export-json-modal">
+  <div class="sub-modal-box" style="max-width: 360px; padding: 24px; display: flex; flex-direction: column; text-align: left;">
+    <div style="font-size: 1.15rem; margin-bottom: 12px; color: var(--text); font-weight: 800; text-align: center;">📄 导出 JSON</div>
+    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px; text-align: center;">请选择您要备份的数据类型：</div>
+    <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px;">
+       <button class="btn outline" style="padding: 16px; justify-content: flex-start; text-align: left; font-size: 0.95rem;" onclick="downloadJSON('records')"><b>📅 仅导出打卡记录</b><br><span style="font-size:0.75rem; font-weight:normal; opacity:0.6;">包含历史打卡时间与状态数据</span></button>
+       <button class="btn outline" style="padding: 16px; justify-content: flex-start; text-align: left; font-size: 0.95rem;" onclick="downloadJSON('config')"><b>⚙️ 仅导出配置文案</b><br><span style="font-size:0.75rem; font-weight:normal; opacity:0.6;">包含设置里的所有名字、文案、颜色等</span></button>
+       <button class="btn outline" style="padding: 16px; justify-content: flex-start; text-align: left; font-size: 0.95rem;" onclick="downloadJSON('all')"><b>📦 导出全部数据</b><br><span style="font-size:0.75rem; font-weight:normal; opacity:0.6;">打卡记录 + 全部配置</span></button>
+    </div>
+    <button class="btn outline" style="width: 100%; padding: 12px; border-radius: 10px; font-weight: 600;" onclick="document.getElementById('export-json-modal').classList.remove('show')">取消</button>
+  </div>
+</div>
 `;

@@ -29,12 +29,12 @@ window.getTabDataHTML = () => `
   <div class="config-card">
     <div class="config-title">📤 本地导入导出</div>
     <div class="flex-btn-group two-cols" style="margin-bottom: 8px;">
-      <button class="btn outline" onclick="exportJSON()">📄 导出 JSON</button>
+      <button class="btn outline" onclick="document.getElementById('export-json-modal').classList.add('show')">📄 导出 JSON</button>
       <button class="btn outline" onclick="exportCSV()">📊 导出 CSV</button>
     </div>
     <div class="flex-btn-group two-cols" style="margin-bottom: 8px;">
-      <button class="btn outline" onclick="exportAsImage()">🖼️ 导出图片</button>
-      <button class="btn outline" onclick="window.print()">🖨️ 打印/PDF</button>
+      <button class="btn outline" onclick="openExportOptions('image')">🖼️ 导出图片</button>
+      <button class="btn outline" onclick="openExportOptions('pdf')">🖨️ 打印/PDF</button>
     </div>
     <button class="btn outline" style="width: 100%;" onclick="document.getElementById('import-file').click()">📥 导入全量备份 JSON</button>
     <input type="file" id="import-file" accept=".json" style="display: none;" onchange="importData(event)">

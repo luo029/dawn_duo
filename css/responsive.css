@@ -42,11 +42,157 @@ body.simple-mode .user-card { padding: 30px 20px; }
   .diff-stat { font-size: 0.72rem; padding: 3px 8px; }
 }
 
+/* ================= 打印/PDF 专项美化 ================= */
 @media print {
-  body { background: white !important; color: black !important; }
-  .top-actions, .modal-overlay, #toast, .sub-modal, .btn, .checkin-group, .diff-pill, .grid-clocks, .section-title, .stat-box, .identity-overlay, .wellness-box, .partner-status-panel, .setup-overlay { display: none !important; }
-  .wrap { max-width: 100%; padding: 0; }
-  .history-box { border: none; box-shadow: none; padding: 0; display: block !important; }
-  .user-card { border-color: #ccc; }
-  .day-box { color: black !important; }
+  body { 
+    background: white !important; 
+    color: #1a1a1a !important; 
+    padding: 0 !important; 
+    font-size: 12pt;
+  }
+  
+  /* 隐藏所有不需要打印的交互元素 */
+  .top-actions, 
+  .modal-overlay, 
+  #toast, 
+  .sub-modal, 
+  .setup-overlay,
+  .identity-overlay,
+  .diff-pill, 
+  .wellness-box,
+  .partner-status-panel,
+  .history-legend,
+  .btn.outline,
+  .fix-panel,
+  .user-card.read-only::after {
+    display: none !important;
+  }
+  
+  .wrap { 
+    max-width: 100% !important; 
+    padding: 0 !important; 
+    margin: 0 !important;
+  }
+  
+  /* 顶部标题 */
+  .brand h1 { 
+    color: #1a1a1a !important; 
+    -webkit-text-fill-color: #1a1a1a !important;
+    font-size: 26pt !important;
+    text-align: center;
+    margin-bottom: 5px;
+    font-weight: 900;
+  }
+  .brand p {
+    text-align: center;
+    color: #666 !important;
+    font-size: 12pt;
+  }
+  .topbar { 
+    justify-content: center !important; 
+    border-bottom: 2px solid #e5e7eb; 
+    padding-bottom: 15px; 
+    margin-bottom: 25px;
+  }
+  
+  /* 时钟区域 */
+  .grid-clocks { 
+    display: flex !important; 
+    justify-content: space-around; 
+    margin-bottom: 30px; 
+    border-bottom: 1px dashed #e5e7eb;
+    padding-bottom: 25px;
+  }
+  .clock-card { 
+    border: none !important; 
+    box-shadow: none !important; 
+    background: transparent !important;
+    padding: 0 !important;
+  }
+  .clock-card::before { display: none; }
+  .clock-time { font-size: 22pt !important; color: #1a1a1a !important; font-weight: 900; }
+  .clock-city, .clock-date { color: #4b5563 !important; font-size: 10pt; }
+  
+  /* 打卡卡片区域修复：不要隐藏，转为纯文本列表 */
+  .section-title { display: block !important; font-size: 14pt; color: #1a1a1a !important; margin: 20px 0 10px; }
+  .grid-users { 
+    display: flex !important; 
+    gap: 20px !important; 
+    margin-bottom: 30px;
+  }
+  .user-card { 
+    flex: 1;
+    border: 1px solid #e5e7eb !important; 
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05) !important; 
+    padding: 20px !important;
+    border-radius: 16px !important;
+    background: white !important;
+  }
+  .role-tag {
+    position: static !important;
+    display: inline-block;
+    transform: none !important;
+    margin-bottom: 12px;
+    padding: 4px 12px !important;
+    border-radius: 8px !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    font-size: 10pt;
+  }
+  .user-name { font-size: 16pt !important; margin-bottom: 5px !important; }
+  
+  /* 关键修复：让打卡记录以文本行方式呈现 */
+  .checkin-group { display: flex !important; flex-direction: column; gap: 10px; margin-top: 15px; }
+  .checkin-btn {
+    background: transparent !important;
+    border: none !important;
+    border-bottom: 1px dashed #e5e7eb !important;
+    padding: 8px 0 !important;
+    border-radius: 0 !important;
+    color: #1a1a1a !important;
+    box-shadow: none !important;
+    transform: none !important;
+  }
+  .checkin-btn .btn-left { gap: 6px !important; }
+  .checkin-btn .btn-icon { display: inline-block !important; font-size: 14pt !important; }
+  .checkin-btn .btn-label { font-size: 12pt !important; color: #374151 !important; }
+  /* 打印时强制显示打卡时间 */
+  .checkin-btn .btn-time { 
+    background: transparent !important; 
+    border: none !important; 
+    color: #1a1a1a !important; 
+    font-weight: 800 !important; 
+    font-size: 14pt !important; 
+    padding: 0 !important;
+  }
+  .checkin-btn.active .btn-time, .checkin-btn.late .btn-time { color: #1a1a1a !important; }
+  
+  /* 统计与历史 */
+  .stat-box { 
+    border: none !important; 
+    border-top: 1px dashed #e5e7eb !important; 
+    border-bottom: 1px dashed #e5e7eb !important;
+    box-shadow: none !important; 
+    padding: 20px 0 !important; 
+    margin-bottom: 30px;
+    display: flex; justify-content: center; gap: 60px;
+  }
+  .stat-item h3 { color: #1a1a1a !important; font-size: 26pt !important; margin-bottom: 5px; }
+  .stat-item p { color: #6b7280 !important; }
+  
+  .history-box { 
+    border: none !important; 
+    box-shadow: none !important; 
+    padding: 0 !important; 
+    display: block !important; 
+  }
+  .history-title { font-size: 14pt !important; color: #1a1a1a !important; margin-bottom: 15px; font-weight: bold; }
+  .history-grid-calendar { display: grid !important; max-width: 100% !important; gap: 8px !important; }
+  .day-box { 
+    border: 1px solid #e5e7eb !important; 
+    color: #1a1a1a !important; 
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .calendar-weekday { color: #6b7280 !important; font-size: 10pt; }
 }

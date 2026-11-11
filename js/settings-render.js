@@ -4,9 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const style = document.createElement('style');
   style.innerHTML = `
     #settings-modal .modal { height: 82vh; max-height: 800px; }
-    @media (max-width: 600px) {
-      #settings-modal .modal { height: 88vh; max-height: none; }
-    }
+    @media (max-width: 600px) { #settings-modal .modal { height: 88vh; max-height: none; } }
     .action-item { display:flex; align-items:center; gap:12px; width:100%; padding:14px 16px; border:1px solid var(--border); background:var(--bg); border-radius:12px; font-size:0.95rem; color:var(--text); cursor:pointer; transition:all 0.2s; text-align:left; font-weight:500; }
     .action-item:hover { background:var(--settings-bg); border-color:var(--tab-active); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
     .action-item .icon { font-size:1.1rem; width:20px; text-align:center; }
@@ -203,7 +201,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <div class="switch-row"><label>赖床超时警告</label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="overtime_wake"><span class="slider"></span></label></div>
           
           <div class="switch-row" style="margin-top: 8px; border-top: 1px dashed var(--border); padding-top: 12px;">
-            <label>重复提醒间隔 (分钟)</label>
+            <label>熬夜/赖床 警告间隔 (分钟)</label>
             <input type="number" id="cfg-notify-interval" value="30" min="10" step="10" style="width: 80px; padding: 6px; text-align: center;">
           </div>
         </div>
@@ -211,6 +209,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
       <!-- 5. 弹窗与文案 -->
       <div class="tab-content" id="tab-msgs">
+        <div class="config-card">
+          <div class="config-title">🧪 推送测试中心<span class="help-icon" data-tip="在后台防误触机制下，如果你已打卡，GitHub Actions 会跳过发送。你可以使用此面板预览文案并发送通知（本地测试或触发真实云端推送），验证最终效果。">i</span></div>
+          <button class="btn primary" style="width: 100%; margin-bottom: 0;" onclick="openNotifyTestModal()">📢 打开测试发送面板</button>
+        </div>
+
         <div class="config-card">
           <div class="config-title">🎭 打卡弹窗设置</div>
           <div class="form-group" style="margin-bottom: 12px;">
@@ -330,7 +333,52 @@ document.addEventListener('DOMContentLoaded', () => {
 <div class="sub-modal" id="wake-action-modal"><div class="sub-modal-box" style="max-width: 360px; padding: 24px; display: flex; flex-direction: column;"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px;"><h3 id="wake-modal-title" style="font-size: 1.15rem; margin:0; color:var(--text); font-weight:700;">今日已打过卡</h3><button class="close-btn" onclick="closeWakeModal()" style="position:static; font-size:1rem;">✕</button></div><div class="sleep-desc-box" id="wake-modal-desc"></div><div style="display: flex; flex-direction: column; gap: 10px;"><button class="action-item" id="btn-wake-confirm" onclick="handleWakeAction('overwrite')"></button><button class="action-item danger" id="btn-wake-cancel" onclick="handleWakeAction('cancel')"></button></div><div style="margin-top: 20px;"><button class="btn outline" onclick="closeWakeModal()" style="width:100%; padding:12px; border-radius: 12px; font-weight: 500;">取消</button></div></div></div>
 <div class="sub-modal" id="sleep-text-modal"><div class="sub-modal-box" style="max-width: 400px;"><div class="sub-modal-head"><h3>编辑多段睡眠文案</h3><button class="close-btn" onclick="document.getElementById('sleep-text-modal').classList.remove('show')">✕</button></div><div class="sub-msg-scroll" style="padding: 16px;"><input type="hidden" id="cfg-sleep-role"><div class="form-group"><label>弹窗标题</label><input type="text" id="cfg-sleep-title" placeholder="例如: 今日已打过卡"></div><div class="form-group"><label>描述文字 <span style="color:var(--muted); font-size:0.75rem;">(支持 {time})</span></label><input type="text" id="cfg-sleep-desc" placeholder="...已经在 {time} 休息过了..."></div><div class="form-group"><label>按钮: 新增小睡</label><input type="text" id="cfg-sleep-sub" placeholder="新增一段小睡"></div><div class="form-group"><label>按钮: 跨日熬夜</label><input type="text" id="cfg-sleep-cross" placeholder="算作昨晚的熬夜"></div><div class="form-group"><label>按钮: 覆盖记录</label><input type="text" id="cfg-sleep-overwrite" placeholder="覆盖当前记录"></div><div class="form-group"><label>按钮: 取消打卡</label><input type="text" id="cfg-sleep-cancel" placeholder="取消打卡 (删除记录)"></div></div><div class="sub-modal-foot"><button class="btn outline" onclick="document.getElementById('sleep-text-modal').classList.remove('show')">取消</button><button class="btn primary" onclick="saveSleepTextModal()">保存</button></div></div></div>
 <div class="sub-modal" id="wake-text-modal"><div class="sub-modal-box" style="max-width: 400px;"><div class="sub-modal-head"><h3>编辑起床弹窗文案</h3><button class="close-btn" onclick="document.getElementById('wake-text-modal').classList.remove('show')">✕</button></div><div class="sub-msg-scroll" style="padding: 16px;"><input type="hidden" id="cfg-wake-role"><div class="form-group"><label>弹窗标题</label><input type="text" id="cfg-wake-title" placeholder="例如: 今日已打过卡"></div><div class="form-group"><label>描述文字 <span style="color:var(--muted); font-size:0.75rem;">(支持 {time})</span></label><input type="text" id="cfg-wake-desc" placeholder="...已经在 {time} 起过床了..."></div><div class="form-group"><label>按钮: 确定覆盖</label><input type="text" id="cfg-wake-confirm" placeholder="覆盖当前记录"></div><div class="form-group"><label>按钮: 保留原记录</label><input type="text" id="cfg-wake-cancel" placeholder="保留原记录"></div></div><div class="sub-modal-foot"><button class="btn outline" onclick="document.getElementById('wake-text-modal').classList.remove('show')">取消</button><button class="btn primary" onclick="saveWakeTextModal()">保存</button></div></div></div>
-<div class="sub-modal" id="notify-text-modal"><div class="sub-modal-box" style="max-width: 480px;"><div class="sub-modal-head"><h3 id="notify-text-modal-title">编辑通知文案</h3><button class="close-btn" onclick="closeNotifyTextModal()">✕</button></div><div style="padding: 12px 16px; border-bottom: 1px dashed var(--border); display: flex; flex-direction: column; gap: 12px;"><div class="form-group" style="margin:0;"><label>发送渠道</label><select id="notify-text-channel"><option value="both">页面 + 后台 (推荐)</option><option value="page">仅页面通知</option><option value="push">仅后台推送</option></select></div><div style="display: flex; justify-content: space-between; align-items: center;"><div class="tip-text" style="margin:0;">开启随机抽取 <span id="notify-text-random-tip" style="color:var(--warn); font-weight:bold; display:none;">(关闭时固定发送第一条)</span></div><label class="toggle-switch" style="transform: scale(0.8);"><input type="checkbox" id="notify-text-random" onchange="document.getElementById('notify-text-random-tip').style.display = this.checked ? 'none' : 'inline';"><span class="slider"></span></label></div></div><div class="sub-msg-scroll" id="notify-text-list" style="padding: 12px 16px;"></div><div style="padding: 0 16px 12px;"><button class="btn-add" onclick="addNotifyTextItem()">➕ 添加一条文案</button></div><div class="sub-modal-foot"><button class="btn outline" onclick="closeNotifyTextModal()">取消</button><button class="btn primary" onclick="saveNotifyTextModal()">保存</button></div></div></div>
+
+<div class="sub-modal" id="notify-text-modal"><div class="sub-modal-box" style="max-width: 480px;"><div class="sub-modal-head"><h3 id="notify-text-modal-title">编辑通知文案</h3><button class="close-btn" onclick="closeNotifyTextModal()">✕</button></div><div style="padding: 12px 16px; border-bottom: 1px dashed var(--border); display: flex; flex-direction: column; gap: 12px;"><div class="form-group" style="margin:0;"><label>自定义通知标题 (留空则使用默认标题)</label><input type="text" id="notify-text-title" placeholder="例如: 🚨 赖床警告 / 🌙 乖乖睡觉"><div class="tip-text" id="notify-text-default-title-tip" style="margin-top: 4px; color: var(--text-muted); font-size: 0.75rem;"></div></div><div class="form-group" style="margin:0;"><label>发送渠道</label><select id="notify-text-channel"><option value="both">页面 + 后台 (推荐)</option><option value="page">仅页面通知</option><option value="push">仅后台推送</option></select></div><div style="display: flex; justify-content: space-between; align-items: center;"><div class="tip-text" style="margin:0;">开启随机抽取 <span id="notify-text-random-tip" style="color:var(--warn); font-weight:bold; display:none;">(关闭时固定发送第一条)</span></div><label class="toggle-switch" style="transform: scale(0.8);"><input type="checkbox" id="notify-text-random" onchange="document.getElementById('notify-text-random-tip').style.display = this.checked ? 'none' : 'inline';"><span class="slider"></span></label></div></div><div class="sub-msg-scroll" id="notify-text-list" style="padding: 12px 16px;"></div><div style="padding: 0 16px 12px;"><button class="btn-add" onclick="addNotifyTextItem()">➕ 添加一条文案</button></div><div class="sub-modal-foot"><button class="btn outline" onclick="closeNotifyTextModal()">取消</button><button class="btn primary" onclick="saveNotifyTextModal()">保存</button></div></div></div>
+
+<div class="sub-modal" id="notify-test-modal">
+  <div class="sub-modal-box" style="max-width: 400px;">
+    <div class="sub-modal-head">
+      <h3>🧪 测试通知面板</h3>
+      <button class="close-btn" onclick="document.getElementById('notify-test-modal').classList.remove('show')">✕</button>
+    </div>
+    <div class="sub-msg-scroll" style="padding: 16px;">
+      <div class="form-group">
+        <label>选择要测试的文案类型</label>
+        <select id="test-notify-key" onchange="updateTestPreview()">
+          <option value="master_sleep">👑 主人 - 休息提醒</option>
+          <option value="master_wake">👑 主人 - 起床提醒</option>
+          <option value="doggy_sleep">🎀 小狗 - 睡觉提醒</option>
+          <option value="doggy_wake">🎀 小狗 - 起床提醒</option>
+          <option value="overtime_sleep">⏳ 熬夜警告</option>
+          <option value="overtime_wake">⏳ 赖床警告</option>
+          <option value="partner_master_sleep">📡 对方 - 主人休息</option>
+          <option value="partner_master_wake">📡 对方 - 主人起床</option>
+          <option value="partner_doggy_sleep">📡 对方 - 小狗休息</option>
+          <option value="partner_doggy_wake">📡 对方 - 小狗起床</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>发送渠道</label>
+        <select id="test-notify-channel">
+          <option value="local">📱 本地通知 (仅当前浏览器)</option>
+          <option value="push">☁️ 云端推送 (真实触发服务器)</option>
+        </select>
+      </div>
+      <div class="sleep-desc-box" style="margin-bottom: 0; border: 1px dashed var(--border);">
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 6px;">标题预览</div>
+        <div style="font-weight: 700; margin-bottom: 12px; font-size: 1.05rem; color: var(--text);" id="test-notify-title-preview">--</div>
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 6px;">内容预览</div>
+        <div style="color: var(--text); font-size: 0.9rem;" id="test-notify-body-preview">--</div>
+      </div>
+    </div>
+    <div class="sub-modal-foot">
+      <button class="btn outline" onclick="document.getElementById('notify-test-modal').classList.remove('show')">取消</button>
+      <button class="btn primary" onclick="triggerTestNotification()">🚀 发送测试</button>
+    </div>
+  </div>
+</div>
+
 <div class="sub-modal" id="progress-text-modal"><div class="sub-modal-box" style="max-width: 400px;"><div class="sub-modal-head"><h3>编辑加载文案</h3><button class="close-btn" onclick="closeProgressTextModal()">✕</button></div><div class="sub-msg-scroll" style="padding: 16px;"><div class="form-group"><label>目标身份</label><select id="cfg-prog-role" onchange="updateProgTextInputs()"><option value="master">先生 / 主人</option><option value="doggy">宝宝 / 小狗</option><option value="both">共用 / 滴滴</option></select></div><div class="tip-text" id="prog-text-tip" style="margin-bottom: 12px; padding: 8px; background: rgba(156, 143, 166, 0.1); border-radius: 6px; border: 1px dashed var(--border); line-height: 1.5;"></div><div class="form-group"><label>连接/请求授权时</label><input type="text" id="cfg-prog-connect"></div><div class="form-group"><label>校验/同步中</label><input type="text" id="cfg-prog-auth"></div><div class="form-group"><label>云端数据交互时</label><input type="text" id="cfg-prog-sync"></div><div class="form-group"><label>取消/清理时</label><input type="text" id="cfg-prog-cancel"></div><div class="form-group"><label>成功完成时</label><input type="text" id="cfg-prog-success"></div></div><div class="sub-modal-foot"><button class="btn primary" onclick="closeProgressTextModal()">完成</button></div></div></div>
 <div class="sub-modal" id="sub-modal"><div class="sub-modal-box"><div class="sub-modal-head"><h3 id="sub-modal-title">编辑文案</h3><button class="close-btn" onclick="closeSubMsg()">✕</button></div><div class="sub-msg-scroll" id="sub-msg-list"></div><button class="btn-add" onclick="addSubMsgItem()">➕ 添加一条</button><div class="sub-modal-foot"><button class="btn outline" onclick="closeSubMsg()">取消</button><button class="btn primary" onclick="saveSubMsg()">确认</button></div></div></div>
 <div class="sub-modal" id="import-lib-modal"><div class="sub-modal-box" style="max-width: 520px;"><div class="sub-modal-head"><h3>📥 文库导入预览</h3><button class="close-btn" onclick="closeImportLibModal()">✕</button></div><div style="padding: 12px 16px; border-bottom: 1px solid var(--border); background: var(--settings-bg);"><div class="form-group" style="margin-bottom: 0;"><label>导入到哪个文案池？</label><select id="import-target-pool"><option value="master_sleep_success">👑 主人 - 休息(达标)</option><option value="master_sleep_late">👑 主人 - 休息(晚睡)</option><option value="master_wake_success">👑 主人 - 起床(达标)</option><option value="master_wake_late">👑 主人 - 起床(赖床)</option><option value="doggy_sleep_success">🎀 小狗 - 睡觉(达标)</option><option value="doggy_sleep_late">🎀 小狗 - 睡觉(晚睡)</option><option value="doggy_wake_success">🎀 小狗 - 起床(达标)</option><option value="doggy_wake_late">🎀 小狗 - 起床(赖床)</option></select></div></div><div style="padding: 12px 16px; overflow-y: auto; flex: 1; max-height: 50vh;" id="import-lib-preview-list"></div><div class="sub-modal-foot"><button class="btn outline" onclick="closeImportLibModal()">取消</button><button class="btn primary" onclick="confirmImportLibrary()">确认导入选中项</button></div></div></div>

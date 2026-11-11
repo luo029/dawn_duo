@@ -3,7 +3,20 @@ window.updateBackendPushStatus = async function() {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) { statusEl.textContent = '⚠️ 当前浏览器不支持后台推送'; toggleEl.checked = false; toggleEl.disabled = true; return; }
     try {
         const registration = await navigator.serviceWorker.ready; const subscription = await registration.pushManager.getSubscription();
-        if (subscription) { const t = P().texts || DEFAULT_TEXTS_DAILY; const mName = getPureName(t.masterName) || '先生'; const dName = getPureName(t.doggyName) || '宝宝'; let displayId = identity === 'master' ? mName : (identity === 'doggy' ? dName : '联合身份'); statusEl.textContent = `✅ 当前设备已绑定后台推送（身份: ${displayId}）`; toggleEl.checked = true; }
+        if (subscription) { 
+            const t = P().texts || DEFAULT_TEXTS_DAILY; const mName = getPureName(t.masterName) || '先生'; const dName = getPureName(t.doggyName) || '宝宝'; 
+            let displayId = identity === 'master' ? mName : (identity === 'doggy' ? dName : '联合身份'); 
+            
+            let authInfo = '';
+            try { 
+                const localAuth = JSON.parse(localStorage.getItem('dawn-duo-push-auth') || '{}'); 
+                if (localAuth.endpoint === subscription.endpoint) { 
+                    authInfo = `<br><span style="font-size:0.65rem;color:var(--text-muted);font-weight:normal;">授权设备: ${localAuth.device || '未知'} | 授权时间: ${localAuth.time || '未知'}</span>`; 
+                } 
+            } catch(e){}
+            statusEl.innerHTML = `✅ 已绑定推送 (身份: ${displayId})${authInfo}`; 
+            toggleEl.checked = true; 
+        }
         else { statusEl.textContent = 'ℹ️ 当前设备尚未绑定后台推送'; toggleEl.checked = false; }
     } catch (e) { statusEl.textContent = '⚠️ 检查状态失败：' + e.message; toggleEl.checked = false; }
 };
@@ -18,9 +31,20 @@ window.subscribeToPush = async function () {
         const registration = await navigator.serviceWorker.ready;
         const subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array('BCFx4JLqFVNZ2MExV8ZX5IKI1NvwWRsRp-Ennufze3bCXDdfKWicy6MiMAIcBpFcDurOOjvLFU3RlkHGkMzoLIg') });
         updateBar('push', getProgressText('sync') || '正在同步云端...', 80);
-        const t = P().texts || DEFAULT_TEXTS_DAILY; let customIdentity = identity || 'both'; if (identity === 'master') customIdentity = getPureName(t.masterName) || '主人'; if (identity === 'doggy') customIdentity = getPureName(t.doggyName) || '小狗';
-        const res = await fetch('https://push-subscribe.luo029.workers.dev/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ secret: 'doggy', subscription: subscription.toJSON(), identity: customIdentity }) });
-        if (res.ok) { updateBar('push', getProgressText('success') || '✅ 订阅成功！', 100); showToast('✅ 系统通知已开启', 'success'); setTimeout(() => hideBar('push'), 1000); updateBackendPushStatus(); }
+        
+        // 修复乱码：发送纯英文的 identity 标识，不再发送 encodeURIComponent 后的中文
+        const device = getDeviceInfo();
+        const authTime = new Date().toLocaleString();
+        
+        const res = await fetch('https://push-subscribe.luo029.workers.dev/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ secret: 'doggy', subscription: subscription.toJSON(), identity: identity || 'both', device, authTime }) });
+        
+        if (res.ok) { 
+            updateBar('push', getProgressText('success') || '✅ 订阅成功！', 100); 
+            showToast('✅ 系统通知已开启', 'success'); 
+            localStorage.setItem('dawn-duo-push-auth', JSON.stringify({ endpoint: subscription.endpoint, device, time: authTime }));
+            setTimeout(() => hideBar('push'), 1000); 
+            updateBackendPushStatus(); 
+        }
         else { hideBar('push'); showToast('保存失败，请重试', 'late'); document.getElementById('cfg-backend-push').checked = false; }
     } catch (e) { hideBar('push'); showToast('订阅发生错误：' + e.message, 'late'); document.getElementById('cfg-backend-push').checked = false; }
 };
@@ -31,6 +55,7 @@ window.unsubscribeFromPush = async function () {
         const registration = await navigator.serviceWorker.ready; const subscription = await registration.pushManager.getSubscription();
         if (!subscription) { hideBar('push'); updateBackendPushStatus(); return showToast('当前未开启后台推送', 'late'); }
         const endpoint = subscription.endpoint; await subscription.unsubscribe();
+        localStorage.removeItem('dawn-duo-push-auth');
         updateBar('push', getProgressText('sync') || '正在清理云端...', 60);
         const res = await fetch('https://push-subscribe.luo029.workers.dev/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ secret: 'doggy', action: 'unsubscribe', endpoint: endpoint }) });
         if (res.ok) { updateBar('push', getProgressText('success') || '🚫 已取消', 100); showToast('🚫 已取消推送', 'success'); setTimeout(() => hideBar('push'), 1000); }

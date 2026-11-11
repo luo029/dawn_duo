@@ -1,0 +1,41 @@
+name: Send Scheduled Web Push
+
+on:
+  schedule:
+    - cron: '0 22 * * *'   # 每天 UTC 22:00（北京时间次日 06:00），按需修改
+  workflow_dispatch:        # 允许在 GitHub 网页上手动点击测试
+    inputs:
+      test_mode:
+        description: '是否为手动测试 (跳过防误触)'
+        required: false
+        default: 'false'
+
+jobs:
+  send-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install web-push
+        run: npm install web-push
+      - name: Send push notifications
+        run: node send-push.js
+        env:
+          VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          VAPID_SUBJECT: ${{ secrets.VAPID_SUBJECT }}
+          TEST_MODE: ${{ github.event.inputs.test_mode }}
+      
+      - name: Commit and push cleaned subscriptions (if any expired)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if [[ -n $(git status -s subscriptions.json) ]]; then
+            git add subscriptions.json
+            git commit -m "chore: cleanup expired subscriptions"
+            git push
+          fi

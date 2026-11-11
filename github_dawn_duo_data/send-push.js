@@ -11,6 +11,8 @@ const SUBS_FILE = 'subscriptions.json';
 const CONFIG_FILE = 'config.json';
 const LOG_FILE = 'push_log.json';
 const TEST_MODE = process.env.TEST_MODE === 'true';
+const CUSTOM_TITLE = process.env.CUSTOM_TITLE || '';
+const CUSTOM_BODY = process.env.CUSTOM_BODY || '';
 const TRIGGER_FROM = process.env.TRIGGER_FROM || '';
 
 function getTimeInTZ(tzObj) {
@@ -33,6 +35,8 @@ function getDateStr(tzObj) {
 }
 function getMins(date) { return date.getHours() * 60 + date.getMinutes(); }
 function toMins(t) { if (typeof t !== 'string') return NaN; const p = t.split(':'); if (p.length < 2) return NaN; const h = Number(p[0]), m = Number(p[1]); return (Number.isFinite(h) && Number.isFinite(m)) ? h * 60 + m : NaN; }
+function minsToTime(m) { if (!Number.isFinite(m)) return ''; const h = Math.floor(m / 60); const min = Math.floor(m % 60); return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`; }
+
 function checkPushText(notifyTexts, key, replacements) {
   const item = notifyTexts[key];
   if (!item) return null;
@@ -94,7 +98,6 @@ function checkPushText(notifyTexts, key, replacements) {
   const isInWindow = (currentMins, start, end) => { if (!windowEnabled) return true; if (start > end) { return currentMins >= start || currentMins < end; } else { return currentMins >= start && currentMins < end; } };
 
   for (const sub of subscriptions) {
-    // 新增：如果设备被屏蔽，直接跳过
     if (sub.blocked === true) {
         console.log(`[跳过] 设备已屏蔽: ${sub.endpoint.slice(0, 30)}...`);
         continue;
@@ -110,6 +113,16 @@ function checkPushText(notifyTexts, key, replacements) {
 
     const sendMaster = checkMaster || checkBoth;
     const sendDoggy = checkDoggy || checkBoth;
+
+    if (TEST_MODE && CUSTOM_TITLE && CUSTOM_BODY) {
+        try {
+            await webpush.sendNotification(sub, JSON.stringify({ title: CUSTOM_TITLE, body: CUSTOM_BODY, icon }));
+            console.log(`[测试模式] 发送自定义通知: ${CUSTOM_TITLE}`);
+        } catch(err) {
+            if (err.statusCode === 404 || err.statusCode === 410) failedEndpoints.push(sub.endpoint);
+        }
+        continue; 
+    }
 
     const mDateStr = getDateStr(timeZones.master);
     const dDateStr = getDateStr(timeZones.doggy);
@@ -128,7 +141,7 @@ function checkPushText(notifyTexts, key, replacements) {
         if (remoteDb.doggy[dDateStr]?.wake?.done) { textKey = 'partner_doggy_wake'; sendType = 'wake'; }
         else if (remoteDb.doggy[dDateStr]?.sleep?.done) { textKey = 'partner_doggy_sleep'; sendType = 'sleep'; }
         else continue;
-        replacements = { name: dName, time: remoteDb.doggy[dDateStr]?.[sendType]?.time || '' };
+        replacements = { name: dName, time: remoteDb.doggy[dDateStr]?.[sendType]?.time || '', mins: '' };
         if (notifyItems[textKey] === false) continue;
         body = checkPushText(notifyTexts, textKey, replacements);
         title = '📡 对方动态';
@@ -136,7 +149,7 @@ function checkPushText(notifyTexts, key, replacements) {
         if (remoteDb.master[mDateStr]?.wake?.done) { textKey = 'partner_master_wake'; sendType = 'wake'; }
         else if (remoteDb.master[mDateStr]?.sleep?.done) { textKey = 'partner_master_sleep'; sendType = 'sleep'; }
         else continue;
-        replacements = { name: mName, time: remoteDb.master[mDateStr]?.[sendType]?.time || '' };
+        replacements = { name: mName, time: remoteDb.master[mDateStr]?.[sendType]?.time || '', mins: '' };
         if (notifyItems[textKey] === false) continue;
         body = checkPushText(notifyTexts, textKey, replacements);
         title = '📡 对方动态';
@@ -156,7 +169,7 @@ function checkPushText(notifyTexts, key, replacements) {
     if (sendMaster) {
       targetUser = 'master'; targetDate = mDateStr;
       if (Math.abs(mMins - mSleepGoal) < Math.abs(mMins - mWakeGoal)) { textKey = 'master_sleep'; sendType = 'sleep'; } else { textKey = 'master_wake'; sendType = 'wake'; }
-      replacements = { name: mName };
+      replacements = { name: mName, time: minsToTime(mMins), mins: '' };
       
       const isDone = sendType === 'sleep' ? remoteDb.master[mDateStr]?.sleep?.done : remoteDb.master[mDateStr]?.wake?.done;
       if (isDone && !TEST_MODE) { console.log(`[跳过] ${mName} 今日已打卡 ${sendType}`); continue; }
@@ -172,7 +185,7 @@ function checkPushText(notifyTexts, key, replacements) {
     } else if (sendDoggy) {
       targetUser = 'doggy'; targetDate = dDateStr;
       if (Math.abs(dMins - dSleepGoal) < Math.abs(dMins - dWakeGoal)) { textKey = 'doggy_sleep'; sendType = 'sleep'; } else { textKey = 'doggy_wake'; sendType = 'wake'; }
-      replacements = { name: dName };
+      replacements = { name: dName, time: minsToTime(dMins), mins: '' };
       
       const isDone = sendType === 'sleep' ? remoteDb.doggy[dDateStr]?.sleep?.done : remoteDb.doggy[dDateStr]?.wake?.done;
       if (isDone && !TEST_MODE) { console.log(`[跳过] ${dName} 今日已打卡 ${sendType}`); continue; }
@@ -195,10 +208,20 @@ function checkPushText(notifyTexts, key, replacements) {
     );
 
     if (isOvertime) {
-      textKey = sendType === 'sleep' ? 'overtime_sleep' : 'overtime_wake';
+      const roleOKey = `${targetUser}_${sendType}_overtime`;
+      textKey = notifyTexts[roleOKey] ? roleOKey : (sendType === 'sleep' ? 'overtime_sleep' : 'overtime_wake');
+      
       const goalMin = sendType === 'sleep' ? (targetUser === 'master' ? mSleepGoal : dSleepGoal) : (targetUser === 'master' ? mWakeGoal : dWakeGoal);
       const currentMin = targetUser === 'master' ? mMins : dMins;
-      replacements.mins = (sendType === 'sleep' ? (currentMin - goalMin + 1440) % 1440 : currentMin - goalMin);
+      
+      const overtimeMins = sendType === 'sleep' ? (currentMin - goalMin + 1440) % 1440 : currentMin - goalMin;
+      replacements.mins = overtimeMins;
+      
+      const oh = Math.floor(overtimeMins / 60);
+      const om = overtimeMins % 60;
+      if (oh > 0 && om > 0) replacements.time = `${oh} h ${om} m`;
+      else if (oh > 0) replacements.time = `${oh} h`;
+      else replacements.time = `${om} m`;
 
       if (maxTimes > 0) {
         const logKey = `${targetDate}_${targetUser}_${sendType}_overtime`;
@@ -211,7 +234,7 @@ function checkPushText(notifyTexts, key, replacements) {
     if (body) {
       const textObj = notifyTexts[textKey] || {};
       title = textObj.title || (sendType === 'sleep' ? '🌙 休息提醒' : '☀️ 起床提醒');
-      if (textKey.startsWith('overtime') && !textObj.title) title = sendType === 'sleep' ? '⚠️ 熬夜警告' : '⚠️ 赖床警告';
+      if (textKey.includes('overtime') && !textObj.title) title = sendType === 'sleep' ? '⚠️ 熬夜警告' : '⚠️ 赖床警告';
       icon = textObj.icon || '/icon-512.png';
     }
 

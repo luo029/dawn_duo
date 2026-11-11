@@ -34,22 +34,29 @@ function checkNotifications() {
             if (!notifyLog[it.key]) { 
                 const obj = nTexts[it.key] || { channel: 'both', texts: [] };
                 if (obj.channel === 'both' || obj.channel === 'page') {
-                    const rawText = getRandomText(obj.texts); const body = (rawText || '').replace(/{name}/g, it.name); sendNotify(it.key, '🔔 契约提醒', body); 
+                    const rawText = getRandomText(obj.texts); const body = (rawText || '').replace(/{name}/g, it.name); 
+                    const titleObj = obj.title || '🔔 契约提醒';
+                    sendNotify(it.key, titleObj, body); 
                 }
                 notifyLog[it.key] = true; saveNotifyLog(); 
             } return; 
         }
-        // 超时逻辑（不再需要总开关，只要单项开关开启就走）
-        const oKey = it.type === 'sleep' ? 'overtime_sleep' : 'overtime_wake';
-        if (nItems[oKey] === false) return; // 检查超时单独开关
+        // 超时逻辑
+        const roleOKey = `${it.user}_${it.type}_overtime`;
+        const oKey = nTexts[roleOKey] ? roleOKey : (it.type === 'sleep' ? 'overtime_sleep' : 'overtime_wake');
+        if (nItems[it.type === 'sleep' ? 'overtime_sleep' : 'overtime_wake'] === false) return; 
         let isOvertime = false, overtimeMins = 0; if (it.type === 'sleep' && offset > 30) { isOvertime = true; overtimeMins = offset; } else if (it.type === 'wake' && offset > 30) { isOvertime = true; overtimeMins = offset; }
         if (isOvertime) { 
             const lastNotifyTs = notifyLog[it.key + '_overtime'] || 0; const intervalMs = (nSettings.overtimeInterval || 30) * 60000; 
             if (nowTs - lastNotifyTs >= intervalMs) { 
                 const obj = nTexts[oKey] || { channel: 'both', texts: [] };
                 if (obj.channel === 'both' || obj.channel === 'page') {
-                    let rawText = getRandomText(obj.texts); if (!rawText) rawText = it.type === 'sleep' ? '{name}，已经熬夜 {mins} 分钟了，该睡觉了！' : '{name}，已经赖床 {mins} 分钟了，快起床吧！';
-                    const body = rawText.replace(/{name}/g, it.name).replace(/{mins}/g, overtimeMins); sendNotify(it.key + '_overtime', it.type === 'sleep' ? '🌙 熬夜警告' : '☀️ 赖床警告', body); 
+                    let rawText = getRandomText(obj.texts); if (!rawText) rawText = it.type === 'sleep' ? '{name}，已经熬夜 {time} 了，该睡觉了！' : '{name}，已经赖床 {time} 了，快起床吧！';
+                    const oh = Math.floor(overtimeMins / 60); const om = overtimeMins % 60;
+                    const timeStr = oh > 0 && om > 0 ? `${oh} h ${om} m` : (oh > 0 ? `${oh} h` : `${om} m`);
+                    const body = rawText.replace(/{name}/g, it.name).replace(/{time}/g, timeStr).replace(/{mins}/g, overtimeMins); 
+                    const titleObj = obj.title || (it.type === 'sleep' ? '🌙 熬夜警告' : '☀️ 赖床警告');
+                    sendNotify(it.key + '_overtime', titleObj, body); 
                 }
                 notifyLog[it.key + '_overtime'] = nowTs; saveNotifyLog(); 
             } 
@@ -72,7 +79,7 @@ function detectPartnerCheckin(remoteDb) {
         const obj = nTexts[tplKey] || { channel: 'both', texts: [] };
         if (obj.channel === 'both' || obj.channel === 'page') {
             const rawText = getRandomText(obj.texts) || `{name} 已${type === 'sleep' ? '休息' : '起床'} ({time})`; const time = remoteRec[type]?.time || '';
-            const body = rawText.replace(/{name}/g, partnerName).replace(/{time}/g, time); const title = type === 'sleep' ? (partnerKey === 'master' ? '👑 主人已休息' : '🎀 小狗已休息') : (partnerKey === 'master' ? '👑 主人已起床' : '🎀 小狗已起床');
+            const body = rawText.replace(/{name}/g, partnerName).replace(/{time}/g, time); const title = obj.title || (type === 'sleep' ? (partnerKey === 'master' ? '👑 主人已休息' : '🎀 小狗已休息') : (partnerKey === 'master' ? '👑 主人已起床' : '🎀 小狗已起床'));
             sendNotify(logKey, title, body);
         }
         notifyLog[logKey] = true;

@@ -9,6 +9,14 @@ on:
         description: '是否为手动测试 (跳过防误触)'
         required: false
         default: 'false'
+      custom_title:
+        description: '测试用的标题 (留空则按时间自动推)'
+        required: false
+        default: ''
+      custom_body:
+        description: '测试用的内容 (留空则按时间自动推)'
+        required: false
+        default: ''
       trigger_from:
         description: '触发来源 (partner = 打卡触发)'
         required: false
@@ -33,6 +41,8 @@ jobs:
           VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
           VAPID_SUBJECT: ${{ secrets.VAPID_SUBJECT }}
           TEST_MODE: ${{ github.event.inputs.test_mode }}
+          CUSTOM_TITLE: ${{ github.event.inputs.custom_title }}
+          CUSTOM_BODY: ${{ github.event.inputs.custom_body }}
           TRIGGER_FROM: ${{ github.event.inputs.trigger_from }}
       
       - name: Commit and push cleaned subscriptions (if any expired)

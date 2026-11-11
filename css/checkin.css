@@ -8,6 +8,7 @@
 .partner-status-panel.sleep-status { background: linear-gradient(135deg, rgba(56, 189, 248, 0.15), rgba(56, 189, 248, 0.05)); color: var(--master-color); border: 1px solid rgba(56, 189, 248, 0.3); }
 .partner-status-panel.wake-status { background: linear-gradient(135deg, rgba(244, 114, 182, 0.15), rgba(244, 114, 182, 0.05)); color: var(--doggy-color); border: 1px solid rgba(244, 114, 182, 0.3); }
 
+/* 优化：移除 user-card 的 translateZ(0)，让它正常参与文档流渲染 */
 .user-card { background: var(--card-bg); border-radius: 20px; padding: 32px 16px 20px; border: 1px solid var(--border); box-shadow: var(--shadow); position: relative; overflow: hidden; }
 .role-tag { position: absolute; top: 0; left: 50%; transform: translateX(-50%); font-size: 0.65rem; padding: 4px 12px; border-radius: 0 0 12px 12px; color: white; font-weight: bold; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,0.2); z-index: 2; }
 .master-card .role-tag { background: var(--master-color); }

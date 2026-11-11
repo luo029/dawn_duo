@@ -6,6 +6,7 @@ body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
   background: var(--bg); color: var(--text); line-height: 1.5; padding-bottom: 40px;
   transition: background-color 0.3s, color 0.3s;
-  -webkit-font-smoothing: antialiased;
+  /* 优化：移除了 -webkit-font-smoothing: antialiased; 避免在部分设备上引起严重的滚动卡顿 */
+  -webkit-overflow-scrolling: touch; /* 提升 iOS 滚动体验 */
 }
-.wrap { max-width: 800px; margin: 0 auto; padding: 20px 16px; }
+.wrap { max-width: 800px; margin: 0 auto; padding: 20px 16px; transform: translateZ(0); /* 提升滚动性能 */ }

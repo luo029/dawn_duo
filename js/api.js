@@ -1,17 +1,21 @@
-async function fetchGHFile(path) {
-    if (!ghConfig.user || !ghConfig.repo || !ghConfig.token) return null;
-    try {
-        const url = `https://api.github.com/repos/${ghConfig.user}/${ghConfig.repo}/contents/${path}?t=${Date.now()}`;
-        const res = await fetch(url, { headers: { 'Authorization': `token ${ghConfig.token}`, 'Accept': 'application/vnd.github.v3+json' } });
-        if (res.ok) { const data = await res.json(); return { sha: data.sha, content: decodeBase64Utf8(data.content) }; }
-        if (res.status === 404) return null;
-        throw new Error(`GitHub API 返回 ${res.status}`);
-    } catch (e) { console.warn(`拉取 ${path} 失败`, e); throw e; }
+window.addEventListener('DOMContentLoaded', () => {
+  const savedTheme = document.documentElement.getAttribute('data-theme');
+  const btn = document.getElementById('theme-toggle');
+  if (btn) btn.textContent = savedTheme === 'dark' ? '🌙' : '☀️';
+});
+applyConfigsToPage(); updateModeCards(); render(); initIdentity(); updateNotifyStatus();
+
+// 性能优化：抛弃 setInterval，改用 requestAnimationFrame 驱动时钟，避免滚动时阻塞主线程
+let lastClockTick = 0;
+function clockLoop(timestamp) {
+  // 确保每秒只更新一次，且完全贴合屏幕刷新率
+  if (!lastClockTick || timestamp - lastClockTick >= 1000) {
+    lastClockTick = timestamp;
+    updateClocks();
+  }
+  requestAnimationFrame(clockLoop);
 }
-async function pushGHFile(path, contentStr, oldSha) {
-    try {
-        const url = `https://api.github.com/repos/${ghConfig.user}/${ghConfig.repo}/contents/${path}`;
-        const res = await fetch(url, { method: 'PUT', headers: { 'Authorization': `token ${ghConfig.token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' }, body: JSON.stringify({ message: `🐾 自动更新 ${path}`, content: encodeBase64Utf8(contentStr), sha: oldSha || undefined }) });
-        return res.ok;
-    } catch (e) { console.warn(`上传 ${path} 失败`, e); return false; }
-}
+requestAnimationFrame(clockLoop);
+updateClocks();
+
+if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js').catch(() => {}); }

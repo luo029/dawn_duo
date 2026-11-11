@@ -2,13 +2,17 @@ name: Send Scheduled Web Push
 
 on:
   schedule:
-    - cron: '0 22 * * *'   # 每天 UTC 22:00（北京时间次日 06:00），按需修改
-  workflow_dispatch:        # 允许在 GitHub 网页上手动点击测试
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
     inputs:
       test_mode:
         description: '是否为手动测试 (跳过防误触)'
         required: false
         default: 'false'
+      trigger_from:
+        description: '触发来源 (partner = 打卡触发)'
+        required: false
+        default: ''
 
 jobs:
   send-push:
@@ -29,6 +33,7 @@ jobs:
           VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
           VAPID_SUBJECT: ${{ secrets.VAPID_SUBJECT }}
           TEST_MODE: ${{ github.event.inputs.test_mode }}
+          TRIGGER_FROM: ${{ github.event.inputs.trigger_from }}
       
       - name: Commit and push cleaned subscriptions (if any expired)
         run: |

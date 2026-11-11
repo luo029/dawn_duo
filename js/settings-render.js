@@ -1,6 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
   if (document.getElementById('settings-modal')) return;
-
   const style = document.createElement('style');
   style.innerHTML = `
     #settings-modal .modal { height: 82vh; max-height: 800px; }
@@ -34,6 +33,14 @@ document.addEventListener('DOMContentLoaded', () => {
     #global-tooltip::before { content: ''; position: absolute; top: -5px; left: 10px; border-width: 0 5px 5px 5px; border-style: solid; border-color: transparent transparent rgba(20, 20, 25, 0.95) transparent; }
     .card-divider { height: 1px; border-top: 1px dashed var(--border); margin: 12px 0; }
     .section-label { font-size: 0.75rem; font-weight: 700; color: var(--text-muted); margin: 12px 0 8px; display: flex; align-items: center; gap: 6px; }
+    
+    .device-item { background: var(--input-bg); border: 1px solid var(--border); padding: 10px 12px; border-radius: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+    .device-info { display: flex; flex-direction: column; gap: 4px; }
+    .device-id { font-weight: 700; font-size: 0.85rem; color: var(--text); }
+    .device-meta { font-size: 0.7rem; color: var(--text-muted); }
+    .device-badge { padding: 2px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 700; }
+    .device-badge.master { background: rgba(56, 189, 248, 0.15); color: var(--master-color); }
+    .device-badge.doggy { background: rgba(244, 114, 182, 0.15); color: var(--doggy-color); }
   `;
   document.head.appendChild(style);
 
@@ -201,19 +208,38 @@ document.addEventListener('DOMContentLoaded', () => {
           <div class="switch-row"><label>赖床超时警告</label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="overtime_wake"><span class="slider"></span></label></div>
           
           <div class="switch-row" style="margin-top: 8px; border-top: 1px dashed var(--border); padding-top: 12px;">
-            <label>熬夜/赖床 警告间隔 (分钟)</label>
+            <label>提醒重复间隔 (分钟)</label>
             <input type="number" id="cfg-notify-interval" value="30" min="10" step="10" style="width: 80px; padding: 6px; text-align: center;">
           </div>
+
+          <div class="card-divider"></div>
+
+          <div class="section-label">🛡️ 防轰炸与时间窗设置</div>
+          <div class="switch-row"><label>开启时间窗限制<span class="help-icon" data-tip="只在特定的时间段内发送超时提醒。关闭后，任何时间超时都会发。">i</span></label><label class="toggle-switch"><input type="checkbox" id="cfg-overtime-window"><span class="slider"></span></label></div>
+          
+          <div id="overtime-window-details" style="margin-top: 8px;">
+            <div class="flex-row">
+              <div class="form-group"><label>熬夜允许区间</label><div style="display:flex; gap:4px; align-items:center;"><input type="time" id="cfg-overtime-sleep-start" value="21:00"><span>至</span><input type="time" id="cfg-overtime-sleep-end" value="05:00"></div></div>
+            </div>
+            <div class="flex-row">
+              <div class="form-group"><label>赖床允许区间</label><div style="display:flex; gap:4px; align-items:center;"><input type="time" id="cfg-overtime-wake-start" value="05:00"><span>至</span><input type="time" id="cfg-overtime-wake-end" value="12:00"></div></div>
+            </div>
+          </div>
+
+          <div class="switch-row" style="margin-top: 8px;">
+            <label>每天最大发送次数<span class="help-icon" data-tip="触发超时后，每天最多发几次警告。填 0 代表不限制次数。">i</span></label>
+            <input type="number" id="cfg-overtime-max" value="3" min="0" step="1" style="width: 80px; padding: 6px; text-align: center;">
+          </div>
+        </div>
+
+        <div class="config-card">
+          <div class="config-title">🧪 推送测试中心<span class="help-icon" data-tip="在后台防误触机制下，如果你已打卡，GitHub Actions 会跳过发送。你可以使用此面板预览文案并发送通知（本地测试或触发真实云端推送），验证最终效果。">i</span></div>
+          <button class="btn primary" style="width: 100%; margin-bottom: 0;" onclick="openNotifyTestModal()">📢 打开测试发送面板</button>
         </div>
       </div>
 
       <!-- 5. 弹窗与文案 -->
       <div class="tab-content" id="tab-msgs">
-        <div class="config-card">
-          <div class="config-title">🧪 推送测试中心<span class="help-icon" data-tip="在后台防误触机制下，如果你已打卡，GitHub Actions 会跳过发送。你可以使用此面板预览文案并发送通知（本地测试或触发真实云端推送），验证最终效果。">i</span></div>
-          <button class="btn primary" style="width: 100%; margin-bottom: 0;" onclick="openNotifyTestModal()">📢 打开测试发送面板</button>
-        </div>
-
         <div class="config-card">
           <div class="config-title">🎭 打卡弹窗设置</div>
           <div class="form-group" style="margin-bottom: 12px;">
@@ -286,6 +312,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
       <!-- 6. 数据与同步 -->
       <div class="tab-content" id="tab-data">
+        <div class="config-card">
+          <div class="config-title" style="color: var(--warn); border-bottom-color: var(--warn);">🧪 全段测试模式<span class="help-icon" data-tip="开启后，一切真实推送（页面通知、定时云端、打卡触发）都将被阻断，仅保留本地测试功能。防止在调试时打扰对方。">i</span></div>
+          <div class="switch-row"><label>开启全段测试模式</label><label class="toggle-switch"><input type="checkbox" id="cfg-global-testing"><span class="slider"></span></label></div>
+        </div>
+
+        <div class="config-card">
+          <div class="config-title">📱 推送设备管理<span class="help-icon" data-tip="读取云端 subscriptions.json，查看目前所有绑定了推送的设备。点击垃圾桶可以彻底移除该设备授权。">i</span></div>
+          <div id="device-list-container" style="margin-top: 8px;">
+            <div style="text-align: center; color: var(--text-muted); font-size: 0.8rem; padding: 10px;">加载中...</div>
+          </div>
+        </div>
+        
         <div class="config-card">
           <div class="config-title">☁️ 云端数据同步<span class="help-icon" data-tip="仓库: luo029/dawn_duo_data\n系统会自动根据您的身份，将记录分离存放到云端 (master_records.json / doggy_records.json)，互不干扰。">i</span></div>
           <div class="switch-row" style="margin-bottom: 8px; padding: 0;"><label>开启自动拉取/推送</label><label class="toggle-switch"><input type="checkbox" id="cfg-auto-sync"><span class="slider"></span></label></div>
@@ -385,6 +423,18 @@ document.addEventListener('DOMContentLoaded', () => {
 <div class="sub-modal" id="custom-time-modal"><div class="sub-modal-box" style="max-width:320px;"><div class="sub-modal-head"><h3 id="custom-time-title" style="font-size:1rem;">修改打卡时间</h3><button class="close-btn" onclick="closeCustomTimeModal()">✕</button></div><div style="padding: 10px 0;"><div class="form-group"><label>打卡具体时间 (24小时制)</label><input type="time" id="custom-time-input" style="font-size:1.2rem; text-align:center; padding:10px;"></div></div><div class="sub-modal-foot" style="flex-wrap:wrap; gap:8px;"><button class="btn danger outline" onclick="submitCustomTime('clear')" style="flex:1 1 100%; padding:8px; font-size:0.8rem;">🗑️ 取消打卡</button><button class="btn outline" onclick="closeCustomTimeModal()" style="flex:1;">取消</button><button class="btn primary" onclick="submitCustomTime('save')" style="flex:1;">保存</button></div></div></div>
 <div class="sub-modal" id="diff-modal"><div class="sub-modal-box diff-modal-box"><div class="sub-modal-head"><h3 id="diff-modal-title">同步差异对比</h3><button class="close-btn" onclick="closeDiffModal()">✕</button></div><div style="padding: 10px 20px; border-bottom: 1px solid var(--border); display: flex; gap: 12px; align-items: center; background: var(--settings-bg);"><label style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem; cursor: pointer; font-weight: 600;"><input type="checkbox" id="diff-select-all" checked onchange="toggleAllDiff(this.checked)" style="width: 16px; height: 16px; accent-color: var(--tab-active);">全选差异</label><button class="btn outline" style="font-size: 0.75rem; padding: 4px 10px;" onclick="toggleAllDiff(true)">全选</button><button class="btn outline" style="font-size: 0.75rem; padding: 4px 10px;" onclick="toggleAllDiff(false)">全不选</button></div><div class="diff-scroll" id="diff-content"></div><div class="sub-modal-foot" style="flex-wrap: wrap; gap: 8px;"><button class="btn outline" onclick="closeDiffModal()" style="flex:1;">取消</button><button class="btn primary" id="diff-confirm-btn" onclick="confirmSyncDiff(false)" style="flex:1 1 100%;">应用选中差异</button></div></div></div>
 
+<!-- 自定义通用确认弹窗 -->
+<div class="sub-modal" id="custom-confirm-modal">
+  <div class="sub-modal-box" style="max-width: 320px; padding: 24px; display: flex; flex-direction: column; text-align: center;">
+    <div style="font-size: 1.15rem; margin-bottom: 12px; color: var(--text); font-weight: 700;" id="custom-confirm-title">确认操作</div>
+    <div class="sleep-desc-box" id="custom-confirm-desc" style="margin-bottom: 20px; text-align: left;"></div>
+    <div style="display: flex; gap: 10px;">
+      <button class="btn outline" style="flex: 1; padding: 12px; border-radius: 10px; font-weight: 600;" onclick="closeCustomConfirm()">取消</button>
+      <button class="btn" id="custom-confirm-btn" style="flex: 1; padding: 12px; border-radius: 10px; font-weight: 600; background: var(--warn); color: white; border: none;">确定</button>
+    </div>
+  </div>
+</div>
+
 <div id="global-tooltip"></div>
   `;
   document.body.insertAdjacentHTML('beforeend', container.innerHTML);
@@ -395,12 +445,10 @@ document.addEventListener('DOMContentLoaded', () => {
       e.stopPropagation();
       const text = e.target.getAttribute('data-tip');
       const rect = e.target.getBoundingClientRect();
-      
       tooltip.textContent = text;
       tooltip.style.left = Math.max(10, rect.left - 10) + 'px';
       tooltip.style.top = (rect.bottom + 8) + 'px';
       tooltip.classList.add('show');
-      
       clearTimeout(window.tooltipTimer);
       window.tooltipTimer = setTimeout(() => tooltip.classList.remove('show'), 3000);
     } else {

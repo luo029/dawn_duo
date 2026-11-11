@@ -100,7 +100,30 @@ async function doCheckin(user, type, dateStr, existingRecord, sleepType = 'main'
   }
   const status = record.ontime ? 'success' : 'late'; const pool = P().msgPool || {}; const arr = pool?.[user]?.[type]?.[status] || [];
   const msg = arr.length > 0 ? arr[Math.floor(Math.random() * arr.length)] : (record.ontime ? '打卡成功！' : '打卡完成，但未达标。');
-  showToast(msg, status); saveLocalData();
+  showToast(msg, status); 
+  
+  // 打卡完成，触发云端实时通知
+  triggerPartnerPush();
+
+  saveLocalData();
+}
+// 新增：打卡后触发云端 Actions
+async function triggerPartnerPush() {
+    if (configs.notifySettings && configs.notifySettings.global_testing) {
+        console.log('测试模式已开启，跳过云端触发');
+        return;
+    }
+    if (!ghConfig.user || !ghConfig.repo || !ghConfig.token) return;
+    try {
+        await fetch(`https://api.github.com/repos/${ghConfig.user}/${ghConfig.repo}/actions/workflows/push.yml/dispatches`, {
+            method: 'POST',
+            headers: { 'Authorization': `token ${ghConfig.token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ref: 'main', inputs: { trigger_from: 'partner', test_mode: 'false' } })
+        });
+        console.log('已触发对方打卡通知');
+    } catch(e) {
+        console.warn('触发对方通知失败', e);
+    }
 }
 let saveTimeout = null;
 function saveLocalData(skipSync) {

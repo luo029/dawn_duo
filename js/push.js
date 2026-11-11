@@ -32,13 +32,27 @@ window.subscribeToPush = async function () {
         const subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array('BCFx4JLqFVNZ2MExV8ZX5IKI1NvwWRsRp-Ennufze3bCXDdfKWicy6MiMAIcBpFcDurOOjvLFU3RlkHGkMzoLIg') });
         updateBar('push', getProgressText('sync') || '正在同步云端...', 80);
         
-        // 修复乱码：发送纯英文的 identity 标识，不再发送 encodeURIComponent 后的中文
         const device = getDeviceInfo();
         const authTime = new Date().toLocaleString();
         
+        // 1. 发送给中转站（写入订阅）
         const res = await fetch('https://push-subscribe.luo029.workers.dev/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ secret: 'doggy', subscription: subscription.toJSON(), identity: identity || 'both', device, authTime }) });
         
         if (res.ok) { 
+            // 2. 强制补全设备信息到 GitHub 云端（解决中转站丢失数据的问题）
+            try {
+                const fileRes = await fetchGHFile('subscriptions.json');
+                if (fileRes) {
+                    const subs = JSON.parse(fileRes.content);
+                    const target = subs.find(s => s.endpoint === subscription.endpoint);
+                    if (target && (!target.device || target.device !== device)) {
+                        target.device = device;
+                        target.authTime = authTime;
+                        await pushGHFile('subscriptions.json', JSON.stringify(subs, null, 2), fileRes.sha);
+                    }
+                }
+            } catch(e) { console.warn('补全云端设备信息失败', e); }
+
             updateBar('push', getProgressText('success') || '✅ 订阅成功！', 100); 
             showToast('✅ 系统通知已开启', 'success'); 
             localStorage.setItem('dawn-duo-push-auth', JSON.stringify({ endpoint: subscription.endpoint, device, time: authTime }));

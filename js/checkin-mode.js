@@ -105,25 +105,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (window.render) { const originalRender = window.render; window.render = function() { originalRender.apply(this, arguments); updatePureUI(); }; }
 
+    // 监听设置面板中的极简开关
+    window.addEventListener('DOMContentLoaded', () => {
+        const chk = document.getElementById('cfg-checkin-mode');
+        if (chk) {
+            chk.addEventListener('change', (e) => {
+                localStorage.setItem('dawn-duo-checkin-mode', e.target.checked ? 'true' : 'false');
+                applyPureMode();
+                if (e.target.checked && window.closeSettings) window.closeSettings(); 
+            });
+        }
+    });
+
+    // 每次打开设置面板时，同步一次复选框状态
     if (window.openSettings) {
         const originalOpen = window.openSettings;
         window.openSettings = function() {
             originalOpen.apply(this, arguments);
-            const tabGeneral = document.getElementById('tab-general');
-            if (tabGeneral && !document.getElementById('cfg-checkin-mode-wrap')) {
-                const div = document.createElement('div'); div.className = 'config-card'; div.id = 'cfg-checkin-mode-wrap';
-                div.innerHTML = `<div class="config-title">🎯 契约打卡模式</div><div class="switch-row"><label>开启全屏极简打卡</label><label class="toggle-switch"><input type="checkbox" id="cfg-checkin-mode"><span class="slider"></span></label></div><div class="mode-tip">隐蔽所有界面，呈现不同主题的专属打卡按钮。背景色会随打卡状态自动变换。</div>`;
-                tabGeneral.insertBefore(div, tabGeneral.firstElementChild);
-                const chk = document.getElementById('cfg-checkin-mode'); 
-                chk.onchange = (e) => { 
-                    localStorage.setItem('dawn-duo-checkin-mode', e.target.checked ? 'true' : 'false'); 
-                    applyPureMode(); 
-                    // 核心修复：开启后立刻强制关闭设置面板
-                    if (e.target.checked && window.closeSettings) window.closeSettings(); 
-                };
-            }
-            const chk = document.getElementById('cfg-checkin-mode'); if (chk) chk.checked = localStorage.getItem('dawn-duo-checkin-mode') === 'true';
+            setTimeout(() => {
+                const chk = document.getElementById('cfg-checkin-mode');
+                if (chk) chk.checked = localStorage.getItem('dawn-duo-checkin-mode') === 'true';
+            }, 50);
         };
     }
+
     applyPureMode();
 });

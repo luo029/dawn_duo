@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
     .msg-entry-title { font-size: 0.85rem; font-weight: 700; color: var(--text); }
     .msg-entry-count { font-size: 0.7rem; font-weight: 600; color: var(--text-muted); background: var(--btn-bg); padding: 4px 10px; border-radius: 20px; border: 1px solid var(--border); }
     .msg-entry-btn:hover .msg-entry-count { color: var(--tab-active); border-color: rgba(56, 189, 248, 0.3); }
-    .help-icon { display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px; border-radius: 50%; border: 1px solid var(--text-muted); color: var(--text-muted); font-size: 10px; font-weight: bold; cursor: pointer; margin-left: 6px; user-select: none; transition: all 0.2s; vertical-align: middle; }
+    .help-icon { display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px; border-radius: 50%; border: 1px solid var(--text-muted); color: var(--text-muted); font-size: 10px; font-weight: bold; cursor: pointer; margin-left: 6px; user-select: none; transition: all 0.2s; vertical-align: middle; position: relative; z-index: 10; }
     .help-icon:hover { color: var(--tab-active); border-color: var(--tab-active); background: var(--btn-bg); }
     #global-tooltip { position: fixed; background: rgba(20, 20, 25, 0.95); color: #fff; padding: 10px 14px; border-radius: 8px; font-size: 0.75rem; line-height: 1.5; max-width: 250px; z-index: 9999; pointer-events: none; opacity: 0; transition: opacity 0.2s; box-shadow: 0 4px 15px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(4px); word-break: break-all; white-space: pre-wrap; }
     #global-tooltip.show { opacity: 1; }
@@ -38,11 +38,31 @@ document.addEventListener('DOMContentLoaded', () => {
     .device-badge.master { background: rgba(56, 189, 248, 0.15); color: var(--master-color); }
     .device-badge.doggy { background: rgba(244, 114, 182, 0.15); color: var(--doggy-color); }
     
-    /* 滴滴模式专属切换 Tabs（完美适配移动端） */
     .dual-tabs { display: none; gap: 4px; margin-bottom: 16px; background: var(--input-bg); padding: 4px; border-radius: 12px; border: 1px solid var(--border); }
     .dual-tab-btn { flex: 1; padding: 10px 4px; border-radius: 8px; font-size: 0.85rem; font-weight: 700; border: none; background: transparent; color: var(--text-muted); cursor: pointer; transition: all 0.2s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; justify-content: center; align-items: center; gap: 4px; }
     .dual-tab-btn.active { background: var(--card-bg); color: var(--tab-active); box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
     @media(max-width: 400px) { .dual-tab-btn { font-size: 0.75rem; padding: 8px 2px; } }
+
+    .fix-panel { display: flex !important; flex-direction: column !important; gap: 12px !important; margin-top: 10px !important; }
+    .fix-card-group { background: var(--settings-bg); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+    .fix-user-title { padding: 10px 16px; background: var(--card-bg); font-size: 0.85rem; font-weight: 800; color: var(--text); border-bottom: 1px dashed var(--border); display: flex; align-items: center; gap: 6px; }
+    .fix-item { display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border); background: var(--card-bg); cursor: pointer; transition: background 0.2s; flex-wrap: nowrap; }
+    .fix-item:hover { background: var(--btn-bg); }
+    .fix-item:last-child { border-bottom: none; }
+    .fix-item-left { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; pointer-events: none; }
+    .fix-item-icon { font-size: 1rem; flex-shrink: 0; }
+    .fix-item-label { font-size: 0.85rem; color: var(--text-muted); font-weight: 600; white-space: nowrap; }
+    .fix-item-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; justify-content: flex-end; }
+    .fix-item-time { font-size: 1.25rem; font-weight: 900; font-family: 'DIN Alternate', monospace; color: var(--text); white-space: nowrap; min-width: 55px; text-align: right; margin-right: 4px; }
+    .fix-badge { font-size: 0.65rem; padding: 1px 6px; border-radius: 999px; font-weight: 700; white-space: nowrap; flex-shrink: 0; letter-spacing: 1px; margin-left: 4px; }
+    .fix-badge.success { background: rgba(16, 185, 129, 0.15); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.3); }
+    .fix-badge.late { background: rgba(239, 68, 68, 0.15); color: var(--warn); border: 1px solid rgba(239, 68, 68, 0.3); }
+    .fix-badge.none { background: var(--btn-bg); color: var(--text-muted); border: 1px dashed var(--border); }
+    .fix-action-btn { padding: 4px 6px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; border: none; background: transparent; cursor: pointer; transition: all 0.2s; white-space: nowrap; display: flex; align-items: center; gap: 4px; }
+    .fix-action-btn.edit { color: var(--tab-active); }
+    .fix-action-btn.edit:hover { background: rgba(56, 189, 248, 0.1); }
+    .fix-action-btn.delete { color: var(--text-muted); }
+    .fix-action-btn.delete:hover { color: var(--warn); background: var(--warn-bg); }
   `;
   document.head.appendChild(style);
 
@@ -78,19 +98,36 @@ ${safeCall('getSettingsModalsHTML')}
   document.body.insertAdjacentHTML('beforeend', container.innerHTML);
 
   const tooltip = document.getElementById('global-tooltip');
+  let hideTimer;
+  const showTip = (target) => {
+    const text = target.getAttribute('data-tip');
+    if (!text) return;
+    const rect = target.getBoundingClientRect();
+    tooltip.textContent = text;
+    let left = Math.max(10, rect.left - 10);
+    if (left + 250 > window.innerWidth) left = window.innerWidth - 260;
+    tooltip.style.left = left + 'px';
+    tooltip.style.top = (rect.bottom + 8) + 'px';
+    tooltip.classList.add('show');
+  };
+  const hideTip = () => tooltip.classList.remove('show');
+
+  document.addEventListener('mouseover', (e) => {
+    const helpIcon = e.target.closest('.help-icon');
+    if (helpIcon && window.matchMedia('(hover: hover)').matches) { clearTimeout(hideTimer); showTip(helpIcon); }
+  });
+  document.addEventListener('mouseout', (e) => {
+    const helpIcon = e.target.closest('.help-icon');
+    if (helpIcon && window.matchMedia('(hover: hover)').matches) { hideTip(); }
+  });
+
   document.addEventListener('click', (e) => {
-    if (e.target.classList.contains('help-icon')) {
-      e.stopPropagation();
-      const text = e.target.getAttribute('data-tip');
-      const rect = e.target.getBoundingClientRect();
-      tooltip.textContent = text;
-      tooltip.style.left = Math.max(10, rect.left - 10) + 'px';
-      tooltip.style.top = (rect.bottom + 8) + 'px';
-      tooltip.classList.add('show');
-      clearTimeout(window.tooltipTimer);
-      window.tooltipTimer = setTimeout(() => tooltip.classList.remove('show'), 3000);
-    } else {
-      tooltip.classList.remove('show');
-    }
+    const helpIcon = e.target.closest('.help-icon');
+    if (helpIcon) { 
+      e.stopPropagation(); e.preventDefault();
+      showTip(helpIcon);
+      clearTimeout(hideTimer);
+      hideTimer = setTimeout(hideTip, 3000);
+    } else { hideTip(); }
   });
 });

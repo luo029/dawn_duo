@@ -18,7 +18,17 @@ function updateColorInputs() { const c = P().colors || DEFAULT_CONFIGS.profiles.
 window.showCustomConfirm = function(title, desc, onConfirm) { document.getElementById('custom-confirm-title').textContent = title; document.getElementById('custom-confirm-desc').innerHTML = desc; const btn = document.getElementById('custom-confirm-btn'); const newBtn = btn.cloneNode(true); btn.parentNode.replaceChild(newBtn, btn); newBtn.onclick = () => { closeCustomConfirm(); if (onConfirm) onConfirm(); }; document.getElementById('custom-confirm-modal').classList.add('show'); };
 window.closeCustomConfirm = function() { const modal = document.getElementById('custom-confirm-modal'); if (modal) modal.classList.remove('show'); };
 
-window.openSettings = function() { try { fillTextInputs(); updateColorInputs(); updateMsgCounts(); updateModeCards(); const setChk = (id, val) => { const el = document.getElementById(id); if (el) el.checked = val; }; const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; }; setChk('cfg-simple-mode', configs.simpleMode === true); setChk('cfg-notifications', configs.notifications === true); setVal('cfg-anniversary', configs.anniversary); setChk('cfg-show-history', configs.showHistory === true); setChk('cfg-show-logical-date', configs.showLogicalDate !== false); setVal('cfg-clock-layout', configs.clockLayout); setChk('cfg-show-master-clock', configs.showMasterClock); setChk('cfg-show-doggy-clock', configs.showDoggyClock); setChk('cfg-show-seconds', configs.showSeconds); setChk('cfg-show-shichen', configs.showShichen); setChk('cfg-show-wellness', configs.showWellness); setVal('cfg-tz-master-type', configs.timeZones.master.type || 'iana'); setVal('cfg-tz-doggy-type', configs.timeZones.doggy.type || 'iana'); if (configs.timeZones.master.type === 'offset') setVal('cfg-tz-master-offset', configs.timeZones.master.value); else setVal('cfg-tz-master-iana', configs.timeZones.master.value); if (configs.timeZones.doggy.type === 'offset') setVal('cfg-tz-doggy-offset', configs.timeZones.doggy.value); else setVal('cfg-tz-doggy-iana', configs.timeZones.doggy.value); toggleTzInput('master'); toggleTzInput('doggy'); setVal('cfg-goal-master-sleep', configs.goals.master.sleep); setVal('cfg-goal-master-wake', configs.goals.master.wake); setVal('cfg-goal-doggy-sleep', configs.goals.doggy.sleep); setVal('cfg-goal-doggy-wake', configs.goals.doggy.wake); setVal('cfg-history-type', configs.historyType); setVal('cfg-history-days', String(configs.historyDays)); const nItems = configs.notifySettings?.items || {}; document.querySelectorAll('.notify-item-chk').forEach(chk => { chk.checked = nItems[chk.dataset.key] !== false; }); setChk('cfg-global-testing', configs.notifySettings?.global_testing === true); 
+window.openSettings = function() { try { fillTextInputs(); updateColorInputs(); updateMsgCounts(); updateModeCards(); const setChk = (id, val) => { const el = document.getElementById(id); if (el) el.checked = val; }; const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; }; setChk('cfg-simple-mode', configs.simpleMode === true); setChk('cfg-notifications', configs.notifications === true); setVal('cfg-anniversary', configs.anniversary); setChk('cfg-show-history', configs.showHistory === true); setChk('cfg-show-logical-date', configs.showLogicalDate !== false); setVal('cfg-clock-layout', configs.clockLayout); setChk('cfg-show-master-clock', configs.showMasterClock); setChk('cfg-show-doggy-clock', configs.showDoggyClock); setChk('cfg-show-seconds', configs.showSeconds); setChk('cfg-show-shichen', configs.showShichen); setChk('cfg-show-wellness', configs.showWellness); setVal('cfg-tz-master-type', configs.timeZones.master.type || 'iana'); setVal('cfg-tz-doggy-type', configs.timeZones.doggy.type || 'iana'); if (configs.timeZones.master.type === 'offset') setVal('cfg-tz-master-offset', configs.timeZones.master.value); else setVal('cfg-tz-master-iana', configs.timeZones.master.value); if (configs.timeZones.doggy.type === 'offset') setVal('cfg-tz-doggy-offset', configs.timeZones.doggy.value); else setVal('cfg-tz-doggy-iana', configs.timeZones.doggy.value); toggleTzInput('master'); toggleTzInput('doggy'); setVal('cfg-goal-master-sleep', configs.goals.master.sleep); setVal('cfg-goal-master-wake', configs.goals.master.wake); setVal('cfg-goal-doggy-sleep', configs.goals.doggy.sleep); setVal('cfg-goal-doggy-wake', configs.goals.doggy.wake); setVal('cfg-history-type', configs.historyType); setVal('cfg-history-days', String(configs.historyDays)); const nItems = configs.notifySettings?.items || {}; document.querySelectorAll('.notify-item-chk').forEach(chk => { chk.checked = nItems[chk.dataset.key] !== false; }); 
+        
+        const isMDND = configs.notifySettings?.master_dnd === true;
+        const isDDND = configs.notifySettings?.doggy_dnd === true;
+        document.querySelectorAll('.dnd-chk').forEach(chk => {
+            if (chk.dataset.key === 'master_dnd') chk.checked = isMDND;
+            if (chk.dataset.key === 'doggy_dnd') chk.checked = isDDND;
+        });
+        if (window.toggleDNDState) { window.toggleDNDState('master', isMDND); window.toggleDNDState('doggy', isDDND); }
+
+        setChk('cfg-global-testing', configs.notifySettings?.global_testing === true); 
         setChk('cfg-overtime-window-master', configs.notifySettings?.master_window_enabled !== false); 
         setVal('cfg-on-time-before-master', configs.notifySettings?.master_on_time_before !== undefined ? configs.notifySettings.master_on_time_before : 15); 
         setVal('cfg-on-time-after-master', configs.notifySettings?.master_on_time_after !== undefined ? configs.notifySettings.master_on_time_after : 15); 
@@ -87,9 +97,14 @@ window.saveSettings = function(skipSync) {
         configs.historyDays = [7, 30, 90, 365].includes(hd) ? hd : 30; 
         configs.historyYear = getVal('cfg-history-year', '') || configs.historyYear; 
         configs.historyMonth = getVal('cfg-history-month', '') || configs.historyMonth; 
-        configs.configVersion = 17; 
+        configs.configVersion = 18; 
         if (!configs.notifySettings.items) configs.notifySettings.items = {}; 
         document.querySelectorAll('.notify-item-chk').forEach(chk => { configs.notifySettings.items[chk.dataset.key] = chk.checked; }); 
+        
+        document.querySelectorAll('.dnd-chk').forEach(chk => {
+            configs.notifySettings[chk.dataset.key] = chk.checked;
+        });
+
         configs.notifySettings.global_testing = getChk('cfg-global-testing', false); 
         
         configs.notifySettings.master_window_enabled = getChk('cfg-overtime-window-master', true); 
@@ -146,7 +161,6 @@ function applyIdentityFilter() {
         }
     });
     
-    // 处理其他不属于 dual-group 的元素
     document.querySelectorAll('[data-user]').forEach(el => {
         if (el.closest('.dual-user-group')) return; 
         if (role === 'both') el.style.display = '';

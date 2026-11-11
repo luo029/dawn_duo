@@ -103,6 +103,10 @@ function checkPushText(notifyTexts, key, replacements) {
 
   for (const sub of subscriptions) {
     if (sub.blocked === true) continue;
+    if (sub.muted === true) {
+        console.log(`[跳过] 设备已静音: ${sub.endpoint.slice(0, 30)}...`);
+        continue;
+    }
     if (TEST_MODE && TEST_TARGET !== 'all' && !sub.endpoint.endsWith(TEST_TARGET)) continue;
 
     let title = '', body = '', icon = '/icon-512.png';
@@ -142,6 +146,8 @@ function checkPushText(notifyTexts, key, replacements) {
 
     if (TRIGGER_FROM === 'partner') {
       if (sendMaster) {
+        const isDND = notifySettings.master_dnd === true;
+        if (isDND) continue;
         if (remoteDb.doggy[dDateStr]?.wake?.done) { textKey = 'partner_doggy_wake'; sendType = 'wake'; }
         else if (remoteDb.doggy[dDateStr]?.sleep?.done) { textKey = 'partner_doggy_sleep'; sendType = 'sleep'; }
         else continue;
@@ -151,6 +157,8 @@ function checkPushText(notifyTexts, key, replacements) {
         body = checkPushText(notifyTexts, textKey, replacements);
         title = '📡 对方动态';
       } else if (sendDoggy) {
+        const isDND = notifySettings.doggy_dnd === true;
+        if (isDND) continue;
         if (remoteDb.master[mDateStr]?.wake?.done) { textKey = 'partner_master_wake'; sendType = 'wake'; }
         else if (remoteDb.master[mDateStr]?.sleep?.done) { textKey = 'partner_master_sleep'; sendType = 'sleep'; }
         else continue;
@@ -173,9 +181,11 @@ function checkPushText(notifyTexts, key, replacements) {
 
     if (sendMaster) {
       targetUser = 'master';
+      if (notifySettings.master_dnd === true) continue;
       if (Math.abs(mMins - mSleepGoal) < Math.abs(mMins - mWakeGoal)) { sendType = 'sleep'; } else { sendType = 'wake'; }
     } else if (sendDoggy) {
       targetUser = 'doggy';
+      if (notifySettings.doggy_dnd === true) continue;
       if (Math.abs(dMins - dSleepGoal) < Math.abs(dMins - dWakeGoal)) { sendType = 'sleep'; } else { sendType = 'wake'; }
     } else { continue; }
 

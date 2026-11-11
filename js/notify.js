@@ -14,6 +14,9 @@ function checkNotifications() {
     if (identity === 'doggy' || identity === 'both') { items.push({ key: 'doggy_sleep', user: 'doggy', type: 'sleep', tz: configs.timeZones.doggy, name: dName }); items.push({ key: 'doggy_wake', user: 'doggy', type: 'wake', tz: configs.timeZones.doggy, name: dName }); }
     
     items.forEach(it => {
+        const isDND = it.user === 'master' ? nSettings.master_dnd === true : nSettings.doggy_dnd === true;
+        if (isDND) return;
+
         if (nItems[it.key] === false) return;
         const done = db[it.user]?.[today]?.[it.type]?.done; if (done) return;
         const nowTimeStr = getTimeInTZ(it.tz, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
@@ -99,7 +102,11 @@ function detectPartnerCheckin(remoteDb) {
     if (!identity || identity === 'both') return;
     if (!configs.notifications || !configs.notifySettings) return;
     if (!notificationSupported() || Notification.permission !== 'granted') return;
+    
     const partnerKey = identity === 'master' ? 'doggy' : 'master'; const today = getLogicalDateStr();
+    const isMyDND = identity === 'master' ? configs.notifySettings.master_dnd === true : configs.notifySettings.doggy_dnd === true;
+    if (isMyDND) return;
+
     const localRec = (db[partnerKey] || {})[today] || {}; const remoteRec = (remoteDb[partnerKey] || {})[today] || {}; if (!remoteRec || typeof remoteRec !== 'object') return;
     const prof = P(); const partnerNameRaw = partnerKey === 'master' ? prof.texts?.masterName : prof.texts?.doggyName; const partnerName = getPureName(partnerNameRaw) || (partnerKey === 'master' ? '先生' : '宝宝');
     const nTexts = prof.notifyTexts || {}; const nItems = configs.notifySettings.items || {};

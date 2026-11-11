@@ -102,12 +102,10 @@ async function doCheckin(user, type, dateStr, existingRecord, sleepType = 'main'
   const msg = arr.length > 0 ? arr[Math.floor(Math.random() * arr.length)] : (record.ontime ? '打卡成功！' : '打卡完成，但未达标。');
   showToast(msg, status); 
   
-  // 打卡完成，触发云端实时通知
   triggerPartnerPush();
 
   saveLocalData();
 }
-// 新增：打卡后触发云端 Actions
 async function triggerPartnerPush() {
     if (configs.notifySettings && configs.notifySettings.global_testing) {
         console.log('测试模式已开启，跳过云端触发');
@@ -115,6 +113,10 @@ async function triggerPartnerPush() {
     }
     if (!ghConfig.user || !ghConfig.repo || !ghConfig.token) return;
     try {
+        // 强制先上传最新数据到云端，防止云端脚本拉取旧数据防误触跳过，确保对方一定能收到
+        if (typeof autoSyncToGitHub === 'function') {
+            await autoSyncToGitHub(true); 
+        }
         await fetch(`https://api.github.com/repos/${ghConfig.user}/${ghConfig.repo}/actions/workflows/push.yml/dispatches`, {
             method: 'POST',
             headers: { 'Authorization': `token ${ghConfig.token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },

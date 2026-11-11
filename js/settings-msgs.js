@@ -155,11 +155,12 @@ window.openNotifyTestModal = function() {
 
     const targetSelect = document.getElementById('test-notify-target');
     if (targetSelect) {
-        let wrapperT = targetSelect.closest('.custom-select-wrapper');
-        if (wrapperT) { wrapperT.parentNode.insertBefore(targetSelect, wrapperT); wrapperT.remove(); }
-        targetSelect.dataset.customized = 'false';
-        targetSelect.innerHTML = '<option value="all">全部授权设备</option>';
+        // 先确保原本的初始化完成
+        if (window.initCustomSelects) window.initCustomSelects();
         
+        targetSelect.innerHTML = '<option value="all">全部授权设备</option>';
+        if (window.refreshCustomSelects) window.refreshCustomSelects();
+
         if (ghConfig.user && ghConfig.repo && ghConfig.token) {
             fetchGHFile('subscriptions.json').then(res => {
                 if (res && res.content) {
@@ -171,21 +172,28 @@ window.openNotifyTestModal = function() {
                         let idText = id === 'master' ? '主人' : (id === 'doggy' ? '小狗' : '滴滴');
                         html += `<option value="${sub.endpoint.slice(-20)}">${dName} (${idText})</option>`;
                     });
-                    let wT = targetSelect.closest('.custom-select-wrapper');
-                    if (wT) { wT.parentNode.insertBefore(targetSelect, wT); wT.remove(); }
-                    targetSelect.dataset.customized = 'false';
                     targetSelect.innerHTML = html;
-                    if (window.initCustomSelects) window.initCustomSelects();
+                    // 只刷新选项内容，不摧毁 DOM 结构
+                    if (window.refreshCustomSelects) window.refreshCustomSelects();
                 }
             }).catch(e => console.warn('拉取设备列表失败', e));
         }
-        if (window.initCustomSelects) window.initCustomSelects();
     }
 
     if (window.initCustomSelects) window.initCustomSelects(); 
+    toggleTestTarget();
     updateTestPreview(); 
     document.getElementById('notify-test-modal').classList.add('show'); 
 };
+
+window.toggleTestTarget = function() {
+    const chanEl = document.getElementById('test-notify-channel');
+    const targetEl = document.getElementById('test-notify-target');
+    if (!chanEl || !targetEl) return;
+    const targetGroup = targetEl.closest('.form-group');
+    if (targetGroup) targetGroup.style.display = 'block';
+};
+
 window.updateTestPreview = function() { 
     const key = document.getElementById('test-notify-key').value; 
     const prof = P(); const nTexts = prof.notifyTexts || {}; let obj = nTexts[key] || { texts: [] }; if (Array.isArray(obj)) obj = { channel: 'both', texts: obj }; 
@@ -240,7 +248,7 @@ window.triggerTestNotification = async function() {
         let perm = Notification.permission; 
         if (perm === 'default') { try { perm = await Notification.requestPermission(); } catch (e) { perm = 'denied'; } } 
         if (perm !== 'granted') return showToast('未获得通知权限，请允许', 'late'); 
-        try { new Notification(title, { body: body, tag: 'dawn-test-' + Date.now(), requireInteraction: true }); showToast('本地测试通知已发送', 'success'); } catch (e) { showToast('发送失败：' + e.message, 'late'); } 
+        try { new Notification(title, { body: body, tag: 'dawn-test-' + Date.now(), requireInteraction: true }); showToast('页面通知已发送', 'success'); } catch (e) { showToast('发送失败：' + e.message, 'late'); } 
     } else if (channel === 'push') { 
         if (!ghConfig.user || !ghConfig.repo || !ghConfig.token) return showToast('请先配置 GitHub Token 才能测试云端推送', 'late'); 
         showToast('正在请求云端发送...', 'success'); 

@@ -1,6 +1,9 @@
 window.updateBackendPushStatus = async function() {
     const statusEl = document.getElementById('backend-push-status'); const toggleEl = document.getElementById('cfg-backend-push'); if (!statusEl || !toggleEl) return;
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) { statusEl.textContent = '⚠️ 当前浏览器不支持后台推送'; toggleEl.checked = false; toggleEl.disabled = true; return; }
+    const muteEl = document.getElementById('cfg-device-mute');
+    
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) { statusEl.textContent = '⚠️ 当前浏览器不支持后台推送'; toggleEl.checked = false; toggleEl.disabled = true; if (muteEl) muteEl.disabled = true; return; }
+    
     try {
         const registration = await navigator.serviceWorker.ready; const subscription = await registration.pushManager.getSubscription();
         if (subscription) { 
@@ -16,9 +19,23 @@ window.updateBackendPushStatus = async function() {
             } catch(e){}
             statusEl.innerHTML = `✅ 已绑定推送 (身份: ${displayId})${authInfo}`; 
             toggleEl.checked = true; 
+            if (muteEl) muteEl.disabled = false;
+
+            // 同步静音状态
+            try {
+                const res = await fetchGHFile('subscriptions.json');
+                if (res) {
+                    const subs = JSON.parse(res.content);
+                    const target = subs.find(s => s.endpoint === subscription.endpoint);
+                    const isMuted = target && target.muted === true;
+                    if (muteEl) muteEl.checked = isMuted;
+                    if (window.handleDeviceMuteUI) window.handleDeviceMuteUI(isMuted);
+                }
+            } catch (e) { console.warn('拉取静音状态失败', e); }
+
         }
-        else { statusEl.textContent = 'ℹ️ 当前设备尚未绑定后台推送'; toggleEl.checked = false; }
-    } catch (e) { statusEl.textContent = '⚠️ 检查状态失败：' + e.message; toggleEl.checked = false; }
+        else { statusEl.textContent = 'ℹ️ 当前设备尚未绑定后台推送'; toggleEl.checked = false; if (muteEl) { muteEl.checked = false; muteEl.disabled = true; } if (window.handleDeviceMuteUI) window.handleDeviceMuteUI(false); }
+    } catch (e) { statusEl.textContent = '⚠️ 检查状态失败：' + e.message; toggleEl.checked = false; if (muteEl) { muteEl.checked = false; muteEl.disabled = true; } if (window.handleDeviceMuteUI) window.handleDeviceMuteUI(false); }
 };
 window.handleBackendPushToggle = async function() { const toggleEl = document.getElementById('cfg-backend-push'); if (toggleEl.checked) await subscribeToPush(); else await unsubscribeFromPush(); };
 window.subscribeToPush = async function () {
@@ -35,11 +52,9 @@ window.subscribeToPush = async function () {
         const device = getDeviceInfo();
         const authTime = new Date().toLocaleString();
         
-        // 1. 发送给中转站（写入订阅）
         const res = await fetch('https://push-subscribe.luo029.workers.dev/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ secret: 'doggy', subscription: subscription.toJSON(), identity: identity || 'both', device, authTime }) });
         
         if (res.ok) { 
-            // 2. 强制补全设备信息到 GitHub 云端（解决中转站丢失数据的问题）
             try {
                 const fileRes = await fetchGHFile('subscriptions.json');
                 if (fileRes) {
@@ -76,5 +91,37 @@ window.unsubscribeFromPush = async function () {
         else { hideBar('push'); showToast('本地已取消，云端清理失败', 'late'); }
         updateBackendPushStatus();
     } catch (e) { hideBar('push'); showToast('取消失败：' + e.message, 'late'); updateBackendPushStatus(); }
+};
+window.toggleDeviceMute = async function(isMuted) {
+    const muteEl = document.getElementById('cfg-device-mute');
+    if (!ghConfig.user || !ghConfig.repo || !ghConfig.token) return;
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    
+    try {
+        const registration = await navigator.serviceWorker.ready;
+        const subscription = await registration.pushManager.getSubscription();
+        if (!subscription) { if (muteEl) muteEl.checked = false; return showToast('当前未绑定推送', 'late'); }
+        
+        showToast('正在同步云端静音状态...', 'success');
+        const endpoint = subscription.endpoint;
+        
+        const fileRes = await fetchGHFile('subscriptions.json');
+        if (!fileRes) return;
+        const subs = JSON.parse(fileRes.content);
+        const target = subs.find(s => s.endpoint === endpoint);
+        if (target) {
+            target.muted = isMuted;
+            await pushGHFile('subscriptions.json', JSON.stringify(subs, null, 2), fileRes.sha);
+            showToast(isMuted ? '🔕 本设备已静音' : '🔔 本设备已恢复接收', 'success');
+            if (window.handleDeviceMuteUI) window.handleDeviceMuteUI(isMuted);
+        } else {
+            showToast('云端找不到该设备记录，请重新授权', 'late');
+            if (muteEl) muteEl.checked = !isMuted;
+        }
+    } catch(e) {
+        console.warn('更新静音状态失败', e);
+        showToast('更新静音状态失败', 'late');
+        if (muteEl) muteEl.checked = !isMuted;
+    }
 };
 function urlBase64ToUint8Array(base64String) { const padding = '='.repeat((4 - (base64String.length % 4)) % 4); const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/'); const rawData = atob(base64); return new Uint8Array([...rawData].map(char => char.charCodeAt(0))); }

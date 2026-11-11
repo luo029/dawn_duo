@@ -15,6 +15,19 @@
 2. **数据与后台脚本仓**（`luo029/dawn_duo_data`）：存放打卡记录 JSON 及后台推送脚本。
 **注意**：为了方便本地一次性编辑和 AI 读取，`send-push.js` 和 `push.yml` 虽然最终运行在 `dawn_duo_data` 仓库，但也同步存放在本地的项目根目录下。在提交时，需将这两个文件上传到云端仓库。云端数据交互逻辑由前端通过 GitHub API 直接读写。
 
+### 🛠️ 设置面板架构重构（重要规范）
+为了防止由于 `settings.js` 过大导致的代码难以维护以及白屏崩溃，设置面板已进行彻底解耦拆分。**所有拆分文件必须平铺在 `js/` 目录下（绝对禁止放入子文件夹，防止路径错误导致白屏）**。
+拆分的文件结构如下：
+- `js/settings-general.js`：外观、身份、模式、纪念日等。
+- `js/settings-profiles.js`：双人名字、标签、颜色、按钮文字。
+- `js/settings-rules.js`：作息时间、时区、时钟排版、日历等。
+- `js/settings-notify.js`：通知渠道、后台推送开关、提醒项。
+- `js/settings-msgs.js`：弹窗文案、通知文案、随机文案库、导入库。
+- `js/settings-data.js`：测试模式、推送设备管理、云端同步、本地导入导出。
+- `js/settings-modals.js`：设置面板关联的所有子弹窗 HTML 模板。
+- `js/settings-render.js`：负责拼装 DOM 并注入页面，内部包含防崩溃保护（使用 `safeCall` 包裹），即使某个 Tab 加载失败，也不会影响整体页面白屏。
+- `js/settings.js`：核心交互逻辑（保存、读取、开关联动等）。
+
 ## 序言（文言文版）
 盖闻山海虽远，不隔同心。是作“契约”一役，结连理于云端。主从相契，作息同规；朝暮相守，互为牵挂。借彼星汉之网，传此相思之音；凭此无相之手，警其寤寐之期。虽隔半洲，宛若比邻。此库之设，实乃双心相照之信物，异地结伴之良方也。
 
@@ -30,16 +43,19 @@
 ### 2. 通知与推送机制
 - **页面内通知**：基于 `Notification API`，利用 `sw.js` 和前端轮询判断是否到达打卡时间。
 - **后台云端推送 (Web Push)**：前端获取 Push Subscription 并发送至 Cloudflare Worker 写入 `subscriptions.json`。GitHub Actions 每天定时触发 `send-push.js` 发送通知，遇到 404/410 自动清理失效订阅。
+- **设备信息补全机制**：因 Cloudflare Worker 中转站会丢弃部分附加信息，前端在 `push.js` 订阅成功后加入了“强制补全”逻辑。前端会再次请求 GitHub API 拉取 `subscriptions.json`，将本地缓存的设备名和时间匹配后强推回云端，确保【数据】页面能正常显示设备。
+- **设备删除与联动**：在【数据】页面删除设备时，加入自定义二次确认弹窗（美观）。若检测到删除的是本机设备，将自动联动取消本地订阅，并关闭【提醒】页面的后台推送开关，同时刷新列表。
 - **防误触机制**：`send-push.js` 在发送前会读取双文件记录，若已打卡则直接跳过，避免打扰。
-- **设备与编码**：订阅时会记录设备类型与授权时间，身份标识改为传纯英文 (`master` / `doggy` / `both`) 避免 Cloudflare 乱码，通知内的中文称呼由 `send-push.js` 动态读取。
 - **测试面板**：前端测试中心新增“云端触发”按钮，直接调用 GitHub API 触发 Actions 手动执行。
-  - *前提配置*：Token 必须为 **Fine-grained** 且授予该仓库 **`Actions` (Read and write)** 权限；分支需为 `main`。
-  - *备注*：Fine-grained Token 不存在独立的 `workflow` 字段，触发工作流由 `Actions` 权限覆盖。若使用 Classic Token，则需勾选 `workflow` 和 `repo` scope。
 
-### 3. Cloudflare Workers
+### 3. 界面与动态变量
+- **动态名称绑定**：设置面板中的“显示主人时间/小狗时间”现在为动态标签，会根据当前是日常模式/主仆模式，以及用户自定义的名字（如将主人改为“老板”），自动更新为“显示老板时间”。
+- **原生弹窗全面替换**：禁用原生 `confirm` 弹窗，统一使用自定义弹窗组件（`#custom-confirm-modal`），与 UI 风格保持一致。
+
+### 4. Cloudflare Workers
 - **`dawn-duo`**：主站接口代理。
 - **`push-subscribe`**：接收前端请求，校验 `WEBHOOK_SECRET`，读写订阅信息。
 
-### 4. GitHub Actions (`dawn_duo_data` 仓库)
+### 5. GitHub Actions (`dawn_duo_data` 仓库)
 - **`push.yml`**：每天 UTC 22:00 触发。
 - **`send-push.js`**：读取 VAPID 密钥与文案，遍历订阅并发送推送。

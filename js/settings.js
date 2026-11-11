@@ -8,7 +8,16 @@ window.chooseIdentity = function(id) { if (['master', 'doggy', 'both'].indexOf(i
 window.switchTab = function(e, tabId) { const targetBtn = e.currentTarget || e.target, targetContent = document.getElementById(tabId); if (!targetContent) return; requestAnimationFrame(() => { document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active')); document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active')); targetBtn.classList.add('active'); targetContent.classList.add('active'); }); };
 window.toggleHistoryTypeOptions = function() { const type = document.getElementById('cfg-history-type').value; document.getElementById('group-history-days').style.display = type === 'days' ? 'block' : 'none'; document.getElementById('group-history-month').style.display = type === 'month' ? 'flex' : 'none'; };
 window.toggleTzInput = function(user) { const type = document.getElementById(`cfg-tz-${user}-type`).value; document.getElementById(`group-tz-${user}-iana`).style.display = type === 'iana' ? 'block' : 'none'; document.getElementById(`group-tz-${user}-offset`).style.display = type === 'offset' ? 'block' : 'none'; };
-function updateModeCards() { const d = document.getElementById('mode-card-daily'), s = document.getElementById('mode-card-service'); if (d) d.classList.toggle('active', configs.mode === 'daily'); if (s) s.classList.toggle('active', configs.mode === 'service'); const isService = configs.mode === 'service', masterTitle = isService ? '主人' : '先生', doggyTitle = isService ? '小狗' : '宝宝'; const idsToUpdate = { 'cfg-title-master': masterTitle, 'cfg-title-doggy': doggyTitle, 'label-tz-master-type': `${masterTitle} 时区设置`, 'label-tz-doggy-type': `${doggyTitle} 时区设置`, 'label-tz-master-iana': `${masterTitle} 所在时区`, 'label-tz-doggy-iana': `${doggyTitle} 所在时区`, 'label-tz-master-offset': `${masterTitle} 时差`, 'label-tz-doggy-offset': `${doggyTitle} 时差`, 'label-goal-master-sleep': `${masterTitle}休息目标`, 'label-goal-master-wake': `${masterTitle}起床目标`, 'label-goal-doggy-sleep': `${doggyTitle}睡觉目标`, 'label-goal-doggy-wake': `${doggyTitle}起床目标` }; for (const [id, text] of Object.entries(idsToUpdate)) { const el = document.getElementById(id); if (el) el.textContent = text; } const t = P().texts || DEFAULT_TEXTS_DAILY; const mName = getPureName(t.masterName) || (configs.mode === 'service' ? '主人' : '先生'); const dName = getPureName(t.doggyName) || (configs.mode === 'service' ? '小狗' : '宝宝'); document.querySelectorAll('.text-master-name').forEach(el => { el.textContent = el.classList.contains('name-with-suffix') ? mName + '版' : mName; }); document.querySelectorAll('.text-doggy-name').forEach(el => { el.textContent = el.classList.contains('name-with-suffix') ? dName + '版' : dName; }); document.querySelectorAll('.notify-role-master').forEach(el => el.textContent = masterTitle); document.querySelectorAll('.notify-role-doggy').forEach(el => el.textContent = doggyTitle); const dIcon = document.getElementById('mode-icon-daily'); if (dIcon) dIcon.textContent = t.dailyModeIcon || '💕'; const sIcon = document.getElementById('mode-icon-service'); if (sIcon) sIcon.textContent = t.serviceModeIcon || '🐕'; updateIdentityLabels(); updateIdentityCards(); }
+function updateModeCards() { const d = document.getElementById('mode-card-daily'), s = document.getElementById('mode-card-service'); if (d) d.classList.toggle('active', configs.mode === 'daily'); if (s) s.classList.toggle('active', configs.mode === 'service'); const isService = configs.mode === 'service', masterTitle = isService ? '主人' : '先生', doggyTitle = isService ? '小狗' : '宝宝'; const idsToUpdate = { 'cfg-title-master': masterTitle, 'cfg-title-doggy': doggyTitle, 'label-tz-master-type': `${masterTitle} 时区设置`, 'label-tz-doggy-type': `${doggyTitle} 时区设置`, 'label-tz-master-iana': `${masterTitle} 所在时区`, 'label-tz-doggy-iana': `${doggyTitle} 所在时区`, 'label-tz-master-offset': `${masterTitle} 时差`, 'label-tz-doggy-offset': `${doggyTitle} 时差`, 'label-goal-master-sleep': `${masterTitle}休息目标`, 'label-goal-master-wake': `${masterTitle}起床目标`, 'label-goal-doggy-sleep': `${doggyTitle}睡觉目标`, 'label-goal-doggy-wake': `${doggyTitle}起床目标` }; for (const [id, text] of Object.entries(idsToUpdate)) { const el = document.getElementById(id); if (el) el.textContent = text; } 
+    const t = P().texts || DEFAULT_TEXTS_DAILY; const mName = getPureName(t.masterName) || (configs.mode === 'service' ? '主人' : '先生'); const dName = getPureName(t.doggyName) || (configs.mode === 'service' ? '小狗' : '宝宝'); 
+    
+    // 动态修改时钟显示标签 (修复点)
+    const lblShowMaster = document.getElementById('lbl-show-master-clock');
+    const lblShowDoggy = document.getElementById('lbl-show-doggy-clock');
+    if (lblShowMaster) lblShowMaster.textContent = `显示${mName}时间`;
+    if (lblShowDoggy) lblShowDoggy.textContent = `显示${dName}时间`;
+
+    document.querySelectorAll('.text-master-name').forEach(el => { el.textContent = el.classList.contains('name-with-suffix') ? mName + '版' : mName; }); document.querySelectorAll('.text-doggy-name').forEach(el => { el.textContent = el.classList.contains('name-with-suffix') ? dName + '版' : dName; }); document.querySelectorAll('.notify-role-master').forEach(el => el.textContent = masterTitle); document.querySelectorAll('.notify-role-doggy').forEach(el => el.textContent = doggyTitle); const dIcon = document.getElementById('mode-icon-daily'); if (dIcon) dIcon.textContent = t.dailyModeIcon || '💕'; const sIcon = document.getElementById('mode-icon-service'); if (sIcon) sIcon.textContent = t.serviceModeIcon || '🐕'; updateIdentityLabels(); updateIdentityCards(); }
 window.setMode = function(mode) { const next = mode === 'service' ? 'service' : 'daily'; if (configs.mode === next) { updateModeCards(); return; } configs.mode = next; try { localStorage.setItem('dawn-duo-configs', JSON.stringify(configs)); } catch (e) { } applyConfigsToPage(); updateClocks(); render(); fillTextInputs(); updateColorInputs(); updateMsgCounts(); updateModeCards(); showToast(next === 'service' ? '已切换到主仆版本 🌙' : '已切换到日常版本 ☀️', 'success'); };
 function fillTextInputs() { const t = P().texts || DEFAULT_TEXTS_DAILY; const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; }; const setChk = (id, val) => { const el = document.getElementById(id); if (el) el.checked = val; }; setVal('cfg-title', t.title || ''); setVal('cfg-subtitle', t.subtitle || ''); setVal('cfg-master-name', t.masterName || ''); setVal('cfg-master-tag', t.masterTag || ''); setVal('cfg-master-region', t.masterRegion || ''); setVal('cfg-doggy-name', t.doggyName || ''); setVal('cfg-doggy-tag', t.doggyTag || ''); setVal('cfg-doggy-region', t.doggyRegion || ''); setVal('cfg-master-sleep-btn', t.masterSleepBtn || ''); setVal('cfg-master-wake-btn', t.masterWakeBtn || ''); setVal('cfg-doggy-sleep-btn', t.doggySleepBtn || ''); setVal('cfg-doggy-wake-btn', t.doggyWakeBtn || ''); setVal('cfg-icon-daily', t.dailyModeIcon || '💕'); setVal('cfg-icon-service', t.serviceModeIcon || '🐕'); const n = configs.notifySettings || {}; setVal('cfg-notify-interval', n.overtimeInterval || 30); setChk('cfg-show-partner-card', configs.showPartnerCard !== false); setChk('cfg-show-partner-status', configs.showPartnerStatus !== false); setChk('cfg-auto-sync', ghConfig.autoSync !== false); setVal('cfg-sync-interval', ghConfig.syncInterval !== undefined ? String(ghConfig.syncInterval) : '5'); setChk('cfg-sync-prompt', ghConfig.syncPrompt !== false); if (window.togglePartnerNotifyInputs) window.togglePartnerNotifyInputs(); }
 function updateColorInputs() { const c = P().colors || DEFAULT_CONFIGS.profiles.daily.colors; const elMaster = document.getElementById('cfg-color-master'); if (elMaster) elMaster.value = c.master || '#38bdf8'; const elDoggy = document.getElementById('cfg-color-doggy'); if (elDoggy) elDoggy.value = c.doggy || '#f472b6'; }
@@ -19,20 +28,14 @@ window.openNotifyTextModal = function(key) {
     if (Array.isArray(obj)) obj = { channel: 'both', texts: obj }; 
     const isService = configs.mode === 'service', mTitle = isService ? '主人' : '先生', dTitle = isService ? '小狗' : '宝宝'; 
     const nameMap = { master_sleep: `${mTitle} - 到点休息`, master_wake: `${mTitle} - 到点起床`, doggy_sleep: `${dTitle} - 到点睡觉`, doggy_wake: `${dTitle} - 到点起床`, overtime_sleep: '熬夜超时警告', overtime_wake: '赖床超时警告', partner_master_sleep: `对方 - ${mTitle}休息`, partner_master_wake: `对方 - ${mTitle}起床`, partner_doggy_sleep: `对方 - ${dTitle}休息`, partner_doggy_wake: `对方 - ${dTitle}起床`, status_master_sleep: `状态栏 - ${mTitle}休息中`, status_master_wake: `状态栏 - ${mTitle}已醒`, status_doggy_sleep: `状态栏 - ${dTitle}休息中`, status_doggy_wake: `状态栏 - ${dTitle}已醒` }; 
-    
     const defaultTitles = { master_sleep: '🌙 休息提醒', master_wake: '☀️ 起床提醒', doggy_sleep: '🌙 休息提醒', doggy_wake: '☀️ 起床提醒', overtime_sleep: '⚠️ 熬夜警告', overtime_wake: '⚠️ 赖床警告', partner_master_sleep: '👑 主人已休息', partner_master_wake: '👑 主人已起床', partner_doggy_sleep: '🎀 小狗已休息', partner_doggy_wake: '🎀 小狗已起床' };
-    
     const titleEl = document.getElementById('notify-text-modal-title'); if (titleEl) titleEl.textContent = `编辑：${nameMap[key] || key}`; 
-    
     const tipEl = document.getElementById('notify-text-default-title-tip');
     if (tipEl) tipEl.textContent = `💡 留空时将使用默认标题："${defaultTitles[key] || '🔔 契约提醒'}"`;
-
     const chkRandom = document.getElementById('notify-text-random'); if (chkRandom) chkRandom.checked = obj.texts.length > 1; 
     document.getElementById('notify-text-random-tip').style.display = chkRandom.checked ? 'none' : 'inline'; 
-    
     const titleInput = document.getElementById('notify-text-title'); 
     if (titleInput) titleInput.value = obj.title || '';
-    
     const chanEl = document.getElementById('notify-text-channel'); if (chanEl) chanEl.value = obj.channel || 'both'; 
     const listEl = document.getElementById('notify-text-list'); if (!listEl) return; 
     listEl.innerHTML = ''; if (obj.texts.length === 0) obj.texts = ['']; 
@@ -50,234 +53,19 @@ window.saveNotifyTextModal = function() {
     const channel = document.getElementById('notify-text-channel').value || 'both'; 
     const titleInput = document.getElementById('notify-text-title'); 
     const customTitle = titleInput ? titleInput.value.trim() : '';
-    
     const prof = P(); if (!prof.notifyTexts) prof.notifyTexts = {}; 
     prof.notifyTexts[currentNotifyKey] = { channel: channel, title: customTitle, texts: newArr.length > 0 ? newArr : [''] }; 
     try { localStorage.setItem('dawn-duo-configs', JSON.stringify(configs)); } catch (e) {} 
     closeNotifyTextModal(); if (window.debounceSync) debounceSync(); 
     showToast('文案已保存', 'success'); 
 };
-
-window.openNotifyTestModal = function() {
-    const selectEl = document.getElementById('test-notify-key');
-    if (!selectEl) return;
-    const isService = configs.mode === 'service', mTitle = isService ? '主人' : '先生', dTitle = isService ? '小狗' : '宝宝';
-    const options = [
-        { val: 'master_sleep', text: `👑 ${mTitle} - 休息提醒` },
-        { val: 'master_wake', text: `👑 ${mTitle} - 起床提醒` },
-        { val: 'doggy_sleep', text: `🎀 ${dTitle} - 睡觉提醒` },
-        { val: 'doggy_wake', text: `🎀 ${dTitle} - 起床提醒` },
-        { val: 'overtime_sleep', text: `⏳ 熬夜警告` },
-        { val: 'overtime_wake', text: `⏳ 赖床警告` },
-        { val: 'partner_master_sleep', text: `📡 对方 - ${mTitle}休息` },
-        { val: 'partner_master_wake', text: `📡 对方 - ${mTitle}起床` },
-        { val: 'partner_doggy_sleep', text: `📡 对方 - ${dTitle}休息` },
-        { val: 'partner_doggy_wake', text: `📡 对方 - ${dTitle}起床` }
-    ];
-    
-    const wrapper = selectEl.closest('.custom-select-wrapper');
-    if (wrapper) {
-        wrapper.parentNode.insertBefore(selectEl, wrapper);
-        wrapper.remove();
-    }
-    selectEl.dataset.customized = 'false';
-    
-    selectEl.innerHTML = options.map(o => `<option value="${o.val}">${o.text}</option>`).join('');
-    
-    if (window.initCustomSelects) window.initCustomSelects();
-    
-    updateTestPreview();
-    document.getElementById('notify-test-modal').classList.add('show');
-};
-
-window.updateTestPreview = function() {
-    const key = document.getElementById('test-notify-key').value;
-    const prof = P(); const nTexts = prof.notifyTexts || {};
-    let obj = nTexts[key] || { texts: [] };
-    if (Array.isArray(obj)) obj = { channel: 'both', texts: obj };
-    
-    const defaultTitles = { master_sleep: '🌙 休息提醒', master_wake: '☀️ 起床提醒', doggy_sleep: '🌙 休息提醒', doggy_wake: '☀️ 起床提醒', overtime_sleep: '⚠️ 熬夜警告', overtime_wake: '⚠️ 赖床警告', partner_master_sleep: '👑 主人已休息', partner_master_wake: '👑 主人已起床', partner_doggy_sleep: '🎀 小狗已休息', partner_doggy_wake: '🎀 小狗已起床' };
-    const title = obj.title || defaultTitles[key] || '🔔 契约提醒';
-    
-    let body = '';
-    if (obj.texts && obj.texts.length > 0) { body = getRandomText(obj.texts); }
-    if (!body) body = '你有一条新的提醒';
-    
-    const isService = configs.mode === 'service';
-    const mName = getPureName(P().texts.masterName) || (isService ? '主人' : '先生');
-    const dName = getPureName(P().texts.doggyName) || (isService ? '小狗' : '宝宝');
-    const nowTime = formatCheckinTime(configs.timeZones.master);
-    
-    let rName = mName;
-    if (key.includes('doggy') || key.includes('partner_doggy')) rName = dName;
-    
-    body = body.replace(/{name}/g, rName).replace(/{time}/g, nowTime).replace(/{mins}/g, '30');
-    
-    document.getElementById('test-notify-title-preview').textContent = title;
-    document.getElementById('test-notify-body-preview').textContent = body;
-};
-
-window.triggerTestNotification = async function() {
-    if (!notificationSupported()) return showToast('当前浏览器不支持通知', 'late');
-    if (!window.isSecureContext) return showToast('⚠️ 必须在 HTTPS 下', 'late');
-    
-    const channel = document.getElementById('test-notify-channel').value;
-    const title = document.getElementById('test-notify-title-preview').textContent;
-    const body = document.getElementById('test-notify-body-preview').textContent;
-    
-    if (channel === 'local') {
-        let perm = Notification.permission;
-        if (perm === 'default') { try { perm = await Notification.requestPermission(); } catch (e) { perm = 'denied'; } }
-        if (perm !== 'granted') return showToast('未获得通知权限，请允许', 'late');
-        try {
-            new Notification(title, { body: body, tag: 'dawn-test-' + Date.now(), requireInteraction: true });
-            showToast('本地测试通知已发送', 'success');
-        } catch (e) {
-            showToast('发送失败：' + e.message, 'late');
-        }
-    } else if (channel === 'push') {
-        if (!ghConfig.user || !ghConfig.repo || !ghConfig.token) return showToast('请先配置 GitHub Token 才能测试云端推送', 'late');
-        showToast('正在请求云端发送...', 'success');
-        try {
-            const res = await fetch(`https://api.github.com/repos/${ghConfig.user}/${ghConfig.repo}/actions/workflows/push.yml/dispatches`, {
-                method: 'POST',
-                headers: { 'Authorization': `token ${ghConfig.token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ref: 'main', inputs: { test_mode: 'true' } })
-            });
-            if (res.ok) {
-                showToast('✅ 已触发云端推送，请留意设备通知', 'success');
-                document.getElementById('notify-test-modal').classList.remove('show');
-            } else if (res.status === 404) {
-                showToast('触发失败：找不到 workflow 或分支(确保默认分支为 main)', 'late');
-            } else if (res.status === 403) {
-                showToast('触发失败：Token 缺少 workflow 权限', 'late');
-            } else {
-                showToast('触发失败，请检查网络或配置', 'late');
-            }
-        } catch (e) {
-            showToast('请求出错：' + e.message, 'late');
-        }
-    }
-};
-
-// 增加自定义确认框通用方法
-window.showCustomConfirm = function(title, desc, onConfirm) {
-    document.getElementById('custom-confirm-title').textContent = title;
-    document.getElementById('custom-confirm-desc').innerHTML = desc;
-    const btn = document.getElementById('custom-confirm-btn');
-    const newBtn = btn.cloneNode(true);
-    btn.parentNode.replaceChild(newBtn, btn);
-    newBtn.onclick = () => {
-        closeCustomConfirm();
-        if (onConfirm) onConfirm();
-    };
-    document.getElementById('custom-confirm-modal').classList.add('show');
-};
+window.openNotifyTestModal = function() { const selectEl = document.getElementById('test-notify-key'); if (!selectEl) return; const isService = configs.mode === 'service', mTitle = isService ? '主人' : '先生', dTitle = isService ? '小狗' : '宝宝'; const options = [ { val: 'master_sleep', text: `👑 ${mTitle} - 休息提醒` }, { val: 'master_wake', text: `👑 ${mTitle} - 起床提醒` }, { val: 'doggy_sleep', text: `🎀 ${dTitle} - 睡觉提醒` }, { val: 'doggy_wake', text: `🎀 ${dTitle} - 起床提醒` }, { val: 'overtime_sleep', text: `⏳ 熬夜警告` }, { val: 'overtime_wake', text: `⏳ 赖床警告` }, { val: 'partner_master_sleep', text: `📡 对方 - ${mTitle}休息` }, { val: 'partner_master_wake', text: `📡 对方 - ${mTitle}起床` }, { val: 'partner_doggy_sleep', text: `📡 对方 - ${dTitle}休息` }, { val: 'partner_doggy_wake', text: `📡 对方 - ${dTitle}起床` } ]; const wrapper = selectEl.closest('.custom-select-wrapper'); if (wrapper) { wrapper.parentNode.insertBefore(selectEl, wrapper); wrapper.remove(); } selectEl.dataset.customized = 'false'; selectEl.innerHTML = options.map(o => `<option value="${o.val}">${o.text}</option>`).join(''); if (window.initCustomSelects) window.initCustomSelects(); updateTestPreview(); document.getElementById('notify-test-modal').classList.add('show'); };
+window.updateTestPreview = function() { const key = document.getElementById('test-notify-key').value; const prof = P(); const nTexts = prof.notifyTexts || {}; let obj = nTexts[key] || { texts: [] }; if (Array.isArray(obj)) obj = { channel: 'both', texts: obj }; const defaultTitles = { master_sleep: '🌙 休息提醒', master_wake: '☀️ 起床提醒', doggy_sleep: '🌙 休息提醒', doggy_wake: '☀️ 起床提醒', overtime_sleep: '⚠️ 熬夜警告', overtime_wake: '⚠️ 赖床警告', partner_master_sleep: '👑 主人已休息', partner_master_wake: '👑 主人已起床', partner_doggy_sleep: '🎀 小狗已休息', partner_doggy_wake: '🎀 小狗已起床' }; const title = obj.title || defaultTitles[key] || '🔔 契约提醒'; let body = ''; if (obj.texts && obj.texts.length > 0) { body = getRandomText(obj.texts); } if (!body) body = '你有一条新的提醒'; const isService = configs.mode === 'service'; const mName = getPureName(P().texts.masterName) || (isService ? '主人' : '先生'); const dName = getPureName(P().texts.doggyName) || (isService ? '小狗' : '宝宝'); const nowTime = formatCheckinTime(configs.timeZones.master); let rName = mName; if (key.includes('doggy') || key.includes('partner_doggy')) rName = dName; body = body.replace(/{name}/g, rName).replace(/{time}/g, nowTime).replace(/{mins}/g, '30'); document.getElementById('test-notify-title-preview').textContent = title; document.getElementById('test-notify-body-preview').textContent = body; };
+window.triggerTestNotification = async function() { if (!notificationSupported()) return showToast('当前浏览器不支持通知', 'late'); if (!window.isSecureContext) return showToast('⚠️ 必须在 HTTPS 下', 'late'); const channel = document.getElementById('test-notify-channel').value; const title = document.getElementById('test-notify-title-preview').textContent; const body = document.getElementById('test-notify-body-preview').textContent; if (channel === 'local') { let perm = Notification.permission; if (perm === 'default') { try { perm = await Notification.requestPermission(); } catch (e) { perm = 'denied'; } } if (perm !== 'granted') return showToast('未获得通知权限，请允许', 'late'); try { new Notification(title, { body: body, tag: 'dawn-test-' + Date.now(), requireInteraction: true }); showToast('本地测试通知已发送', 'success'); } catch (e) { showToast('发送失败：' + e.message, 'late'); } } else if (channel === 'push') { if (!ghConfig.user || !ghConfig.repo || !ghConfig.token) return showToast('请先配置 GitHub Token 才能测试云端推送', 'late'); showToast('正在请求云端发送...', 'success'); try { const res = await fetch(`https://api.github.com/repos/${ghConfig.user}/${ghConfig.repo}/actions/workflows/push.yml/dispatches`, { method: 'POST', headers: { 'Authorization': `token ${ghConfig.token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' }, body: JSON.stringify({ ref: 'main', inputs: { test_mode: 'true' } }) }); if (res.ok) { showToast('✅ 已触发云端推送，请留意设备通知', 'success'); document.getElementById('notify-test-modal').classList.remove('show'); } else if (res.status === 404) { showToast('触发失败：找不到 workflow 或分支(确保默认分支为 main)', 'late'); } else if (res.status === 403) { showToast('触发失败：Token 缺少 workflow 权限', 'late'); } else { showToast('触发失败，请检查网络或配置', 'late'); } } catch (e) { showToast('请求出错：' + e.message, 'late'); } } };
+window.showCustomConfirm = function(title, desc, onConfirm) { document.getElementById('custom-confirm-title').textContent = title; document.getElementById('custom-confirm-desc').innerHTML = desc; const btn = document.getElementById('custom-confirm-btn'); const newBtn = btn.cloneNode(true); btn.parentNode.replaceChild(newBtn, btn); newBtn.onclick = () => { closeCustomConfirm(); if (onConfirm) onConfirm(); }; document.getElementById('custom-confirm-modal').classList.add('show'); };
 window.closeCustomConfirm = function() { const modal = document.getElementById('custom-confirm-modal'); if (modal) modal.classList.remove('show'); };
-
-window.loadPushDevices = async function() {
-    const container = document.getElementById('device-list-container');
-    if (!container) return;
-    container.innerHTML = '<div style="text-align: center; color: var(--text-muted); font-size: 0.8rem; padding: 10px;">读取云端设备中...</div>';
-    try {
-        const res = await fetchGHFile('subscriptions.json');
-        if (!res) {
-            container.innerHTML = '<div style="text-align: center; color: var(--text-muted); font-size: 0.8rem; padding: 10px;">暂无绑定的推送设备</div>';
-            return;
-        }
-        const subs = JSON.parse(res.content);
-        if (!Array.isArray(subs) || subs.length === 0) {
-            container.innerHTML = '<div style="text-align: center; color: var(--text-muted); font-size: 0.8rem; padding: 10px;">暂无绑定的推送设备</div>';
-            return;
-        }
-        
-        container.innerHTML = '';
-        const isService = configs.mode === 'service';
-        const mName = getPureName(P().texts.masterName) || (isService ? '主人' : '先生');
-        const dName = getPureName(P().texts.doggyName) || (isService ? '小狗' : '宝宝');
-
-        subs.forEach((sub, idx) => {
-            let displayId = sub.identity || 'both';
-            let badgeClass = 'master';
-            let icon = '👑';
-            
-            if (displayId === 'doggy' || displayId.includes(dName) || displayId === '小狗') {
-                displayId = dName; badgeClass = 'doggy'; icon = '🎀';
-            } else if (displayId === 'master' || displayId.includes(mName) || displayId === '主人') {
-                displayId = mName; badgeClass = 'master'; icon = '👑';
-            } else {
-                displayId = '联合身份'; badgeClass = 'both'; icon = '🍉';
-            }
-
-            const device = sub.device || '未记录设备（请重新授权）';
-            const authTime = sub.authTime || '未记录时间';
-            
-            const el = document.createElement('div');
-            el.className = 'device-item';
-            el.innerHTML = `
-                <div class="device-info">
-                    <div class="device-id">${icon} ${displayId}</div>
-                    <div class="device-meta">${device} · 授权于 ${authTime}</div>
-                </div>
-                <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
-                    <div class="device-badge ${badgeClass}" style="margin-bottom: 4px;">${badgeClass === 'master' ? '主人端' : (badgeClass === 'doggy' ? '小狗端' : '双端')}</div>
-                    <button class="btn danger outline" style="padding: 4px 8px; font-size: 0.75rem;" onclick="removePushDevice(${idx})">🗑️ 移除</button>
-                </div>
-            `;
-            container.appendChild(el);
-        });
-    } catch(e) {
-        container.innerHTML = '<div style="text-align: center; color: var(--warn); font-size: 0.8rem; padding: 10px;">读取失败，请检查网络或 Token</div>';
-    }
-};
-
-window.removePushDevice = function(idx) {
-    if (!ghConfig.user || !ghConfig.repo || !ghConfig.token) return;
-    fetchGHFile('subscriptions.json').then(async res => {
-        if (!res) return;
-        const subs = JSON.parse(res.content);
-        if (!subs[idx]) return;
-        const removedSub = subs[idx];
-        let isCurrentDevice = false;
-        try {
-            const localAuth = JSON.parse(localStorage.getItem('dawn-duo-push-auth') || '{}');
-            if (localAuth.endpoint === removedSub.endpoint) isCurrentDevice = true;
-        } catch(e) {}
-        
-        const deviceName = removedSub.device || '未知设备';
-        const msg = `确定要彻底移除设备 <b>${deviceName}</b> 的推送授权吗？<br><br>移除后，该设备将无法接收到云端后台推送。<br>（如需恢复，请去【提醒】页面重新开启后台推送）`;
-        
-        window.showCustomConfirm('📵 移除推送设备', msg, async () => {
-            try {
-                subs.splice(idx, 1);
-                const ok = await pushGHFile('subscriptions.json', JSON.stringify(subs, null, 2), res.sha);
-                if (ok) {
-                    showToast('✅ 设备已移除', 'success');
-                    if (isCurrentDevice) {
-                        try {
-                            const registration = await navigator.serviceWorker.ready;
-                            const subscription = await registration.pushManager.getSubscription();
-                            if (subscription) await subscription.unsubscribe();
-                            localStorage.removeItem('dawn-duo-push-auth');
-                            if (window.updateBackendPushStatus) window.updateBackendPushStatus();
-                        } catch(e) { console.warn('本地取消订阅失败', e); }
-                        showToast('当前设备的后台推送已关闭', 'late');
-                    }
-                    if (window.loadPushDevices) window.loadPushDevices(); // 修复：无论是否本机，都刷新列表
-                } else {
-                    showToast('移除失败，请重试', 'late');
-                }
-            } catch(e) {
-                console.warn(e);
-                showToast('移除出错', 'late');
-            }
-        });
-    }).catch(e => {
-        console.warn(e);
-        showToast('读取数据出错', 'late');
-    });
-};
-
+window.loadPushDevices = async function() { const container = document.getElementById('device-list-container'); if (!container) return; container.innerHTML = '<div style="text-align: center; color: var(--text-muted); font-size: 0.8rem; padding: 10px;">读取云端设备中...</div>'; try { const res = await fetchGHFile('subscriptions.json'); if (!res) { container.innerHTML = '<div style="text-align: center; color: var(--text-muted); font-size: 0.8rem; padding: 10px;">暂无绑定的推送设备</div>'; return; } const subs = JSON.parse(res.content); if (!Array.isArray(subs) || subs.length === 0) { container.innerHTML = '<div style="text-align: center; color: var(--text-muted); font-size: 0.8rem; padding: 10px;">暂无绑定的推送设备</div>'; return; } container.innerHTML = ''; const isService = configs.mode === 'service'; const mName = getPureName(P().texts.masterName) || (isService ? '主人' : '先生'); const dName = getPureName(P().texts.doggyName) || (isService ? '小狗' : '宝宝'); subs.forEach((sub, idx) => { let displayId = sub.identity || 'both'; let badgeClass = 'master'; let icon = '👑'; if (displayId === 'doggy' || displayId.includes(dName) || displayId === '小狗') { displayId = dName; badgeClass = 'doggy'; icon = '🎀'; } else if (displayId === 'master' || displayId.includes(mName) || displayId === '主人') { displayId = mName; badgeClass = 'master'; icon = '👑'; } else { displayId = '联合身份'; badgeClass = 'both'; icon = '🍉'; } const device = sub.device || '未记录设备（请重新授权）'; const authTime = sub.authTime || '未记录时间'; const el = document.createElement('div'); el.className = 'device-item'; el.innerHTML = ` <div class="device-info"> <div class="device-id">${icon} ${displayId}</div> <div class="device-meta">${device} · 授权于 ${authTime}</div> </div> <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;"> <div class="device-badge ${badgeClass}" style="margin-bottom: 4px;">${badgeClass === 'master' ? '主人端' : (badgeClass === 'doggy' ? '小狗端' : '双端')}</div> <button class="btn danger outline" style="padding: 4px 8px; font-size: 0.75rem;" onclick="removePushDevice(${idx})">🗑️ 移除</button> </div> `; container.appendChild(el); }); } catch(e) { container.innerHTML = '<div style="text-align: center; color: var(--warn); font-size: 0.8rem; padding: 10px;">读取失败，请检查网络或 Token</div>'; } };
+window.removePushDevice = function(idx) { if (!ghConfig.user || !ghConfig.repo || !ghConfig.token) return; fetchGHFile('subscriptions.json').then(async res => { if (!res) return; const subs = JSON.parse(res.content); if (!subs[idx]) return; const removedSub = subs[idx]; let isCurrentDevice = false; try { const localAuth = JSON.parse(localStorage.getItem('dawn-duo-push-auth') || '{}'); if (localAuth.endpoint === removedSub.endpoint) isCurrentDevice = true; } catch(e) {} const deviceName = removedSub.device || '未知设备'; const msg = `确定要彻底移除设备 <b>${deviceName}</b> 的推送授权吗？<br><br>移除后，该设备将无法接收到云端后台推送。<br>（如需恢复，请去【提醒】页面重新开启后台推送）`; window.showCustomConfirm('📵 移除推送设备', msg, async () => { try { subs.splice(idx, 1); const ok = await pushGHFile('subscriptions.json', JSON.stringify(subs, null, 2), res.sha); if (ok) { showToast('✅ 设备已移除', 'success'); if (isCurrentDevice) { try { const registration = await navigator.serviceWorker.ready; const subscription = await registration.pushManager.getSubscription(); if (subscription) await subscription.unsubscribe(); localStorage.removeItem('dawn-duo-push-auth'); if (window.updateBackendPushStatus) window.updateBackendPushStatus(); } catch(e) { console.warn('本地取消订阅失败', e); } showToast('当前设备的后台推送已关闭', 'late'); } if (window.loadPushDevices) window.loadPushDevices(); } else { showToast('移除失败，请重试', 'late'); } } catch(e) { console.warn(e); showToast('移除出错', 'late'); } }); }).catch(e => { console.warn(e); showToast('读取数据出错', 'late'); }); };
 window.openProgressTextModal = function() { let role = identity || 'both'; document.getElementById('cfg-prog-role').value = role; updateProgTextInputs(); document.getElementById('prog-text-tip').innerHTML = `当前修改的是 <b>[${modeLabel()}]</b> 模式下的加载文案。<br>你可以使用 <b>{name}</b>。`; const modal = document.getElementById('progress-text-modal'); if (modal) modal.classList.add('show'); };
 window.updateProgTextInputs = function() { const pt = P().progressTexts || {}; const role = document.getElementById('cfg-prog-role').value; const arr = pt[role] || pt.both || pt; const setVal = (id, val) => { const el = document.getElementById(id); if (el) { el.value = val; el.placeholder = '默认'; } }; setVal('cfg-prog-connect', arr.connect || ''); setVal('cfg-prog-auth', arr.auth || ''); setVal('cfg-prog-sync', arr.sync || ''); setVal('cfg-prog-cancel', arr.cancel || ''); setVal('cfg-prog-success', arr.success || ''); };
 window.closeProgressTextModal = function() { const prof = P(); if (!prof.progressTexts) prof.progressTexts = {}; const role = document.getElementById('cfg-prog-role').value; if (!prof.progressTexts[role]) prof.progressTexts[role] = {}; const getVal = (id, fallback) => { const el = document.getElementById(id); return el ? el.value.trim() : fallback; }; prof.progressTexts[role].connect = getVal('cfg-prog-connect', ''); prof.progressTexts[role].auth = getVal('cfg-prog-auth', ''); prof.progressTexts[role].sync = getVal('cfg-prog-sync', ''); prof.progressTexts[role].cancel = getVal('cfg-prog-cancel', ''); prof.progressTexts[role].success = getVal('cfg-prog-success', ''); try { localStorage.setItem('dawn-duo-configs', JSON.stringify(configs)); } catch (e) {} const modal = document.getElementById('progress-text-modal'); if (modal) modal.classList.remove('show'); if (window.debounceSync) debounceSync(); showToast('加载文案已保存', 'success'); };
@@ -294,23 +82,7 @@ window.readLibraryFile = function(event) { const file = event.target.files[0]; i
 function renderImportPreview() { const listEl = document.getElementById('import-lib-preview-list'); if (!listEl) return; listEl.innerHTML = ''; let dupCount = 0; const fragment = document.createDocumentFragment(); parsedImportLines.forEach((item, index) => { if (item.isDuplicate) dupCount++; const row = document.createElement('div'); row.className = `import-item-row ${item.isDuplicate ? 'duplicate' : ''}`; const chk = document.createElement('input'); chk.type = 'checkbox'; chk.checked = !item.isDuplicate; chk.disabled = item.isDuplicate; chk.dataset.index = index; const txt = document.createElement('span'); txt.className = 'import-text'; txt.textContent = item.text; txt.style.flex = '1'; row.appendChild(chk); row.appendChild(txt); if (item.isDuplicate) { const badge = document.createElement('span'); badge.className = 'import-badge'; badge.textContent = '高度重复'; row.appendChild(badge); } fragment.appendChild(row); }); listEl.appendChild(fragment); if (dupCount > 0) showToast(`发现 ${dupCount} 条重复文案，已自动为您取消勾选`, 'late'); }
 window.closeImportLibModal = function() { const modal = document.getElementById('import-lib-modal'); if (modal) modal.classList.remove('show'); parsedImportLines = []; };
 window.confirmImportLibrary = function() { const targetKeyEl = document.getElementById('import-target-pool'); if (!targetKeyEl) return; const targetKey = targetKeyEl.value; const [user, type, status] = targetKey.split('_'); const listEl = document.getElementById('import-lib-preview-list'); if (!listEl) return; const checkedBoxes = listEl.querySelectorAll('input[type="checkbox"]:checked'); if (checkedBoxes.length === 0) return showToast('请至少勾选一条要导入的文案', 'late'); const toAdd = Array.from(checkedBoxes).map(chk => parsedImportLines[Number(chk.dataset.index)].text); const prof = P(); if (!prof.msgPool) prof.msgPool = {}; if (!prof.msgPool[user]) prof.msgPool[user] = {}; if (!prof.msgPool[user][type]) prof.msgPool[user][type] = {}; if (!prof.msgPool[user][type][status]) prof.msgPool[user][type][status] = []; prof.msgPool[user][type][status].push(...toAdd); try { localStorage.setItem('dawn-duo-configs', JSON.stringify(configs)); } catch (e) {} updateMsgCounts(); closeImportLibModal(); if (window.debounceSync) debounceSync(); showToast(`成功导入 ${toAdd.length} 条文案 💗`, 'success'); };
-window.openSettings = function() { try { fillTextInputs(); updateColorInputs(); updateMsgCounts(); updateModeCards(); const setChk = (id, val) => { const el = document.getElementById(id); if (el) el.checked = val; }; const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; }; setChk('cfg-simple-mode', configs.simpleMode === true); setChk('cfg-notifications', configs.notifications === true); setVal('cfg-anniversary', configs.anniversary); setChk('cfg-show-history', configs.showHistory === true); setChk('cfg-show-logical-date', configs.showLogicalDate !== false); setVal('cfg-clock-layout', configs.clockLayout); setChk('cfg-show-master-clock', configs.showMasterClock); setChk('cfg-show-doggy-clock', configs.showDoggyClock); setChk('cfg-show-seconds', configs.showSeconds); setChk('cfg-show-shichen', configs.showShichen); setChk('cfg-show-wellness', configs.showWellness); setVal('cfg-tz-master-type', configs.timeZones.master.type || 'iana'); setVal('cfg-tz-doggy-type', configs.timeZones.doggy.type || 'iana'); if (configs.timeZones.master.type === 'offset') setVal('cfg-tz-master-offset', configs.timeZones.master.value); else setVal('cfg-tz-master-iana', configs.timeZones.master.value); if (configs.timeZones.doggy.type === 'offset') setVal('cfg-tz-doggy-offset', configs.timeZones.doggy.value); else setVal('cfg-tz-doggy-iana', configs.timeZones.doggy.value); toggleTzInput('master'); toggleTzInput('doggy'); setVal('cfg-goal-master-sleep', configs.goals.master.sleep); setVal('cfg-goal-master-wake', configs.goals.master.wake); setVal('cfg-goal-doggy-sleep', configs.goals.doggy.sleep); setVal('cfg-goal-doggy-wake', configs.goals.doggy.wake); setVal('cfg-history-type', configs.historyType); setVal('cfg-history-days', String(configs.historyDays)); 
-    const nItems = configs.notifySettings?.items || {};
-    document.querySelectorAll('.notify-item-chk').forEach(chk => { chk.checked = nItems[chk.dataset.key] !== false; });
-    
-    setChk('cfg-global-testing', configs.notifySettings?.global_testing === true);
-    setChk('cfg-overtime-window', configs.notifySettings?.overtime_window_enabled !== false);
-    setVal('cfg-overtime-sleep-start', configs.notifySettings?.overtime_sleep_start || '21:00');
-    setVal('cfg-overtime-sleep-end', configs.notifySettings?.overtime_sleep_end || '05:00');
-    setVal('cfg-overtime-wake-start', configs.notifySettings?.overtime_wake_start || '05:00');
-    setVal('cfg-overtime-wake-end', configs.notifySettings?.overtime_wake_end || '12:00');
-    setVal('cfg-overtime-max', configs.notifySettings?.overtime_max_times !== undefined ? configs.notifySettings.overtime_max_times : 3);
-    const winDet = document.getElementById('overtime-window-details');
-    if (winDet) winDet.style.display = configs.notifySettings?.overtime_window_enabled !== false ? 'block' : 'none';
-
-    loadPushDevices();
-
-    let startYear = new Date().getFullYear(); try { const y = new Date(configs.anniversary).getFullYear(); if (Number.isFinite(y)) startYear = y; } catch (e) { } const endYear = new Date().getFullYear() + 1; const yearSelect = document.getElementById('cfg-history-year'); if (yearSelect) { yearSelect.innerHTML = ''; let yearOptions = ''; for (let y = startYear; y <= endYear; y++) yearOptions += `<option value="${y}">${y} 年</option>`; yearSelect.innerHTML = yearOptions; yearSelect.value = configs.historyYear; if (!yearSelect.value) yearSelect.selectedIndex = 0; } const monthSelect = document.getElementById('cfg-history-month'); if (monthSelect) { monthSelect.innerHTML = ''; let monthOptions = ''; for (let m = 1; m <= 12; m++) monthOptions += `<option value="${String(m).padStart(2,'0')}">${m} 月</option>`; monthSelect.innerHTML = monthOptions; monthSelect.value = configs.historyMonth; if (!monthSelect.value) monthSelect.selectedIndex = 0; } toggleHistoryTypeOptions(); const fixDateInput = document.getElementById('cfg-fix-date'); if (fixDateInput && !fixDateInput.value) fixDateInput.value = getLogicalDateStr(); renderFixPanel(); updateNotifyStatus(); updateIdentityCards(); if (window.updateBackendPushStatus) window.updateBackendPushStatus(); if (window.refreshCustomSelects) window.refreshCustomSelects(); const modal = document.getElementById('settings-modal'); if (modal) modal.classList.add('show'); document.body.style.overflow = 'hidden'; document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active')); document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active')); const firstTabBtn = document.querySelector('.tab-btn'); if (firstTabBtn) firstTabBtn.classList.add('active'); const firstTab = document.getElementById('tab-general'); if (firstTab) firstTab.classList.add('active'); } catch(e) { console.error('打开设置面板时发生详细错误：', e); showToast('打开设置面板失败: ' + e.message, 'late'); } };
+window.openSettings = function() { try { fillTextInputs(); updateColorInputs(); updateMsgCounts(); updateModeCards(); const setChk = (id, val) => { const el = document.getElementById(id); if (el) el.checked = val; }; const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; }; setChk('cfg-simple-mode', configs.simpleMode === true); setChk('cfg-notifications', configs.notifications === true); setVal('cfg-anniversary', configs.anniversary); setChk('cfg-show-history', configs.showHistory === true); setChk('cfg-show-logical-date', configs.showLogicalDate !== false); setVal('cfg-clock-layout', configs.clockLayout); setChk('cfg-show-master-clock', configs.showMasterClock); setChk('cfg-show-doggy-clock', configs.showDoggyClock); setChk('cfg-show-seconds', configs.showSeconds); setChk('cfg-show-shichen', configs.showShichen); setChk('cfg-show-wellness', configs.showWellness); setVal('cfg-tz-master-type', configs.timeZones.master.type || 'iana'); setVal('cfg-tz-doggy-type', configs.timeZones.doggy.type || 'iana'); if (configs.timeZones.master.type === 'offset') setVal('cfg-tz-master-offset', configs.timeZones.master.value); else setVal('cfg-tz-master-iana', configs.timeZones.master.value); if (configs.timeZones.doggy.type === 'offset') setVal('cfg-tz-doggy-offset', configs.timeZones.doggy.value); else setVal('cfg-tz-doggy-iana', configs.timeZones.doggy.value); toggleTzInput('master'); toggleTzInput('doggy'); setVal('cfg-goal-master-sleep', configs.goals.master.sleep); setVal('cfg-goal-master-wake', configs.goals.master.wake); setVal('cfg-goal-doggy-sleep', configs.goals.doggy.sleep); setVal('cfg-goal-doggy-wake', configs.goals.doggy.wake); setVal('cfg-history-type', configs.historyType); setVal('cfg-history-days', String(configs.historyDays)); const nItems = configs.notifySettings?.items || {}; document.querySelectorAll('.notify-item-chk').forEach(chk => { chk.checked = nItems[chk.dataset.key] !== false; }); setChk('cfg-global-testing', configs.notifySettings?.global_testing === true); setChk('cfg-overtime-window', configs.notifySettings?.overtime_window_enabled !== false); setVal('cfg-overtime-sleep-start', configs.notifySettings?.overtime_sleep_start || '21:00'); setVal('cfg-overtime-sleep-end', configs.notifySettings?.overtime_sleep_end || '05:00'); setVal('cfg-overtime-wake-start', configs.notifySettings?.overtime_wake_start || '05:00'); setVal('cfg-overtime-wake-end', configs.notifySettings?.overtime_wake_end || '12:00'); setVal('cfg-overtime-max', configs.notifySettings?.overtime_max_times !== undefined ? configs.notifySettings.overtime_max_times : 3); const winDet = document.getElementById('overtime-window-details'); if (winDet) winDet.style.display = configs.notifySettings?.overtime_window_enabled !== false ? 'block' : 'none'; loadPushDevices(); let startYear = new Date().getFullYear(); try { const y = new Date(configs.anniversary).getFullYear(); if (Number.isFinite(y)) startYear = y; } catch (e) { } const endYear = new Date().getFullYear() + 1; const yearSelect = document.getElementById('cfg-history-year'); if (yearSelect) { yearSelect.innerHTML = ''; let yearOptions = ''; for (let y = startYear; y <= endYear; y++) yearOptions += `<option value="${y}">${y} 年</option>`; yearSelect.innerHTML = yearOptions; yearSelect.value = configs.historyYear; if (!yearSelect.value) yearSelect.selectedIndex = 0; } const monthSelect = document.getElementById('cfg-history-month'); if (monthSelect) { monthSelect.innerHTML = ''; let monthOptions = ''; for (let m = 1; m <= 12; m++) monthOptions += `<option value="${String(m).padStart(2,'0')}">${m} 月</option>`; monthSelect.innerHTML = monthOptions; monthSelect.value = configs.historyMonth; if (!monthSelect.value) monthSelect.selectedIndex = 0; } toggleHistoryTypeOptions(); const fixDateInput = document.getElementById('cfg-fix-date'); if (fixDateInput && !fixDateInput.value) fixDateInput.value = getLogicalDateStr(); renderFixPanel(); updateNotifyStatus(); updateIdentityCards(); if (window.updateBackendPushStatus) window.updateBackendPushStatus(); if (window.refreshCustomSelects) window.refreshCustomSelects(); const modal = document.getElementById('settings-modal'); if (modal) modal.classList.add('show'); document.body.style.overflow = 'hidden'; document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active')); document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active')); const firstTabBtn = document.querySelector('.tab-btn'); if (firstTabBtn) firstTabBtn.classList.add('active'); const firstTab = document.getElementById('tab-general'); if (firstTab) firstTab.classList.add('active'); } catch(e) { console.error('打开设置面板时发生详细错误：', e); showToast('打开设置面板失败: ' + e.message, 'late'); } };
 window.closeSettings = function() { const modal = document.getElementById('settings-modal'); if (modal) modal.classList.remove('show'); document.body.style.overflow = ''; };
 function applyConfigsToPage() { try { const t = P().texts || DEFAULT_TEXTS_DAILY; document.title = t.title || ''; const setText = (id, txt, disp) => { const el = document.getElementById(id); if (el) { el.textContent = txt; if (disp !== undefined) el.style.display = disp; } }; setText('display-title', t.title || ''); setText('display-subtitle', t.subtitle || ''); setText('display-master-name', t.masterName, t.masterName ? 'flex' : 'none'); setText('display-master-tag', t.masterTag, t.masterTag ? 'block' : 'none'); setText('display-doggy-name', t.doggyName, t.doggyName ? 'flex' : 'none'); setText('display-doggy-tag', t.doggyTag, t.doggyTag ? 'block' : 'none'); setText('display-master-sleep-btn', t.masterSleepBtn || '休息'); setText('display-master-wake-btn', t.masterWakeBtn || '起床'); setText('display-doggy-sleep-btn', t.doggySleepBtn || '睡觉'); setText('display-doggy-wake-btn', t.doggyWakeBtn || '起床'); const masterPure = getPureName(t.masterName) || (configs.mode === 'service' ? '主人' : '先生'); const doggyPure = getPureName(t.doggyName) || (configs.mode === 'service' ? '小狗' : '宝宝'); setText('legend-master-text', masterPure + '满勤'); setText('legend-doggy-text', doggyPure + '满勤'); setText('master-city-text', `📍 ${masterPure}${t.masterRegion ? ` (${t.masterRegion})` : ''}`); setText('doggy-city-text', `📍 ${doggyPure}${t.doggyRegion ? ` (${t.doggyRegion})` : ''}`); const gm = configs.goals?.master || DEFAULT_CONFIGS.goals.master; const gd = configs.goals?.doggy || DEFAULT_CONFIGS.goals.doggy; setText('master-goal-text', `目标: ${gm.sleep || '--:--'} / ${gm.wake || '--:--'}`); setText('doggy-goal-text', `目标: ${gd.sleep || '--:--'} / ${gd.wake || '--:--'}`); const logicalDateEl = document.getElementById('logical-date-display'); if (logicalDateEl) logicalDateEl.style.display = configs.showLogicalDate ? 'inline-block' : 'none'; document.body.classList.toggle('simple-mode', configs.simpleMode); applyColors(); updateIdentityLabels(); updateModeCards(); applyIdentity(); } catch(e) { console.warn('应用配置异常', e); } }
 function applyColors() { const colors = P().colors || DEFAULT_CONFIGS.profiles.daily.colors; document.documentElement.style.setProperty('--master-color', colors.master); document.documentElement.style.setProperty('--doggy-color', colors.doggy); }
@@ -319,18 +91,4 @@ window.openCustomTimeModal = function(user, type, label, dateStr, currentTime) {
 window.closeCustomTimeModal = function() { const modal = document.getElementById('custom-time-modal'); if (modal) modal.classList.remove('show'); currentFixTarget = null; };
 window.submitCustomTime = function(action) { if (!currentFixTarget) return; const { user, type, dateStr } = currentFixTarget; if (!db[user]) db[user] = {}; if (!db[user][dateStr]) db[user][dateStr] = {}; if (action === 'clear') { delete db[user][dateStr][type]; if (Object.keys(db[user][dateStr]).length === 0) delete db[user][dateStr]; showToast('已取消打卡', 'late'); } else { const inputEl = document.getElementById('custom-time-input'); if (!inputEl) return; const timeVal = inputEl.value; if (!/^\d{1,2}:\d{2}$/.test(timeVal)) { showToast('请输入有效的时间格式 (HH:mm)', 'late'); return; } const parts = timeVal.split(':'); const timeFormatted = parts[0].padStart(2, '0') + ':' + parts[1]; const ontime = checkGoal(user, type, timeFormatted); db[user][dateStr][type] = { done: true, time: timeFormatted, ontime: ontime, records: [{ time: timeFormatted, ontime: ontime, timestamp: Date.now(), type: 'main' }] }; showToast('时间修正成功！', 'success'); } saveLocalData(); renderFixPanel(); closeCustomTimeModal(); };
 function renderFixPanel() { const dateEl = document.getElementById('cfg-fix-date'); const panel = document.getElementById('fix-panel'); if (!dateEl || !panel) return; const dateStr = dateEl.value; if (!dateStr) { panel.innerHTML = ''; return; } const t = P().texts || DEFAULT_TEXTS_DAILY; const masterShort = getPureName(t.masterName) || (configs.mode === 'service' ? '主人' : '先生'); const doggyShort = getPureName(t.doggyName) || (configs.mode === 'service' ? '小狗' : '宝宝'); const types = [ { user: 'master', type: 'sleep', label: `${masterShort}休息` }, { user: 'master', type: 'wake', label: `${masterShort}起床` }, { user: 'doggy', type: 'sleep', label: `${doggyShort}睡觉` }, { user: 'doggy', type: 'wake', label: `${doggyShort}起床` } ]; panel.innerHTML = ''; types.forEach(item => { const rec = db[item.user]?.[dateStr]?.[item.type]; let stateText = '未打卡', cls = ''; if (rec && rec.done) { if (rec.ontime) { stateText = `按时 (${rec.time || '手动'})`; cls = 'active'; } else { stateText = `迟到 (${rec.time || '手动'})`; cls = 'late'; } } const btn = document.createElement('button'); btn.className = `fix-btn ${cls}`; btn.textContent = `${item.label}: ${stateText}`; btn.onclick = () => { if (!db[item.user]) db[item.user] = {}; if (!db[item.user][dateStr]) db[item.user][dateStr] = {}; let cur = db[item.user][dateStr][item.type]; const getGoalTime = (addHour = false) => { let goal = configs.goals?.[item.user]?.[item.type] || '00:00'; if (!addHour) return goal; let h = parseInt(goal.split(':')[0]), m = parseInt(goal.split(':')[1]); h = (h + 1) % 24; return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`; }; if (!cur || !cur.done) { db[item.user][dateStr][item.type] = { done: true, time: getGoalTime(false), ontime: true, records: [{ time: getGoalTime(false), ontime: true, timestamp: Date.now(), type: 'main' }] }; saveLocalData(); renderFixPanel(); } else if (cur.ontime) { db[item.user][dateStr][item.type] = { done: true, time: getGoalTime(true), ontime: false, records: [{ time: getGoalTime(true), ontime: false, timestamp: Date.now(), type: 'main' }] }; saveLocalData(); renderFixPanel(); } else openCustomTimeModal(item.user, item.type, item.label, dateStr, cur.time); }; panel.appendChild(btn); }); }
-window.saveSettings = function(skipSync) { try { const getVal = (id, fallback) => { const el = document.getElementById(id); return el ? el.value.trim() : fallback; }; const getChk = (id, fallback) => { const el = document.getElementById(id); return el ? el.checked : fallback; }; const prof = P(); prof.texts = { title: getVal('cfg-title', ''), subtitle: getVal('cfg-subtitle', ''), masterName: getVal('cfg-master-name', ''), masterTag: getVal('cfg-master-tag', ''), masterRegion: getVal('cfg-master-region', ''), doggyName: getVal('cfg-doggy-name', ''), doggyTag: getVal('cfg-doggy-tag', ''), doggyRegion: getVal('cfg-doggy-region', ''), masterSleepBtn: getVal('cfg-master-sleep-btn', '') || (configs.mode === 'service' ? '主人休息' : '先生休息'), masterWakeBtn: getVal('cfg-master-wake-btn', '') || (configs.mode === 'service' ? '主人起床' : '先生起床'), doggySleepBtn: getVal('cfg-doggy-sleep-btn', '') || (configs.mode === 'service' ? '小狗睡觉' : '宝宝睡觉'), doggyWakeBtn: getVal('cfg-doggy-wake-btn', '') || (configs.mode === 'service' ? '小狗起床' : '宝宝起床'), dailyModeIcon: getVal('cfg-icon-daily', '') || '💕', serviceModeIcon: getVal('cfg-icon-service', '') || '🐕' }; prof.colors = { master: getVal('cfg-color-master', '#38bdf8'), doggy: getVal('cfg-color-doggy', '#f472b6') }; const readTimeInput = (id, fallback) => { const v = getVal(id, ''); return /^\d{2}:\d{2}$/.test(v) ? v : fallback; }; const prevGoals = configs.goals; configs.goals = { master: { sleep: readTimeInput('cfg-goal-master-sleep', prevGoals.master.sleep), wake: readTimeInput('cfg-goal-master-wake', prevGoals.master.wake) }, doggy: { sleep: readTimeInput('cfg-goal-doggy-sleep', prevGoals.doggy.sleep), wake: readTimeInput('cfg-goal-doggy-wake', prevGoals.doggy.wake) } }; configs.timeZones.master = { type: getVal('cfg-tz-master-type', 'iana'), value: getVal('cfg-tz-master-type', 'iana') === 'iana' ? getVal('cfg-tz-master-iana', 'Asia/Shanghai') : (getVal('cfg-tz-master-offset', '0') || '0') }; configs.timeZones.doggy = { type: getVal('cfg-tz-doggy-type', 'iana'), value: getVal('cfg-tz-doggy-type', 'iana') === 'iana' ? getVal('cfg-tz-doggy-iana', 'America/New_York') : (getVal('cfg-tz-doggy-offset', '0') || '0') }; 
-    const intv = parseInt(getVal('cfg-notify-interval', '30'), 10); configs.notifySettings.overtimeInterval = Number.isFinite(intv) && intv >= 10 ? intv : 30; configs.simpleMode = getChk('cfg-simple-mode', false) === true; configs.showHistory = getChk('cfg-show-history', false) === true; configs.showLogicalDate = getChk('cfg-show-logical-date', true) === true; configs.showPartnerCard = getChk('cfg-show-partner-card', true) === true; configs.showPartnerStatus = getChk('cfg-show-partner-status', true) === true; configs.clockLayout = getVal('cfg-clock-layout', 'separate'); configs.showMasterClock = getChk('cfg-show-master-clock', true); configs.showDoggyClock = getChk('cfg-show-doggy-clock', true); configs.showSeconds = getChk('cfg-show-seconds', true); configs.showShichen = getChk('cfg-show-shichen', false); configs.showWellness = getChk('cfg-show-wellness', false); const wantNotify = getChk('cfg-notifications', false) === true; if (wantNotify) { if (!notificationSupported()) { configs.notifications = false; showToast('当前浏览器不支持系统通知', 'late'); } else if (Notification.permission === 'granted') { configs.notifications = true; } else if (Notification.permission === 'denied') { configs.notifications = false; showToast('通知权限已被浏览器拒绝', 'late'); } else { configs.notifications = true; Notification.requestPermission().then(p => { if (p === 'granted') { configs.notifications = true; showToast('页面通知已开启 🔔', 'success'); } else { configs.notifications = false; showToast('通知权限被拒绝', 'late'); } try { localStorage.setItem('dawn-duo-configs', JSON.stringify(configs)); } catch (e) {} updateNotifyStatus(); }); } } else configs.notifications = false; configs.anniversary = getVal('cfg-anniversary', '') || configs.anniversary || DEFAULT_CONFIGS.anniversary; configs.historyType = getVal('cfg-history-type', 'days') === 'month' ? 'month' : 'days'; const hd = parseInt(getVal('cfg-history-days', '30'), 10); configs.historyDays = [7, 30, 90, 365].includes(hd) ? hd : 30; configs.historyYear = getVal('cfg-history-year', '') || configs.historyYear; configs.historyMonth = getVal('cfg-history-month', '') || configs.historyMonth; configs.configVersion = 15; 
-    if (!configs.notifySettings.items) configs.notifySettings.items = {};
-    document.querySelectorAll('.notify-item-chk').forEach(chk => { configs.notifySettings.items[chk.dataset.key] = chk.checked; });
-
-    configs.notifySettings.global_testing = getChk('cfg-global-testing', false);
-    configs.notifySettings.overtime_window_enabled = getChk('cfg-overtime-window', true);
-    configs.notifySettings.overtime_sleep_start = getVal('cfg-overtime-sleep-start', '21:00');
-    configs.notifySettings.overtime_sleep_end = getVal('cfg-overtime-sleep-end', '05:00');
-    configs.notifySettings.overtime_wake_start = getVal('cfg-overtime-wake-start', '05:00');
-    configs.notifySettings.overtime_wake_end = getVal('cfg-overtime-wake-end', '12:00');
-    const maxTimes = parseInt(getVal('cfg-overtime-max', '3'), 10);
-    configs.notifySettings.overtime_max_times = Number.isFinite(maxTimes) && maxTimes >= 0 ? maxTimes : 3;
-
-    try { localStorage.setItem('dawn-duo-configs', JSON.stringify(configs)); } catch (e) { showToast('保存失败', 'late'); } ghConfig.autoSync = getChk('cfg-auto-sync', true); ghConfig.syncInterval = parseInt(getVal('cfg-sync-interval', '5'), 10) || 0; ghConfig.syncPrompt = getChk('cfg-sync-prompt', true); try { localStorage.setItem(CONFIG_KEY, JSON.stringify(ghConfig)); } catch (e) { } applyConfigsToPage(); updateClocks(); render(); updateNotifyStatus(); showToast('设置已保存！💗', 'success'); closeSettings(); if (window.startSyncTimer) window.startSyncTimer(); if (!skipSync && window.debounceSync) debounceSync(); } catch (e) { console.error(e); showToast('保存时发生错误', 'late'); } };
+window.saveSettings = function(skipSync) { try { const getVal = (id, fallback) => { const el = document.getElementById(id); return el ? el.value.trim() : fallback; }; const getChk = (id, fallback) => { const el = document.getElementById(id); return el ? el.checked : fallback; }; const prof = P(); prof.texts = { title: getVal('cfg-title', ''), subtitle: getVal('cfg-subtitle', ''), masterName: getVal('cfg-master-name', ''), masterTag: getVal('cfg-master-tag', ''), masterRegion: getVal('cfg-master-region', ''), doggyName: getVal('cfg-doggy-name', ''), doggyTag: getVal('cfg-doggy-tag', ''), doggyRegion: getVal('cfg-doggy-region', ''), masterSleepBtn: getVal('cfg-master-sleep-btn', '') || (configs.mode === 'service' ? '主人休息' : '先生休息'), masterWakeBtn: getVal('cfg-master-wake-btn', '') || (configs.mode === 'service' ? '主人起床' : '先生起床'), doggySleepBtn: getVal('cfg-doggy-sleep-btn', '') || (configs.mode === 'service' ? '小狗睡觉' : '宝宝睡觉'), doggyWakeBtn: getVal('cfg-doggy-wake-btn', '') || (configs.mode === 'service' ? '小狗起床' : '宝宝起床'), dailyModeIcon: getVal('cfg-icon-daily', '') || '💕', serviceModeIcon: getVal('cfg-icon-service', '') || '🐕' }; prof.colors = { master: getVal('cfg-color-master', '#38bdf8'), doggy: getVal('cfg-color-doggy', '#f472b6') }; const readTimeInput = (id, fallback) => { const v = getVal(id, ''); return /^\d{2}:\d{2}$/.test(v) ? v : fallback; }; const prevGoals = configs.goals; configs.goals = { master: { sleep: readTimeInput('cfg-goal-master-sleep', prevGoals.master.sleep), wake: readTimeInput('cfg-goal-master-wake', prevGoals.master.wake) }, doggy: { sleep: readTimeInput('cfg-goal-doggy-sleep', prevGoals.doggy.sleep), wake: readTimeInput('cfg-goal-doggy-wake', prevGoals.doggy.wake) } }; configs.timeZones.master = { type: getVal('cfg-tz-master-type', 'iana'), value: getVal('cfg-tz-master-type', 'iana') === 'iana' ? getVal('cfg-tz-master-iana', 'Asia/Shanghai') : (getVal('cfg-tz-master-offset', '0') || '0') }; configs.timeZones.doggy = { type: getVal('cfg-tz-doggy-type', 'iana'), value: getVal('cfg-tz-doggy-type', 'iana') === 'iana' ? getVal('cfg-tz-doggy-iana', 'America/New_York') : (getVal('cfg-tz-doggy-offset', '0') || '0') }; const intv = parseInt(getVal('cfg-notify-interval', '30'), 10); configs.notifySettings.overtimeInterval = Number.isFinite(intv) && intv >= 10 ? intv : 30; configs.simpleMode = getChk('cfg-simple-mode', false) === true; configs.showHistory = getChk('cfg-show-history', false) === true; configs.showLogicalDate = getChk('cfg-show-logical-date', true) === true; configs.showPartnerCard = getChk('cfg-show-partner-card', true) === true; configs.showPartnerStatus = getChk('cfg-show-partner-status', true) === true; configs.clockLayout = getVal('cfg-clock-layout', 'separate'); configs.showMasterClock = getChk('cfg-show-master-clock', true); configs.showDoggyClock = getChk('cfg-show-doggy-clock', true); configs.showSeconds = getChk('cfg-show-seconds', true); configs.showShichen = getChk('cfg-show-shichen', false); configs.showWellness = getChk('cfg-show-wellness', false); const wantNotify = getChk('cfg-notifications', false) === true; if (wantNotify) { if (!notificationSupported()) { configs.notifications = false; showToast('当前浏览器不支持系统通知', 'late'); } else if (Notification.permission === 'granted') { configs.notifications = true; } else if (Notification.permission === 'denied') { configs.notifications = false; showToast('通知权限已被浏览器拒绝', 'late'); } else { configs.notifications = true; Notification.requestPermission().then(p => { if (p === 'granted') { configs.notifications = true; showToast('页面通知已开启 🔔', 'success'); } else { configs.notifications = false; showToast('通知权限被拒绝', 'late'); } try { localStorage.setItem('dawn-duo-configs', JSON.stringify(configs)); } catch (e) {} updateNotifyStatus(); }); } } else configs.notifications = false; configs.anniversary = getVal('cfg-anniversary', '') || configs.anniversary || DEFAULT_CONFIGS.anniversary; configs.historyType = getVal('cfg-history-type', 'days') === 'month' ? 'month' : 'days'; const hd = parseInt(getVal('cfg-history-days', '30'), 10); configs.historyDays = [7, 30, 90, 365].includes(hd) ? hd : 30; configs.historyYear = getVal('cfg-history-year', '') || configs.historyYear; configs.historyMonth = getVal('cfg-history-month', '') || configs.historyMonth; configs.configVersion = 15; if (!configs.notifySettings.items) configs.notifySettings.items = {}; document.querySelectorAll('.notify-item-chk').forEach(chk => { configs.notifySettings.items[chk.dataset.key] = chk.checked; }); configs.notifySettings.global_testing = getChk('cfg-global-testing', false); configs.notifySettings.overtime_window_enabled = getChk('cfg-overtime-window', true); configs.notifySettings.overtime_sleep_start = getVal('cfg-overtime-sleep-start', '21:00'); configs.notifySettings.overtime_sleep_end = getVal('cfg-overtime-sleep-end', '05:00'); configs.notifySettings.overtime_wake_start = getVal('cfg-overtime-wake-start', '05:00'); configs.notifySettings.overtime_wake_end = getVal('cfg-overtime-wake-end', '12:00'); const maxTimes = parseInt(getVal('cfg-overtime-max', '3'), 10); configs.notifySettings.overtime_max_times = Number.isFinite(maxTimes) && maxTimes >= 0 ? maxTimes : 3; try { localStorage.setItem('dawn-duo-configs', JSON.stringify(configs)); } catch (e) { showToast('保存失败', 'late'); } ghConfig.autoSync = getChk('cfg-auto-sync', true); ghConfig.syncInterval = parseInt(getVal('cfg-sync-interval', '5'), 10) || 0; ghConfig.syncPrompt = getChk('cfg-sync-prompt', true); try { localStorage.setItem(CONFIG_KEY, JSON.stringify(ghConfig)); } catch (e) { } applyConfigsToPage(); updateClocks(); render(); updateNotifyStatus(); showToast('设置已保存！💗', 'success'); closeSettings(); if (window.startSyncTimer) window.startSyncTimer(); if (!skipSync && window.debounceSync) debounceSync(); } catch (e) { console.error(e); showToast('保存时发生错误', 'late'); } };

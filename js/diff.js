@@ -80,7 +80,6 @@ window.confirmSyncDiff = async function() {
     
     if (!isUpload) {
         if (!finalDb.master) finalDb.master = {}; if (!finalDb.doggy) finalDb.doggy = {};
-        // 如果是拉取，最终合并的是本地，基于云端改动
         finalDb = JSON.parse(JSON.stringify(localData.db));
         finalCfg = JSON.parse(JSON.stringify(localData.config));
     }
@@ -103,10 +102,25 @@ window.confirmSyncDiff = async function() {
     
     if (isUpload) {
         updateBar('sync', 'sync', 60);
-        const dbStr = JSON.stringify(finalDb, null, 2), cfgStr = JSON.stringify(finalCfg, null, 2);
-        const dbRemote = await fetchGHFile(ghConfig.path), cfgRemote = await fetchGHFile(ghConfig.configPath);
-        const ok1 = await pushGHFile(ghConfig.path, dbStr, dbRemote?.sha), ok2 = await pushGHFile(ghConfig.configPath, cfgStr, cfgRemote?.sha);
-        if (ok1 && ok2) { updateBar('sync', getProgressText('success') || '✅', 100); setTimeout(() => { hideBar('sync'); showToast('⬆️ 数据上传成功', 'success'); closeSettings(); }, 800); } else { hideBar('sync'); showToast('上传失败，请检查网络/权限', 'late'); }
+        const dbStrM = JSON.stringify(finalDb.master, null, 2);
+        const dbStrD = JSON.stringify(finalDb.doggy, null, 2);
+        const cfgStr = JSON.stringify(finalCfg, null, 2);
+        
+        const mRemote = await fetchGHFile('master_records.json');
+        const dRemote = await fetchGHFile('doggy_records.json');
+        const cfgRemote = await fetchGHFile(ghConfig.configPath);
+        
+        const currentIdentity = identity || 'master';
+        let ok1 = true, ok2 = true;
+        if (currentIdentity === 'master' || currentIdentity === 'both') {
+            ok1 = await pushGHFile('master_records.json', dbStrM, mRemote?.sha);
+        }
+        if (currentIdentity === 'doggy' || currentIdentity === 'both') {
+            ok2 = await pushGHFile('doggy_records.json', dbStrD, dRemote?.sha);
+        }
+        const ok3 = await pushGHFile(ghConfig.configPath, cfgStr, cfgRemote?.sha);
+        
+        if (ok1 && ok2 && ok3) { updateBar('sync', getProgressText('success') || '✅', 100); setTimeout(() => { hideBar('sync'); showToast('⬆️ 数据上传成功', 'success'); closeSettings(); }, 800); } else { hideBar('sync'); showToast('上传失败，请检查网络/权限', 'late'); }
     } else {
         updateBar('sync', 'sync', 80);
         setTimeout(() => { updateBar('sync', getProgressText('success') || '✅', 100); applySyncData(finalDb, finalCfg, true); setTimeout(() => { hideBar('sync'); showToast('⬇️ 数据更新成功', 'success'); closeSettings(); }, 800); }, 500);

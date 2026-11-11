@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-  if (document.getElementById('settings-modal')) return; // 防止重复渲染
+  if (document.getElementById('settings-modal')) return;
 
   const style = document.createElement('style');
   style.innerHTML = `
@@ -15,22 +15,19 @@ document.addEventListener('DOMContentLoaded', () => {
     .diff-details summary { cursor: pointer; color: var(--tab-active); font-weight: 600; outline: none; }
     .diff-content-pre { margin-top: 6px; white-space: pre-wrap; word-break: break-all; font-family: monospace; color: var(--text-muted); }
     
-    /* 网格与按钮排版 */
     .flex-btn-group { display: flex; flex-wrap: wrap; gap: 8px; }
     .flex-btn-group .btn { flex: 1 1 calc(33.333% - 8px); padding: 8px 4px; font-size: 0.8rem; min-width: 80px; white-space: nowrap; }
     .flex-btn-group.two-cols .btn { flex: 1 1 calc(50% - 8px); }
     
-    /* 专属美化：随机打卡文案卡片 */
     .msg-entry-btn { background: var(--input-bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s; cursor: pointer; flex: 1 1 calc(50% - 8px); min-width: 120px; }
     .msg-entry-btn:hover { background: var(--settings-bg); border-color: var(--tab-active); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
     .msg-entry-title { font-size: 0.85rem; font-weight: 700; color: var(--text); }
     .msg-entry-count { font-size: 0.7rem; font-weight: 600; color: var(--text-muted); background: var(--btn-bg); padding: 4px 10px; border-radius: 20px; border: 1px solid var(--border); }
     .msg-entry-btn:hover .msg-entry-count { color: var(--tab-active); border-color: rgba(56, 189, 248, 0.3); }
 
-    /* 气泡提示 UI */
-    .help-icon { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border-radius: 50%; border: 1px solid var(--text-muted); color: var(--text-muted); font-size: 10px; font-weight: bold; cursor: pointer; margin-left: 6px; user-select: none; transition: all 0.2s; vertical-align: middle; }
-    .help-icon:hover { color: var(--tab-active); border-color: var(--tab-active); }
-    #global-tooltip { position: fixed; background: rgba(20, 20, 25, 0.95); color: #fff; padding: 10px 14px; border-radius: 8px; font-size: 0.75rem; line-height: 1.5; max-width: 250px; z-index: 9999; pointer-events: none; opacity: 0; transition: opacity 0.2s; box-shadow: 0 4px 15px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(4px); word-break: break-all; }
+    .help-icon { display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px; border-radius: 50%; border: 1px solid var(--text-muted); color: var(--text-muted); font-size: 10px; font-weight: bold; cursor: pointer; margin-left: 6px; user-select: none; transition: all 0.2s; vertical-align: middle; }
+    .help-icon:hover { color: var(--tab-active); border-color: var(--tab-active); background: var(--btn-bg); }
+    #global-tooltip { position: fixed; background: rgba(20, 20, 25, 0.95); color: #fff; padding: 10px 14px; border-radius: 8px; font-size: 0.75rem; line-height: 1.5; max-width: 250px; z-index: 9999; pointer-events: none; opacity: 0; transition: opacity 0.2s; box-shadow: 0 4px 15px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(4px); word-break: break-all; white-space: pre-wrap; }
     #global-tooltip.show { opacity: 1; }
     #global-tooltip::before { content: ''; position: absolute; top: -5px; left: 10px; border-width: 0 5px 5px 5px; border-style: solid; border-color: transparent transparent rgba(20, 20, 25, 0.95) transparent; }
     .card-divider { height: 1px; border-top: 1px dashed var(--border); margin: 12px 0; }
@@ -72,12 +69,12 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="config-card">
           <div class="config-title">📅 界面与纪念日</div>
           <div class="form-group"><label>纪念日</label><input type="date" id="cfg-anniversary" value="2026-11-04"></div>
-          <div class="switch-row"><label>显示对方打卡卡片</label><label class="toggle-switch"><input type="checkbox" id="cfg-show-partner-card"><span class="slider"></span></label></div>
-          <div class="switch-row"><label>显示对方独立状态栏</label><label class="toggle-switch"><input type="checkbox" id="cfg-show-partner-status"><span class="slider"></span></label></div>
-          <div class="switch-row"><label>简洁模式<span class="help-icon" data-tip="隐藏时钟、统计等多余模块，只留核心打卡区">i</span></label><label class="toggle-switch"><input type="checkbox" id="cfg-simple-mode"><span class="slider"></span></label></div>
-          <div class="switch-row"><label>显示契约日<span class="help-icon" data-tip="在顶部时差条旁边显示当前是相恋的第几天">i</span></label><label class="toggle-switch"><input type="checkbox" id="cfg-show-logical-date"><span class="slider"></span></label></div>
+          <div class="switch-row"><label>显示对方打卡卡片<span class="help-icon" data-tip="在当前身份下，是否在主界面显示对方（只读）的打卡按钮">i</span></label><label class="toggle-switch"><input type="checkbox" id="cfg-show-partner-card"><span class="slider"></span></label></div>
+          <div class="switch-row"><label>显示对方独立状态栏<span class="help-icon" data-tip="在打卡区域顶部，显示对方当前是休息还是醒着的状态提示">i</span></label><label class="toggle-switch"><input type="checkbox" id="cfg-show-partner-status"><span class="slider"></span></label></div>
+          <div class="switch-row"><label>简洁模式<span class="help-icon" data-tip="隐藏时钟、日历统计等非核心模块，界面更清爽">i</span></label><label class="toggle-switch"><input type="checkbox" id="cfg-simple-mode"><span class="slider"></span></label></div>
+          <div class="switch-row"><label>显示契约日<span class="help-icon" data-tip="在顶部时差条旁显示当前是契约绑定的第几天">i</span></label><label class="toggle-switch"><input type="checkbox" id="cfg-show-logical-date"><span class="slider"></span></label></div>
           <div class="card-divider"></div>
-          <div class="switch-row"><label>开启全屏极简打卡<span class="help-icon" data-tip="隐蔽所有界面，仅保留圆形按钮，背景色随打卡状态变换">i</span></label><label class="toggle-switch"><input type="checkbox" id="cfg-checkin-mode"><span class="slider"></span></label></div>
+          <div class="switch-row"><label>开启全屏极简打卡<span class="help-icon" data-tip="隐蔽所有界面，仅保留圆形专属按钮，背景色随打卡状态自动变换，双击屏幕或长按按钮退出">i</span></label><label class="toggle-switch"><input type="checkbox" id="cfg-checkin-mode"><span class="slider"></span></label></div>
         </div>
       </div>
 
@@ -147,8 +144,8 @@ document.addEventListener('DOMContentLoaded', () => {
           <div class="switch-row"><label>显示主人时间</label><label class="toggle-switch"><input type="checkbox" id="cfg-show-master-clock"><span class="slider"></span></label></div>
           <div class="switch-row"><label>显示小狗时间</label><label class="toggle-switch"><input type="checkbox" id="cfg-show-doggy-clock"><span class="slider"></span></label></div>
           <div class="switch-row"><label>显示秒数</label><label class="toggle-switch"><input type="checkbox" id="cfg-show-seconds"><span class="slider"></span></label></div>
-          <div class="switch-row"><label>显示十二时辰<span class="help-icon" data-tip="在时钟下方显示子丑寅卯等传统时辰">i</span></label><label class="toggle-switch"><input type="checkbox" id="cfg-show-shichen" onchange="handleShichenToggle()"><span class="slider"></span></label></div>
-          <div class="switch-row"><label>显示经络养生提示<span class="help-icon" data-tip="根据时辰显示对应的中医养生小知识">i</span></label><label class="toggle-switch"><input type="checkbox" id="cfg-show-wellness" onchange="handleWellnessToggle()"><span class="slider"></span></label></div>
+          <div class="switch-row"><label>显示十二时辰<span class="help-icon" data-tip="在时钟下方显示子丑寅卯等传统时辰计时法">i</span></label><label class="toggle-switch"><input type="checkbox" id="cfg-show-shichen" onchange="handleShichenToggle()"><span class="slider"></span></label></div>
+          <div class="switch-row"><label>显示经络养生提示<span class="help-icon" data-tip="根据当前时辰，在时钟下方显示对应的中医经络运行规律与养生小贴士">i</span></label><label class="toggle-switch"><input type="checkbox" id="cfg-show-wellness" onchange="handleWellnessToggle()"><span class="slider"></span></label></div>
         </div>
         <div class="config-card">
           <div class="config-title">📅 日历回顾</div>
@@ -165,17 +162,17 @@ document.addEventListener('DOMContentLoaded', () => {
       <div class="tab-content" id="tab-notify">
         <div class="config-card">
           <div class="config-title">🔔 通知渠道</div>
-          <div class="switch-row"><label>开启页面内通知<span class="help-icon" data-tip="网页开着的时候，到点会弹出浏览器通知">i</span></label><label class="toggle-switch"><input type="checkbox" id="cfg-notifications"><span class="slider"></span></label></div>
+          <div class="switch-row"><label>开启页面内通知<span class="help-icon" data-tip="网页开着的时候，到达目标时间会弹出浏览器通知">i</span></label><label class="toggle-switch"><input type="checkbox" id="cfg-notifications"><span class="slider"></span></label></div>
           <div id="notify-status" class="tip-text" style="margin-bottom: 8px;"></div>
           <button class="btn outline" onclick="testNotification()" style="width: 100%; font-size: 0.8rem; padding: 8px;">🔔 测试页面通知</button>
           <div class="card-divider"></div>
-          <div class="switch-row" style="margin-bottom: 8px;"><label>开启后台推送<span class="help-icon" data-tip="设备锁屏或关闭网页后，也能通过服务器发通知">i</span></label><label class="toggle-switch"><input type="checkbox" id="cfg-backend-push" onchange="handleBackendPushToggle()"><span class="slider"></span></label></div>
+          <div class="switch-row" style="margin-bottom: 8px;"><label>开启后台推送<span class="help-icon" data-tip="设备锁屏或关闭网页后，也能通过云端服务器发送手机系统级推送">i</span></label><label class="toggle-switch"><input type="checkbox" id="cfg-backend-push" onchange="handleBackendPushToggle()"><span class="slider"></span></label></div>
           <div id="backend-push-status" class="tip-text" style="margin-bottom: 12px;">正在检查订阅状态...</div>
           <div class="progress-area" id="push-progress" style="display: none; margin-bottom: 12px;"><div class="progress-bar-wrap"><div class="progress-bar" id="push-progress-bar" style="width: 0%;"></div></div><div class="progress-text" id="push-progress-text">正在处理...</div></div>
         </div>
         <div class="config-card">
           <div class="config-title">⏳ 超时监控</div>
-          <div class="switch-row"><label>开启熬夜/赖床提醒<span class="help-icon" data-tip="过了目标时间还没打卡，会一直催促你">i</span></label><label class="toggle-switch"><input type="checkbox" id="cfg-notify-overtime"><span class="slider"></span></label></div>
+          <div class="switch-row"><label>开启熬夜/赖床提醒<span class="help-icon" data-tip="超过了设定的目标时间还没打卡，会持续发送警告提醒">i</span></label><label class="toggle-switch"><input type="checkbox" id="cfg-notify-overtime"><span class="slider"></span></label></div>
           <div class="form-group" style="margin-top: 8px;"><label>超时重复提醒间隔 (分钟)</label><input type="number" id="cfg-notify-interval" value="30" min="10" step="10"></div>
         </div>
       </div>
@@ -202,7 +199,6 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
         </div>
         
-        <!-- 提醒文案整合到这里，并动态反转名字 -->
         <div class="config-card" data-user="master">
           <div class="config-title">👑 <span class="text-master-name"></span> 提醒文案</div>
           
@@ -248,7 +244,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
 
         <div class="config-card">
-          <div class="config-title">📥 文案库导入</div>
+          <div class="config-title">📥 文案库导入<span class="help-icon" data-tip="支持 .txt / .md / .json 格式，系统会按行读取，并自动检索本地库中相似度大于 70% 的文案进行过滤提示。">i</span></div>
           <button class="btn outline" style="width: 100%;" onclick="document.getElementById('import-lib-file').click()">📂 选择文件导入文库</button><input type="file" id="import-lib-file" accept=".txt,.md,.json" style="display: none;" onchange="readLibraryFile(event)">
         </div>
       </div>
@@ -256,7 +252,7 @@ document.addEventListener('DOMContentLoaded', () => {
       <!-- 6. 数据与同步 -->
       <div class="tab-content" id="tab-data">
         <div class="config-card">
-          <div class="config-title">☁️ 云端数据同步</div>
+          <div class="config-title">☁️ 云端数据同步<span class="help-icon" data-tip="仓库: luo029/dawn_duo_data\n系统会自动根据您的身份，将记录分离存放到云端 (master_records.json / doggy_records.json)，互不干扰。">i</span></div>
           <div class="switch-row" style="margin-bottom: 8px; padding: 0;"><label>开启自动拉取/推送</label><label class="toggle-switch"><input type="checkbox" id="cfg-auto-sync"><span class="slider"></span></label></div>
           <div class="flex-row" style="margin-bottom: 8px;">
             <div class="form-group"><label>自动拉取间隔</label><select id="cfg-sync-interval"><option value="0">关闭</option><option value="1">1 分钟</option><option value="5">5 分钟</option><option value="15">15 分钟</option><option value="30">30 分钟</option><option value="60">1 小时</option></select></div>
@@ -313,7 +309,6 @@ document.addEventListener('DOMContentLoaded', () => {
   `;
   document.body.insertAdjacentHTML('beforeend', container.innerHTML);
 
-  // 核心工具：气泡提示逻辑
   const tooltip = document.getElementById('global-tooltip');
   document.addEventListener('click', (e) => {
     if (e.target.classList.contains('help-icon')) {

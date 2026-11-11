@@ -13,44 +13,55 @@ window.getTabNotifyHTML = () => `
   
   <div class="config-card">
     <div class="config-title">🎯 提醒开关<span class="help-icon" data-tip="关闭某项后，页面通知和云端推送将不再发送该项提醒">i</span></div>
+    
     <div data-user="master">
       <div class="section-label">👑 <span class="text-master-name"></span> 提醒</div>
       <div class="switch-row"><label>🌙 休息提醒</label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="master_sleep"><span class="slider"></span></label></div>
       <div class="switch-row"><label>☀️ 起床提醒</label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="master_wake"><span class="slider"></span></label></div>
+      
+      <div class="section-label" style="margin-top: 16px;">⏳ 超时警告</div>
+      <div class="switch-row"><label>熬夜超时警告</label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="master_sleep_overtime"><span class="slider"></span></label></div>
+      <div class="switch-row"><label>赖床超时警告</label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="master_wake_overtime"><span class="slider"></span></label></div>
+      
+      <div class="section-label" style="margin-top: 16px;">🛡️ 防轰炸与时间窗</div>
+      <div class="switch-row"><label>开启时间窗限制<span class="help-icon" data-tip="只在特定时间段内发送提醒。关闭后，全天任何时间都发。">i</span></label><label class="toggle-switch"><input type="checkbox" id="cfg-overtime-window-master" onchange="document.getElementById('overtime-window-details-master').style.display = this.checked ? 'block' : 'none';"><span class="slider"></span></label></div>
+      <div id="overtime-window-details-master" style="margin-top: 8px;">
+        <div class="flex-row"><div class="form-group"><label>熬夜允许区间</label><div style="display:flex; gap:4px; align-items:center;"><input type="time" id="cfg-overtime-sleep-start-master" value="21:00"><span>至</span><input type="time" id="cfg-overtime-sleep-end-master" value="05:00"></div></div></div>
+        <div class="flex-row"><div class="form-group"><label>赖床允许区间</label><div style="display:flex; gap:4px; align-items:center;"><input type="time" id="cfg-overtime-wake-start-master" value="05:00"><span>至</span><input type="time" id="cfg-overtime-wake-end-master" value="12:00"></div></div></div>
+      </div>
+      <div class="switch-row" style="margin-top: 8px;"><label>每天最大发送次数<span class="help-icon" data-tip="触发超时后，每天最多发几次。填 0 代表不限制次数。">i</span></label><input type="number" id="cfg-overtime-max-master" value="3" min="0" step="1" style="width: 80px; padding: 6px; text-align: center;"></div>
+
       <div class="section-label" style="margin-top: 16px;">📡 <span class="text-doggy-name"></span> 动态</div>
       <div class="switch-row"><label>对方已休息通知</label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="partner_doggy_sleep"><span class="slider"></span></label></div>
       <div class="switch-row"><label>对方已起床通知</label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="partner_doggy_wake"><span class="slider"></span></label></div>
     </div>
+    
     <div data-user="doggy">
       <div class="section-label">🎀 <span class="text-doggy-name"></span> 提醒</div>
       <div class="switch-row"><label>🌙 睡觉提醒</label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="doggy_sleep"><span class="slider"></span></label></div>
       <div class="switch-row"><label>☀️ 起床提醒</label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="doggy_wake"><span class="slider"></span></label></div>
+      
+      <div class="section-label" style="margin-top: 16px;">⏳ 超时警告</div>
+      <div class="switch-row"><label>熬夜超时警告</label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="doggy_sleep_overtime"><span class="slider"></span></label></div>
+      <div class="switch-row"><label>赖床超时警告</label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="doggy_wake_overtime"><span class="slider"></span></label></div>
+
+      <div class="section-label" style="margin-top: 16px;">🛡️ 防轰炸与时间窗</div>
+      <div class="switch-row"><label>开启时间窗限制<span class="help-icon" data-tip="只在特定时间段内发送提醒。关闭后，全天任何时间都发。">i</span></label><label class="toggle-switch"><input type="checkbox" id="cfg-overtime-window-doggy" onchange="document.getElementById('overtime-window-details-doggy').style.display = this.checked ? 'block' : 'none';"><span class="slider"></span></label></div>
+      <div id="overtime-window-details-doggy" style="margin-top: 8px;">
+        <div class="flex-row"><div class="form-group"><label>熬夜允许区间</label><div style="display:flex; gap:4px; align-items:center;"><input type="time" id="cfg-overtime-sleep-start-doggy" value="21:00"><span>至</span><input type="time" id="cfg-overtime-sleep-end-doggy" value="05:00"></div></div></div>
+        <div class="flex-row"><div class="form-group"><label>赖床允许区间</label><div style="display:flex; gap:4px; align-items:center;"><input type="time" id="cfg-overtime-wake-start-doggy" value="05:00"><span>至</span><input type="time" id="cfg-overtime-wake-end-doggy" value="12:00"></div></div></div>
+      </div>
+      <div class="switch-row" style="margin-top: 8px;"><label>每天最大发送次数<span class="help-icon" data-tip="触发超时后，每天最多发几次。填 0 代表不限制次数。">i</span></label><input type="number" id="cfg-overtime-max-doggy" value="3" min="0" step="1" style="width: 80px; padding: 6px; text-align: center;"></div>
+
       <div class="section-label" style="margin-top: 16px;">📡 <span class="text-master-name"></span> 动态</div>
       <div class="switch-row"><label>对方已休息通知</label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="partner_master_sleep"><span class="slider"></span></label></div>
       <div class="switch-row"><label>对方已起床通知</label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="partner_master_wake"><span class="slider"></span></label></div>
     </div>
+    
     <div class="card-divider"></div>
-    <div class="section-label">⏳ 超时警告 (通用)</div>
-    <div class="switch-row"><label>熬夜超时警告</label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="overtime_sleep"><span class="slider"></span></label></div>
-    <div class="switch-row"><label>赖床超时警告</label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="overtime_wake"><span class="slider"></span></label></div>
-    <div class="switch-row" style="margin-top: 8px; border-top: 1px dashed var(--border); padding-top: 12px;">
+    <div class="switch-row">
       <label>提醒重复间隔 (分钟)</label>
       <input type="number" id="cfg-notify-interval" value="30" min="10" step="10" style="width: 80px; padding: 6px; text-align: center;">
-    </div>
-    <div class="card-divider"></div>
-    <div class="section-label">🛡️ 防轰炸与时间窗设置</div>
-    <div class="switch-row"><label>开启时间窗限制<span class="help-icon" data-tip="只在特定的时间段内发送超时提醒。关闭后，任何时间超时都会发。">i</span></label><label class="toggle-switch"><input type="checkbox" id="cfg-overtime-window"><span class="slider"></span></label></div>
-    <div id="overtime-window-details" style="margin-top: 8px;">
-      <div class="flex-row">
-        <div class="form-group"><label>熬夜允许区间</label><div style="display:flex; gap:4px; align-items:center;"><input type="time" id="cfg-overtime-sleep-start" value="21:00"><span>至</span><input type="time" id="cfg-overtime-sleep-end" value="05:00"></div></div>
-      </div>
-      <div class="flex-row">
-        <div class="form-group"><label>赖床允许区间</label><div style="display:flex; gap:4px; align-items:center;"><input type="time" id="cfg-overtime-wake-start" value="05:00"><span>至</span><input type="time" id="cfg-overtime-wake-end" value="12:00"></div></div>
-      </div>
-    </div>
-    <div class="switch-row" style="margin-top: 8px;">
-      <label>每天最大发送次数<span class="help-icon" data-tip="触发超时后，每天最多发几次警告。填 0 代表不限制次数。">i</span></label>
-      <input type="number" id="cfg-overtime-max" value="3" min="0" step="1" style="width: 80px; padding: 6px; text-align: center;">
     </div>
   </div>
 

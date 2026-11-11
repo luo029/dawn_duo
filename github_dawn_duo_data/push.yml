@@ -17,6 +17,10 @@ on:
         description: '测试用的内容 (留空则按时间自动推)'
         required: false
         default: ''
+      test_target:
+        description: '测试推送目标 (all 或 endpoint后缀)'
+        required: false
+        default: 'all'
       trigger_from:
         description: '触发来源 (partner = 打卡触发)'
         required: false
@@ -43,6 +47,7 @@ jobs:
           TEST_MODE: ${{ github.event.inputs.test_mode }}
           CUSTOM_TITLE: ${{ github.event.inputs.custom_title }}
           CUSTOM_BODY: ${{ github.event.inputs.custom_body }}
+          TEST_TARGET: ${{ github.event.inputs.test_target }}
           TRIGGER_FROM: ${{ github.event.inputs.trigger_from }}
       
       - name: Commit and push cleaned subscriptions (if any expired)

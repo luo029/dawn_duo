@@ -129,9 +129,24 @@ window.confirmSyncDiff = async function() {
         }
         const ok3 = await pushGHFile(ghConfig.configPath, cfgStr, cfgRemote?.sha);
         
-        if (ok1 && ok2 && ok3) { updateBar('sync', getProgressText('success') || '✅', 100); setTimeout(() => { hideBar('sync'); showToast('⬆️ 数据上传成功', 'success'); closeSettings(); }, 800); } else { hideBar('sync'); showToast('上传失败，请检查网络/权限', 'late'); }
+        if (ok1 && ok2 && ok3) { 
+            updateBar('sync', getProgressText('success') || '✅', 100); 
+            setTimeout(() => { 
+                hideBar('sync'); 
+                showToast('⬆️ 数据上传成功', 'success'); 
+            }, 800); 
+        } else { 
+            hideBar('sync'); showToast('上传失败，请检查网络/权限', 'late'); 
+        }
     } else {
         updateBar('sync', 'sync', 80);
-        setTimeout(() => { updateBar('sync', getProgressText('success') || '✅', 100); applySyncData(finalDb, finalCfg, true); setTimeout(() => { hideBar('sync'); showToast('⬇️ 数据更新成功', 'success'); closeSettings(); }, 800); }, 500);
+        setTimeout(() => { 
+            updateBar('sync', getProgressText('success') || '✅', 100); 
+            applySyncData(finalDb, finalCfg, true); 
+            setTimeout(() => { 
+                hideBar('sync'); 
+                showToast('⬇️ 数据更新成功', 'success'); 
+            }, 800); 
+        }, 500);
     }
 };

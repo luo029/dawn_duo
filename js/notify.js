@@ -1,18 +1,6 @@
 let lastNotifyCheck = 0;
 function notificationSupported() { return typeof Notification !== 'undefined'; }
-
-// 移除了 setTimeout 自动关闭逻辑，让通知常驻，直到用户点击或相同 tag 覆盖
-function sendNotify(key, title, body) { 
-    try { 
-        const n = new Notification(title, { 
-            body: body, 
-            tag: 'dawn-' + key, 
-            requireInteraction: true, 
-            silent: false 
-        }); 
-    } catch (e) { console.warn('通知发送失败', e); } 
-}
-
+function sendNotify(key, title, body) { try { const n = new Notification(title, { body: body, tag: 'dawn-' + key, requireInteraction: true, silent: false }); } catch (e) { console.warn('通知发送失败', e); } }
 function saveNotifyLog() { try { localStorage.setItem('dawn-duo-notify-log', JSON.stringify(notifyLog)); } catch (e) {} }
 function getRandomText(textArr) { if (Array.isArray(textArr)) { if (textArr.length === 0) return ''; return textArr[Math.floor(Math.random() * textArr.length)]; } return textArr || ''; }
 function checkNotifications() {
@@ -24,41 +12,82 @@ function checkNotifications() {
     let items = [];
     if (identity === 'master' || identity === 'both') { items.push({ key: 'master_sleep', user: 'master', type: 'sleep', tz: configs.timeZones.master, name: mName }); items.push({ key: 'master_wake', user: 'master', type: 'wake', tz: configs.timeZones.master, name: mName }); }
     if (identity === 'doggy' || identity === 'both') { items.push({ key: 'doggy_sleep', user: 'doggy', type: 'sleep', tz: configs.timeZones.doggy, name: dName }); items.push({ key: 'doggy_wake', user: 'doggy', type: 'wake', tz: configs.timeZones.doggy, name: dName }); }
+    
     items.forEach(it => {
-        // 检查单项开关
         if (nItems[it.key] === false) return;
         const done = db[it.user]?.[today]?.[it.type]?.done; if (done) return;
-        const nowMins = toMins(getTimeInTZ(it.tz, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })); const goalMins = toMins(configs.goals?.[it.user]?.[it.type]); if (!Number.isFinite(nowMins) || !Number.isFinite(goalMins)) return;
+        const nowTimeStr = getTimeInTZ(it.tz, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+        const nowMins = toMins(nowTimeStr); const goalMins = toMins(configs.goals?.[it.user]?.[it.type]); if (!Number.isFinite(nowMins) || !Number.isFinite(goalMins)) return;
         let offset = nowMins - goalMins; if (offset < -720) offset += 1440; else if (offset > 720) offset -= 1440;
+        
         if (offset >= -15 && offset <= 15) { 
             if (!notifyLog[it.key]) { 
                 const obj = nTexts[it.key] || { channel: 'both', texts: [] };
                 if (obj.channel === 'both' || obj.channel === 'page') {
-                    const rawText = getRandomText(obj.texts); const body = (rawText || '').replace(/{name}/g, it.name); 
+                    const rawText = getRandomText(obj.texts); 
+                    const nowHour = parseInt(getTimeInTZ(it.tz, { hour: 'numeric', hourCycle: 'h23' }), 10);
+                    const shichen = getShichenInfo(isNaN(nowHour) ? 0 : nowHour);
+                    const timeS = getTimeInTZ(it.tz, { hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' });
+                    const dObj = new Date();
+                    const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+                    const body = (rawText || '').replace(/{name}/g, it.name).replace(/{time_s}/g, timeS).replace(/{time}/g, nowTimeStr).replace(/{shichen}/g, shichen.name).replace(/{shichen_organ}/g, shichen.organ).replace(/{shichen_time}/g, shichen.time).replace(/{weekday}/g, weekdays[dObj.getDay()]).replace(/{date}/g, `${dObj.getMonth()+1}月${dObj.getDate()}日`).replace(/{duration}/g, '').replace(/{mins}/g, '');
                     const titleObj = obj.title || '🔔 契约提醒';
                     sendNotify(it.key, titleObj, body); 
                 }
                 notifyLog[it.key] = true; saveNotifyLog(); 
             } return; 
         }
-        // 超时逻辑
-        const roleOKey = `${it.user}_${it.type}_overtime`;
-        const oKey = nTexts[roleOKey] ? roleOKey : (it.type === 'sleep' ? 'overtime_sleep' : 'overtime_wake');
-        if (nItems[it.type === 'sleep' ? 'overtime_sleep' : 'overtime_wake'] === false) return; 
+        
+        const oKey = `${it.user}_${it.type}_overtime`;
+        if (nItems[oKey] === false) return; 
+        
+        const isMaster = it.user === 'master';
+        const targetWindowEnabled = isMaster ? (nSettings.master_window_enabled !== false) : (nSettings.doggy_window_enabled !== false);
+        const tSleepStart = toMins(isMaster ? (nSettings.master_sleep_start || '21:00') : (nSettings.doggy_sleep_start || '21:00'));
+        const tSleepEnd = toMins(isMaster ? (nSettings.master_sleep_end || '05:00') : (nSettings.doggy_sleep_end || '05:00'));
+        const tWakeStart = toMins(isMaster ? (nSettings.master_wake_start || '05:00') : (nSettings.doggy_wake_start || '05:00'));
+        const tWakeEnd = toMins(isMaster ? (nSettings.master_wake_end || '12:00') : (nSettings.doggy_wake_end || '12:00'));
+        const tMaxTimes = isMaster ? (nSettings.master_max_times !== undefined ? nSettings.master_max_times : 3) : (nSettings.doggy_max_times !== undefined ? nSettings.doggy_max_times : 3);
+        
         let isOvertime = false, overtimeMins = 0; if (it.type === 'sleep' && offset > 30) { isOvertime = true; overtimeMins = offset; } else if (it.type === 'wake' && offset > 30) { isOvertime = true; overtimeMins = offset; }
+        
         if (isOvertime) { 
+            if (targetWindowEnabled) {
+                const start = it.type === 'sleep' ? tSleepStart : tWakeStart;
+                const end = it.type === 'sleep' ? tSleepEnd : tWakeEnd;
+                let inWindow = false;
+                if (start > end) inWindow = nowMins >= start || nowMins < end;
+                else inWindow = nowMins >= start && nowMins < end;
+                if (!inWindow) return;
+            }
+            
+            if (tMaxTimes > 0) {
+                const logKey = `${it.key}_overtime_count`;
+                if ((notifyLog[logKey] || 0) >= tMaxTimes) return;
+            }
+
             const lastNotifyTs = notifyLog[it.key + '_overtime'] || 0; const intervalMs = (nSettings.overtimeInterval || 30) * 60000; 
             if (nowTs - lastNotifyTs >= intervalMs) { 
                 const obj = nTexts[oKey] || { channel: 'both', texts: [] };
                 if (obj.channel === 'both' || obj.channel === 'page') {
-                    let rawText = getRandomText(obj.texts); if (!rawText) rawText = it.type === 'sleep' ? '{name}，已经熬夜 {time} 了，该睡觉了！' : '{name}，已经赖床 {time} 了，快起床吧！';
+                    let rawText = getRandomText(obj.texts); if (!rawText) rawText = it.type === 'sleep' ? '{name}，已经熬夜 {duration} 了，该睡觉了！' : '{name}，已经赖床 {duration} 了，快起床吧！';
                     const oh = Math.floor(overtimeMins / 60); const om = overtimeMins % 60;
-                    const timeStr = oh > 0 && om > 0 ? `${oh} h ${om} m` : (oh > 0 ? `${oh} h` : `${om} m`);
-                    const body = rawText.replace(/{name}/g, it.name).replace(/{time}/g, timeStr).replace(/{mins}/g, overtimeMins); 
+                    const durStr = oh > 0 && om > 0 ? `${oh} h ${om} m` : (oh > 0 ? `${oh} h` : `${om} m`);
+                    const nowHour = parseInt(getTimeInTZ(it.tz, { hour: 'numeric', hourCycle: 'h23' }), 10);
+                    const shichen = getShichenInfo(isNaN(nowHour) ? 0 : nowHour);
+                    const timeS = getTimeInTZ(it.tz, { hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' });
+                    const dObj = new Date();
+                    const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+                    const body = rawText.replace(/{name}/g, it.name).replace(/{time_s}/g, timeS).replace(/{time}/g, nowTimeStr).replace(/{shichen}/g, shichen.name).replace(/{shichen_organ}/g, shichen.organ).replace(/{shichen_time}/g, shichen.time).replace(/{weekday}/g, weekdays[dObj.getDay()]).replace(/{date}/g, `${dObj.getMonth()+1}月${dObj.getDate()}日`).replace(/{duration}/g, durStr).replace(/{mins}/g, overtimeMins);
                     const titleObj = obj.title || (it.type === 'sleep' ? '🌙 熬夜警告' : '☀️ 赖床警告');
                     sendNotify(it.key + '_overtime', titleObj, body); 
                 }
-                notifyLog[it.key + '_overtime'] = nowTs; saveNotifyLog(); 
+                notifyLog[it.key + '_overtime'] = nowTs; 
+                if (tMaxTimes > 0) {
+                    const logKey = `${it.key}_overtime_count`;
+                    notifyLog[logKey] = (notifyLog[logKey] || 0) + 1;
+                }
+                saveNotifyLog(); 
             } 
         }
     });
@@ -74,12 +103,14 @@ function detectPartnerCheckin(remoteDb) {
     ['sleep', 'wake'].forEach(type => {
         const localDone = localRec[type]?.done; const remoteDone = remoteRec[type]?.done; if (localDone || !remoteDone) return;
         const tplKey = `partner_${partnerKey}_${type}`; 
-        if (nItems[tplKey] === false) return; // 检查对方通知独立开关
+        if (nItems[tplKey] === false) return; 
         const logKey = `${tplKey}_${today}`; if (notifyLog[logKey]) return;
         const obj = nTexts[tplKey] || { channel: 'both', texts: [] };
         if (obj.channel === 'both' || obj.channel === 'page') {
-            const rawText = getRandomText(obj.texts) || `{name} 已${type === 'sleep' ? '休息' : '起床'} ({time})`; const time = remoteRec[type]?.time || '';
-            const body = rawText.replace(/{name}/g, partnerName).replace(/{time}/g, time); const title = obj.title || (type === 'sleep' ? (partnerKey === 'master' ? '👑 主人已休息' : '🎀 小狗已休息') : (partnerKey === 'master' ? '👑 主人已起床' : '🎀 小狗已起床'));
+            const rawText = getRandomText(obj.texts) || `{name} 已${type === 'sleep' ? '休息' : '起床'} ({time})`; 
+            const time = remoteRec[type]?.time || '';
+            const body = rawText.replace(/{name}/g, partnerName).replace(/{time}/g, time).replace(/{time_s}/g, time).replace(/{shichen}/g, '').replace(/{shichen_organ}/g, '').replace(/{shichen_time}/g, '').replace(/{weekday}/g, '').replace(/{date}/g, '').replace(/{duration}/g, '').replace(/{mins}/g, ''); 
+            const title = obj.title || (type === 'sleep' ? (partnerKey === 'master' ? '👑 主人已休息' : '🎀 小狗已休息') : (partnerKey === 'master' ? '👑 主人已起床' : '🎀 小狗已起床'));
             sendNotify(logKey, title, body);
         }
         notifyLog[logKey] = true;

@@ -30,7 +30,7 @@ window.saveToGitHub = async function() {
                 showBar('sync', 'sync', 30);
                 await pushAllData(getSyncableData().db, getSyncableData().config, remoteData.shas);
                 updateBar('sync', getProgressText('success') || '上传成功', 100); 
-                setTimeout(() => { hideBar('sync'); showToast('⬆️ 上传成功', 'success'); closeSettings(); }, 800); 
+                setTimeout(() => { hideBar('sync'); showToast('⬆️ 上传成功', 'success'); }, 800); 
             });
             return;
         }

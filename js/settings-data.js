@@ -22,7 +22,7 @@ window.getTabDataHTML = () => `
     <div class="progress-area" id="sync-progress" style="display: none; margin-bottom: 12px;"><div class="progress-bar-wrap"><div class="progress-bar" id="sync-progress-bar" style="width: 0%;"></div></div><div class="progress-text" id="sync-progress-text">正在处理...</div></div>
     <div class="flex-btn-group two-cols" style="margin-top: 8px;">
       <button class="btn outline" onclick="syncFromGitHub()">⬇️ 立即拉取</button>
-      <button class="btn primary" onclick="saveToGitHub()">⬆️ 立即上传</button>
+      <button class="btn outline" onclick="saveToGitHub()">⬆️ 立即上传</button>
     </div>
   </div>
   
@@ -42,7 +42,7 @@ window.getTabDataHTML = () => `
   
   <div class="config-card">
     <div class="config-title">🛠️ 打卡记录修正</div>
-    <div class="form-group"><input type="date" id="cfg-fix-date" onchange="renderFixPanel()"></div>
+    <div class="form-group"><input type="date" id="cfg-fix-date" onchange="window.renderFixPanel()"></div>
     <div class="fix-panel" id="fix-panel"></div>
   </div>
   

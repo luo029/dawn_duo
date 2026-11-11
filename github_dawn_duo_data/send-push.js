@@ -13,7 +13,18 @@ const LOG_FILE = 'push_log.json';
 const TEST_MODE = process.env.TEST_MODE === 'true';
 const CUSTOM_TITLE = process.env.CUSTOM_TITLE || '';
 const CUSTOM_BODY = process.env.CUSTOM_BODY || '';
+const TEST_TARGET = process.env.TEST_TARGET || 'all';
 const TRIGGER_FROM = process.env.TRIGGER_FROM || '';
+
+const SHICHEN = [
+  {name:'子时', time:'23:00-01:00', organ:'胆'}, {name:'丑时', time:'01:00-03:00', organ:'肝'}, {name:'寅时', time:'03:00-05:00', organ:'肺'}, 
+  {name:'卯时', time:'05:00-07:00', organ:'大肠'}, {name:'辰时', time:'07:00-09:00', organ:'胃'}, {name:'巳时', time:'09:00-11:00', organ:'脾'}, 
+  {name:'午时', time:'11:00-13:00', organ:'心'}, {name:'未时', time:'13:00-15:00', organ:'小肠'}, {name:'申时', time:'15:00-17:00', organ:'膀胱'}, 
+  {name:'酉时', time:'17:00-19:00', organ:'肾'}, {name:'戌时', time:'19:00-21:00', organ:'心包'}, {name:'亥时', time:'21:00-23:00', organ:'三焦'}
+];
+const WEEKDAYS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+
+function getShichenInfo(hour) { let index = Math.floor((hour + 1) / 2) % 12; return SHICHEN[index]; }
 
 function getTimeInTZ(tzObj) {
   if (!tzObj || !tzObj.type) return new Date();
@@ -44,7 +55,9 @@ function checkPushText(notifyTexts, key, replacements) {
   const texts = item.texts || [];
   if (texts.length === 0) return null;
   let text = texts[Math.floor(Math.random() * texts.length)];
-  for (const [k, v] of Object.entries(replacements)) text = text.replace(new RegExp(`{${k}}`, 'g'), v);
+  for (const [k, v] of Object.entries(replacements)) {
+    text = text.replace(new RegExp(`{${k}}`, 'g'), v === undefined || v === null ? '' : v);
+  }
   return text;
 }
 
@@ -80,13 +93,6 @@ function checkPushText(notifyTexts, key, replacements) {
   const timeZones = configs.timeZones || { master: { type: 'iana', value: 'Asia/Shanghai' }, doggy: { type: 'iana', value: 'America/New_York' } };
   const notifySettings = configs.notifySettings || {};
   const notifyItems = notifySettings.items || {};
-  
-  const windowEnabled = notifySettings.overtime_window_enabled !== false;
-  const sleepStart = toMins(notifySettings.overtime_sleep_start || '21:00');
-  const sleepEnd = toMins(notifySettings.overtime_sleep_end || '05:00');
-  const wakeStart = toMins(notifySettings.overtime_wake_start || '05:00');
-  const wakeEnd = toMins(notifySettings.overtime_wake_end || '12:00');
-  const maxTimes = notifySettings.overtime_max_times !== undefined ? notifySettings.overtime_max_times : 3;
 
   const isService = mode === 'service';
   const mName = (texts.masterName || (isService ? '主人' : '先生')).replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, '').trim();
@@ -95,13 +101,9 @@ function checkPushText(notifyTexts, key, replacements) {
   const failedEndpoints = [];
   let logUpdated = false;
 
-  const isInWindow = (currentMins, start, end) => { if (!windowEnabled) return true; if (start > end) { return currentMins >= start || currentMins < end; } else { return currentMins >= start && currentMins < end; } };
-
   for (const sub of subscriptions) {
-    if (sub.blocked === true) {
-        console.log(`[跳过] 设备已屏蔽: ${sub.endpoint.slice(0, 30)}...`);
-        continue;
-    }
+    if (sub.blocked === true) continue;
+    if (TEST_MODE && TEST_TARGET !== 'all' && !sub.endpoint.endsWith(TEST_TARGET)) continue;
 
     let title = '', body = '', icon = '/icon-512.png';
     let id = sub.identity || 'both';
@@ -124,24 +126,27 @@ function checkPushText(notifyTexts, key, replacements) {
         continue; 
     }
 
+    const mNow = getTimeInTZ(timeZones.master);
+    const dNow = getTimeInTZ(timeZones.doggy);
     const mDateStr = getDateStr(timeZones.master);
     const dDateStr = getDateStr(timeZones.doggy);
-    const mMins = getMins(getTimeInTZ(timeZones.master));
-    const dMins = getMins(getTimeInTZ(timeZones.doggy));
+    const mMins = getMins(mNow);
+    const dMins = getMins(dNow);
     
     const mSleepGoal = toMins(goals.master?.sleep || '23:00');
     const mWakeGoal = toMins(goals.master?.wake || '07:00');
     const dSleepGoal = toMins(goals.doggy?.sleep || '22:30');
     const dWakeGoal = toMins(goals.doggy?.wake || '07:30');
 
-    let textKey = '', replacements = {}, sendType = '', targetDate = '', targetUser = '';
+    let targetUser = '';
 
     if (TRIGGER_FROM === 'partner') {
       if (sendMaster) {
         if (remoteDb.doggy[dDateStr]?.wake?.done) { textKey = 'partner_doggy_wake'; sendType = 'wake'; }
         else if (remoteDb.doggy[dDateStr]?.sleep?.done) { textKey = 'partner_doggy_sleep'; sendType = 'sleep'; }
         else continue;
-        replacements = { name: dName, time: remoteDb.doggy[dDateStr]?.[sendType]?.time || '', mins: '' };
+        const rTime = remoteDb.doggy[dDateStr]?.[sendType]?.time || '';
+        replacements = { name: dName, time: rTime, time_s: rTime, shichen: '', shichen_organ: '', shichen_time: '', weekday: '', date: '', duration: '', mins: '' };
         if (notifyItems[textKey] === false) continue;
         body = checkPushText(notifyTexts, textKey, replacements);
         title = '📡 对方动态';
@@ -149,7 +154,8 @@ function checkPushText(notifyTexts, key, replacements) {
         if (remoteDb.master[mDateStr]?.wake?.done) { textKey = 'partner_master_wake'; sendType = 'wake'; }
         else if (remoteDb.master[mDateStr]?.sleep?.done) { textKey = 'partner_master_sleep'; sendType = 'sleep'; }
         else continue;
-        replacements = { name: mName, time: remoteDb.master[mDateStr]?.[sendType]?.time || '', mins: '' };
+        const rTime = remoteDb.master[mDateStr]?.[sendType]?.time || '';
+        replacements = { name: mName, time: rTime, time_s: rTime, shichen: '', shichen_organ: '', shichen_time: '', weekday: '', date: '', duration: '', mins: '' };
         if (notifyItems[textKey] === false) continue;
         body = checkPushText(notifyTexts, textKey, replacements);
         title = '📡 对方动态';
@@ -158,7 +164,6 @@ function checkPushText(notifyTexts, key, replacements) {
       if (body) {
          try {
             await webpush.sendNotification(sub, JSON.stringify({ title, body, icon }));
-            console.log(`[伙伴打卡触发] Sent to ${sub.endpoint.slice(0, 50)}...`);
          } catch(err) {
             if (err.statusCode === 404 || err.statusCode === 410) failedEndpoints.push(sub.endpoint);
          }
@@ -167,67 +172,81 @@ function checkPushText(notifyTexts, key, replacements) {
     }
 
     if (sendMaster) {
-      targetUser = 'master'; targetDate = mDateStr;
-      if (Math.abs(mMins - mSleepGoal) < Math.abs(mMins - mWakeGoal)) { textKey = 'master_sleep'; sendType = 'sleep'; } else { textKey = 'master_wake'; sendType = 'wake'; }
-      replacements = { name: mName, time: minsToTime(mMins), mins: '' };
-      
-      const isDone = sendType === 'sleep' ? remoteDb.master[mDateStr]?.sleep?.done : remoteDb.master[mDateStr]?.wake?.done;
-      if (isDone && !TEST_MODE) { console.log(`[跳过] ${mName} 今日已打卡 ${sendType}`); continue; }
-
-      if (sendType === 'sleep') {
-        if (!isInWindow(mMins, sleepStart, sleepEnd) && !TEST_MODE) continue;
-        let diff = mMins - mSleepGoal; if (diff > 720) diff -= 1440;
-        if (diff < 30 && !TEST_MODE) continue; 
-      } else {
-        if (!isInWindow(mMins, wakeStart, wakeEnd) && !TEST_MODE) continue;
-        if (mMins - mWakeGoal < 30 && !TEST_MODE) continue;
-      }
+      targetUser = 'master';
+      if (Math.abs(mMins - mSleepGoal) < Math.abs(mMins - mWakeGoal)) { sendType = 'sleep'; } else { sendType = 'wake'; }
     } else if (sendDoggy) {
-      targetUser = 'doggy'; targetDate = dDateStr;
-      if (Math.abs(dMins - dSleepGoal) < Math.abs(dMins - dWakeGoal)) { textKey = 'doggy_sleep'; sendType = 'sleep'; } else { textKey = 'doggy_wake'; sendType = 'wake'; }
-      replacements = { name: dName, time: minsToTime(dMins), mins: '' };
-      
-      const isDone = sendType === 'sleep' ? remoteDb.doggy[dDateStr]?.sleep?.done : remoteDb.doggy[dDateStr]?.wake?.done;
-      if (isDone && !TEST_MODE) { console.log(`[跳过] ${dName} 今日已打卡 ${sendType}`); continue; }
+      targetUser = 'doggy';
+      if (Math.abs(dMins - dSleepGoal) < Math.abs(dMins - dWakeGoal)) { sendType = 'sleep'; } else { sendType = 'wake'; }
+    } else { continue; }
 
-      if (sendType === 'sleep') {
-        if (!isInWindow(dMins, sleepStart, sleepEnd) && !TEST_MODE) continue;
-        let diff = dMins - dSleepGoal; if (diff > 720) diff -= 1440;
-        if (diff < 30 && !TEST_MODE) continue; 
-      } else {
-        if (!isInWindow(dMins, wakeStart, wakeEnd) && !TEST_MODE) continue;
-        if (dMins - dWakeGoal < 30 && !TEST_MODE) continue;
-      }
+    const isMaster = targetUser === 'master';
+    const currentMins = isMaster ? mMins : dMins;
+    const sleepGoal = isMaster ? mSleepGoal : dSleepGoal;
+    const wakeGoal = isMaster ? mWakeGoal : dWakeGoal;
+    const goalMin = sendType === 'sleep' ? sleepGoal : wakeGoal;
+    
+    let diff = currentMins - goalMin;
+    if (sendType === 'sleep') { if (diff > 720) diff -= 1440; if (diff < -720) diff += 1440; }
+
+    const isDone = sendType === 'sleep' ? (isMaster ? remoteDb.master[mDateStr]?.sleep?.done : remoteDb.doggy[dDateStr]?.sleep?.done) : (isMaster ? remoteDb.master[mDateStr]?.wake?.done : remoteDb.doggy[dDateStr]?.wake?.done);
+    if (isDone && !TEST_MODE) continue;
+
+    const targetNow = isMaster ? mNow : dNow;
+    const shichenInfo = getShichenInfo(targetNow.getHours());
+    let commonReplacements = { 
+        name: isMaster ? mName : dName, 
+        time: minsToTime(currentMins), 
+        time_s: `${minsToTime(currentMins)}:${String(targetNow.getSeconds()).padStart(2,'0')}`, 
+        shichen: shichenInfo.name, 
+        shichen_organ: shichenInfo.organ, 
+        shichen_time: shichenInfo.time, 
+        weekday: WEEKDAYS[targetNow.getDay()], 
+        date: `${targetNow.getMonth()+1}月${targetNow.getDate()}日`, 
+        duration: '', 
+        mins: '' 
+    };
+
+    let targetWindowEnabled = isMaster ? (notifySettings.master_window_enabled !== false) : (notifySettings.doggy_window_enabled !== false);
+    let tSleepStart = toMins(isMaster ? (notifySettings.master_sleep_start || '21:00') : (notifySettings.doggy_sleep_start || '21:00'));
+    let tSleepEnd = toMins(isMaster ? (notifySettings.master_sleep_end || '05:00') : (notifySettings.doggy_sleep_end || '05:00'));
+    let tWakeStart = toMins(isMaster ? (notifySettings.master_wake_start || '05:00') : (notifySettings.doggy_wake_start || '05:00'));
+    let tWakeEnd = toMins(isMaster ? (notifySettings.master_wake_end || '12:00') : (notifySettings.doggy_wake_end || '12:00'));
+    let tMaxTimes = isMaster ? (notifySettings.master_max_times !== undefined ? notifySettings.master_max_times : 3) : (notifySettings.doggy_max_times !== undefined ? notifySettings.doggy_max_times : 3);
+
+    let inWindow = true;
+    if (targetWindowEnabled) {
+        const start = sendType === 'sleep' ? tSleepStart : tWakeStart;
+        const end = sendType === 'sleep' ? tSleepEnd : tWakeEnd;
+        if (start > end) inWindow = currentMins >= start || currentMins < end;
+        else inWindow = currentMins >= start && currentMins < end;
     }
 
-    if (notifyItems[textKey] === false && !TEST_MODE) continue;
-
-    const isOvertime = !TEST_MODE && (
-      (sendType === 'sleep' && (mMins - (targetUser === 'master' ? mSleepGoal : dSleepGoal) >= 30 || (mMins + 1440 - (targetUser === 'master' ? mSleepGoal : dSleepGoal)) % 1440 >= 30)) ||
-      (sendType === 'wake' && mMins - (targetUser === 'master' ? mWakeGoal : dWakeGoal) >= 30)
-    );
-
-    if (isOvertime) {
-      const roleOKey = `${targetUser}_${sendType}_overtime`;
-      textKey = notifyTexts[roleOKey] ? roleOKey : (sendType === 'sleep' ? 'overtime_sleep' : 'overtime_wake');
-      
-      const goalMin = sendType === 'sleep' ? (targetUser === 'master' ? mSleepGoal : dSleepGoal) : (targetUser === 'master' ? mWakeGoal : dWakeGoal);
-      const currentMin = targetUser === 'master' ? mMins : dMins;
-      
-      const overtimeMins = sendType === 'sleep' ? (currentMin - goalMin + 1440) % 1440 : currentMin - goalMin;
-      replacements.mins = overtimeMins;
-      
-      const oh = Math.floor(overtimeMins / 60);
-      const om = overtimeMins % 60;
-      if (oh > 0 && om > 0) replacements.time = `${oh} h ${om} m`;
-      else if (oh > 0) replacements.time = `${oh} h`;
-      else replacements.time = `${om} m`;
-
-      if (maxTimes > 0) {
-        const logKey = `${targetDate}_${targetUser}_${sendType}_overtime`;
-        if ((pushLog[logKey] || 0) >= maxTimes) { console.log(`[跳过] ${replacements.name} 超时提醒已达最大次数`); continue; }
-        pushLog[logKey] = (pushLog[logKey] || 0) + 1; logUpdated = true;
-      }
+    if (diff >= -15 && diff <= 15) {
+        if (notifyItems[`${targetUser}_${sendType}`] === false && !TEST_MODE) continue;
+        if (!inWindow && !TEST_MODE) continue;
+        textKey = `${targetUser}_${sendType}`;
+        replacements = commonReplacements;
+    } else if (diff >= 30) {
+        if (notifyItems[`${targetUser}_${sendType}_overtime`] === false && !TEST_MODE) continue;
+        if (!inWindow && !TEST_MODE) continue;
+        
+        if (tMaxTimes > 0 && !TEST_MODE) {
+            const logKey = `${isMaster ? mDateStr : dDateStr}_${targetUser}_${sendType}_overtime`;
+            if ((pushLog[logKey] || 0) >= tMaxTimes) continue;
+            pushLog[logKey] = (pushLog[logKey] || 0) + 1; logUpdated = true;
+        }
+        
+        textKey = `${targetUser}_${sendType}_overtime`;
+        const oh = Math.floor(diff / 60);
+        const om = diff % 60;
+        let durStr = '';
+        if (oh > 0 && om > 0) durStr = `${oh} h ${om} m`;
+        else if (oh > 0) durStr = `${oh} h`;
+        else durStr = `${om} m`;
+        
+        replacements = Object.assign({}, commonReplacements, { duration: durStr, mins: diff });
+    } else {
+        continue;
     }
 
     body = checkPushText(notifyTexts, textKey, replacements);
@@ -243,16 +262,14 @@ function checkPushText(notifyTexts, key, replacements) {
 
     try {
       await webpush.sendNotification(sub, payload);
-      console.log(`Sent to ${sub.endpoint.slice(0, 50)}... (Identity: ${id}) | Type: ${textKey}`);
     } catch (err) {
-      if (err.statusCode === 404 || err.statusCode === 410) { failedEndpoints.push(sub.endpoint); } else { console.error(`Failed:`, err.message); }
+      if (err.statusCode === 404 || err.statusCode === 410) { failedEndpoints.push(sub.endpoint); }
     }
   }
 
   if (failedEndpoints.length > 0) {
     const remaining = subscriptions.filter(s => !failedEndpoints.includes(s.endpoint));
     fs.writeFileSync(SUBS_FILE, JSON.stringify(remaining, null, 2));
-    console.log(`Removed ${failedEndpoints.length} expired subscription(s).`);
   }
   if (logUpdated) {
     fs.writeFileSync(LOG_FILE, JSON.stringify(pushLog, null, 2));

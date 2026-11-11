@@ -190,5 +190,7 @@ function createDayBox(dateStr, showDateText = false) {
   const mPure = getPureName(t.masterName) || '先生', dPure = getPureName(t.doggyName) || '宝宝';
   const tooltip = `${dateStr} | ${mPure}: ${mScore}/2, ${dPure}: ${dScore}/2`;
   if (mScore === 2 && dScore === 2) statusClass = 'done-both'; else if (mScore === 2) statusClass = 'done-master'; else if (dScore === 2) statusClass = 'done-doggy'; else if (mScore > 0 && dScore > 0) statusClass = 'half-both'; else if (mScore > 0) statusClass = 'half-master'; else if (dScore > 0) statusClass = 'half-doggy';
-  const el = document.createElement('div'); el.className = `day-box ${statusClass}`.trim(); el.title = tooltip; if (!showDateText) el.textContent = parseInt(dateStr.split('-')[2], 10); return el;
+  const el = document.createElement('div'); el.className = `day-box ${statusClass}`.trim(); el.title = tooltip; if (!showDateText) el.textContent = parseInt(dateStr.split('-')[2], 10); 
+  el.onclick = () => { if (window.openHistoryDetail) window.openHistoryDetail(dateStr); };
+  return el;
 }

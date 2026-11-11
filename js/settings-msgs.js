@@ -155,9 +155,7 @@ window.openNotifyTestModal = function() {
 
     const targetSelect = document.getElementById('test-notify-target');
     if (targetSelect) {
-        // 先确保原本的初始化完成
         if (window.initCustomSelects) window.initCustomSelects();
-        
         targetSelect.innerHTML = '<option value="all">全部授权设备</option>';
         if (window.refreshCustomSelects) window.refreshCustomSelects();
 
@@ -173,7 +171,6 @@ window.openNotifyTestModal = function() {
                         html += `<option value="${sub.endpoint.slice(-20)}">${dName} (${idText})</option>`;
                     });
                     targetSelect.innerHTML = html;
-                    // 只刷新选项内容，不摧毁 DOM 结构
                     if (window.refreshCustomSelects) window.refreshCustomSelects();
                 }
             }).catch(e => console.warn('拉取设备列表失败', e));
@@ -234,6 +231,7 @@ window.updateTestPreview = function() {
     document.getElementById('test-notify-title-preview').textContent = title; 
     document.getElementById('test-notify-body-preview').textContent = body; 
 };
+
 window.triggerTestNotification = async function() { 
     if (!notificationSupported()) return showToast('当前浏览器不支持通知', 'late'); 
     if (!window.isSecureContext) return showToast('⚠️ 必须在 HTTPS 下', 'late'); 
@@ -253,7 +251,7 @@ window.triggerTestNotification = async function() {
         if (!ghConfig.user || !ghConfig.repo || !ghConfig.token) return showToast('请先配置 GitHub Token 才能测试云端推送', 'late'); 
         showToast('正在请求云端发送...', 'success'); 
         try { 
-            const res = await fetch(`https://api.github.com/repos/${ghConfig.user}/${ghConfig.repo}/actions/workflows/push.yml/dispatches`, { 
+            const res = await ghFetch(`/repos/${ghConfig.user}/${ghConfig.repo}/actions/workflows/push.yml/dispatches`, { 
                 method: 'POST', 
                 headers: { 'Authorization': `token ${ghConfig.token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' }, 
                 body: JSON.stringify({ 
@@ -278,12 +276,21 @@ window.openProgressTextModal = function() { let role = identity || 'both'; docum
 window.updateProgTextInputs = function() { const pt = P().progressTexts || {}; const role = document.getElementById('cfg-prog-role').value; const arr = pt[role] || pt.both || pt; const setVal = (id, val) => { const el = document.getElementById(id); if (el) { el.value = val; el.placeholder = '默认'; } }; setVal('cfg-prog-connect', arr.connect || ''); setVal('cfg-prog-auth', arr.auth || ''); setVal('cfg-prog-sync', arr.sync || ''); setVal('cfg-prog-cancel', arr.cancel || ''); setVal('cfg-prog-success', arr.success || ''); };
 window.closeProgressTextModal = function() { const prof = P(); if (!prof.progressTexts) prof.progressTexts = {}; const role = document.getElementById('cfg-prog-role').value; if (!prof.progressTexts[role]) prof.progressTexts[role] = {}; const getVal = (id, fallback) => { const el = document.getElementById(id); return el ? el.value.trim() : fallback; }; prof.progressTexts[role].connect = getVal('cfg-prog-connect', ''); prof.progressTexts[role].auth = getVal('cfg-prog-auth', ''); prof.progressTexts[role].sync = getVal('cfg-prog-sync', ''); prof.progressTexts[role].cancel = getVal('cfg-prog-cancel', ''); prof.progressTexts[role].success = getVal('cfg-prog-success', ''); try { localStorage.setItem('dawn-duo-configs', JSON.stringify(configs)); } catch (e) {} const modal = document.getElementById('progress-text-modal'); if (modal) modal.classList.remove('show'); if (window.debounceSync) debounceSync(); showToast('加载文案已保存', 'success'); };
 
-let currentMsgKey = ''; const MSG_KEYS = ['master_sleep_success', 'master_sleep_late', 'master_wake_success', 'master_wake_late', 'doggy_sleep_success', 'doggy_sleep_late', 'doggy_wake_success', 'doggy_wake_late'];
-function updateMsgCounts() { const pool = P().msgPool || {}; MSG_KEYS.forEach(key => { const [user, type, status] = key.split('_'); const arr = pool?.[user]?.[type]?.[status] || []; const el = document.getElementById(`cnt_${key}`); if (el) el.textContent = `${arr.length} 条`; }); }
+let currentMsgKey = ''; 
+const MSG_KEYS = ['master_sleep_success', 'master_sleep_late', 'master_wake_success', 'master_wake_late', 'doggy_sleep_success', 'doggy_sleep_late', 'doggy_wake_success', 'doggy_wake_late'];
+window.updateMsgCounts = function() { 
+    const pool = P().msgPool || {}; 
+    MSG_KEYS.forEach(key => { 
+        const [user, type, status] = key.split('_'); 
+        const arr = pool?.[user]?.[type]?.[status] || []; 
+        const el = document.getElementById(`cnt_${key}`); 
+        if (el) el.textContent = `${arr.length} 条`; 
+    }); 
+};
 window.openSubMsg = function(key, title) { currentMsgKey = key; const t = P().texts || DEFAULT_TEXTS_DAILY; const name = key.startsWith('master') ? t.masterName : t.doggyName; const titleEl = document.getElementById('sub-modal-title'); if (titleEl) titleEl.textContent = `${getPureName(name)} - ${title} (${modeLabel()})`; const [user, type, status] = key.split('_'); const arr = (P().msgPool || {})?.[user]?.[type]?.[status] || []; const listEl = document.getElementById('sub-msg-list'); if (!listEl) return; listEl.innerHTML = ''; arr.forEach(text => addSubMsgItem(text)); const modal = document.getElementById('sub-modal'); if (modal) modal.classList.add('show'); };
 window.closeSubMsg = function() { const modal = document.getElementById('sub-modal'); if (modal) modal.classList.remove('show'); };
 window.addSubMsgItem = function(text = '') { const listEl = document.getElementById('sub-msg-list'); if (!listEl) return; const row = document.createElement('div'); row.className = 'msg-item'; const input = document.createElement('input'); input.type = 'text'; input.value = text; input.placeholder = '输入一条新文案...'; const delBtn = document.createElement('button'); delBtn.className = 'btn-del'; delBtn.type = 'button'; delBtn.textContent = '✕'; delBtn.onclick = () => row.remove(); row.appendChild(input); row.appendChild(delBtn); listEl.appendChild(row); };
-window.saveSubMsg = function() { const listEl = document.getElementById('sub-msg-list'); if (!listEl) return; const inputs = listEl.querySelectorAll('input'); const newArr = Array.from(inputs).map(inp => inp.value.trim()).filter(v => v !== ''); const [user, type, status] = currentMsgKey.split('_'); const prof = P(); if (!prof.msgPool) prof.msgPool = {}; if (!prof.msgPool[user]) prof.msgPool[user] = {}; if (!prof.msgPool[user][type]) prof.msgPool[user][type] = {}; prof.msgPool[user][type][status] = newArr; updateMsgCounts(); closeSubMsg(); try { localStorage.setItem('dawn-duo-configs', JSON.stringify(configs)); } catch (e) { } if (window.debounceSync) debounceSync(); };
+window.saveSubMsg = function() { const listEl = document.getElementById('sub-msg-list'); if (!listEl) return; const inputs = listEl.querySelectorAll('input'); const newArr = Array.from(inputs).map(inp => inp.value.trim()).filter(v => v !== ''); const [user, type, status] = currentMsgKey.split('_'); const prof = P(); if (!prof.msgPool) prof.msgPool = {}; if (!prof.msgPool[user]) prof.msgPool[user] = {}; if (!prof.msgPool[user][type]) prof.msgPool[user][type] = {}; prof.msgPool[user][type][status] = newArr; if(window.updateMsgCounts) window.updateMsgCounts(); closeSubMsg(); try { localStorage.setItem('dawn-duo-configs', JSON.stringify(configs)); } catch (e) { } if (window.debounceSync) debounceSync(); };
 
 window.openSleepTextModal = function(role) { const sTexts = P().sleepTexts?.[role] || (configs.mode === 'service' ? DEFAULT_SLEEP_TEXTS_SERVICE[role] : DEFAULT_SLEEP_TEXTS_DAILY[role]) || {}; document.getElementById('cfg-sleep-role').value = role; document.getElementById('cfg-sleep-title').value = sTexts.title || ''; document.getElementById('cfg-sleep-desc').value = sTexts.desc || ''; document.getElementById('cfg-sleep-sub').value = sTexts.sub || ''; document.getElementById('cfg-sleep-cross').value = sTexts.cross || ''; document.getElementById('cfg-sleep-overwrite').value = sTexts.overwrite || ''; document.getElementById('cfg-sleep-cancel').value = sTexts.cancel || ''; document.getElementById('sleep-text-modal').classList.add('show'); };
 window.saveSleepTextModal = function() { const role = document.getElementById('cfg-sleep-role').value; const prof = P(); if (!prof.sleepTexts) prof.sleepTexts = {}; prof.sleepTexts[role] = { title: document.getElementById('cfg-sleep-title').value.trim(), desc: document.getElementById('cfg-sleep-desc').value.trim(), sub: document.getElementById('cfg-sleep-sub').value.trim(), cross: document.getElementById('cfg-sleep-cross').value.trim(), overwrite: document.getElementById('cfg-sleep-overwrite').value.trim(), cancel: document.getElementById('cfg-sleep-cancel').value.trim() }; try { localStorage.setItem('dawn-duo-configs', JSON.stringify(configs)); } catch (e) {} document.getElementById('sleep-text-modal').classList.remove('show'); if (window.debounceSync) debounceSync(); showToast('多段睡眠文案已保存', 'success'); };
@@ -460,7 +467,7 @@ function doImport(text, targetKey) {
 function importSingleText(text, targetKey) {
     doImport(text, targetKey);
     try { localStorage.setItem('dawn-duo-configs', JSON.stringify(configs)); } catch (e) {}
-    updateMsgCounts();
+    if(window.updateMsgCounts) window.updateMsgCounts();
     if (window.debounceSync) window.debounceSync();
     showToast('单条导入成功', 'success');
 }
@@ -483,7 +490,7 @@ window.confirmImportLibrary = function() {
         totalAdded++; 
     }); 
     try { localStorage.setItem('dawn-duo-configs', JSON.stringify(configs)); } catch (e) {} 
-    updateMsgCounts(); 
+    if(window.updateMsgCounts) window.updateMsgCounts();
     closeImportLibModal(); 
     if (window.debounceSync) window.debounceSync(); 
     showToast(`成功导入 ${totalAdded} 条文案 💗`, 'success'); 

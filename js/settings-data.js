@@ -19,6 +19,14 @@ window.getTabDataHTML = () => `
       <div class="form-group"><label>自动拉取间隔</label><select id="cfg-sync-interval"><option value="0">关闭</option><option value="1">1 分钟</option><option value="5">5 分钟</option><option value="15">15 分钟</option><option value="30">30 分钟</option><option value="60">1 小时</option></select></div>
       <div class="form-group" style="display:flex; align-items:center; justify-content:center;"><label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:600; font-size:0.85rem;"><input type="checkbox" id="cfg-sync-prompt" style="width:16px; height:16px; accent-color: var(--tab-active);">差异时弹窗</label></div>
     </div>
+    <div class="form-group" style="margin-bottom: 8px;">
+        <label>GitHub API 代理地址 (可选，留空则直连)</label>
+        <input type="text" id="cfg-gh-proxy" placeholder="例如 https://gh-proxy.xxx.workers.dev">
+    </div>
+    <div class="switch-row" style="margin-bottom: 12px;">
+        <label>直连超时自动切代理<span class="help-icon" data-tip="如果直连 GitHub API 超过 3 秒未响应，将自动使用上方填写的代理地址重试。">i</span></label>
+        <label class="toggle-switch"><input type="checkbox" id="cfg-gh-auto-fallback"><span class="slider"></span></label>
+    </div>
     <div class="progress-area" id="sync-progress" style="display: none; margin-bottom: 12px;"><div class="progress-bar-wrap"><div class="progress-bar" id="sync-progress-bar" style="width: 0%;"></div></div><div class="progress-text" id="sync-progress-text">正在处理...</div></div>
     <div class="flex-btn-group two-cols" style="margin-top: 8px;">
       <button class="btn outline" onclick="syncFromGitHub()">⬇️ 立即拉取</button>
@@ -102,10 +110,9 @@ window.loadPushDevices = async function() {
         }); 
     } catch(e) { 
         console.error('设备读取失败:', e);
-        // 将真实报错展示在界面上
         container.innerHTML = `<div style="text-align: center; color: var(--warn); font-size: 0.8rem; padding: 10px;">
             读取失败: ${e.message || '网络错误'}<br>
-            <span style="font-size: 0.7rem; opacity: 0.7; margin-top: 4px; display: block;">（如在国内，请检查能否正常直连 GitHub API）</span>
+            <span style="font-size: 0.7rem; opacity: 0.7; margin-top: 4px; display: block;">（如果频繁超时，请在上方填写 CF 代理地址）</span>
         </div>`; 
     } 
 };

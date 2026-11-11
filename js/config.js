@@ -54,6 +54,16 @@ let configs = deepMerge(DEFAULT_CONFIGS, savedConfigs);
 function P() { return configs.profiles[configs.mode] || configs.profiles.daily; }
 function modeLabel() { return configs.mode === 'service' ? '主仆' : '日常'; }
 const IDENTITY_KEY = 'dawn-duo-identity'; let identity = ''; try { identity = localStorage.getItem(IDENTITY_KEY) || ''; } catch (e) { identity = ''; } if (['master', 'doggy', 'both'].indexOf(identity) === -1) identity = '';
-const CONFIG_KEY = 'dawn-duo-gh-config'; let ghConfig = { user: 'luo029', repo: 'dawn_duo_data', path: 'records.json', configPath: 'config.json', token: '', autoSync: true, syncInterval: 5, syncPrompt: true }; try { const savedGh = JSON.parse(localStorage.getItem(CONFIG_KEY)) || {}; ghConfig.token = savedGh.token || ''; ghConfig.autoSync = savedGh.autoSync !== false; ghConfig.syncInterval = savedGh.syncInterval !== undefined ? Number(savedGh.syncInterval) : 5; ghConfig.syncPrompt = savedGh.syncPrompt !== false; } catch (e) { }
+const CONFIG_KEY = 'dawn-duo-gh-config'; 
+let ghConfig = { user: 'luo029', repo: 'dawn_duo_data', path: 'records.json', configPath: 'config.json', token: '', autoSync: true, syncInterval: 5, syncPrompt: true, apiProxy: '', autoFallback: true }; 
+try { 
+    const savedGh = JSON.parse(localStorage.getItem(CONFIG_KEY)) || {}; 
+    ghConfig.token = savedGh.token || ''; 
+    ghConfig.autoSync = savedGh.autoSync !== false; 
+    ghConfig.syncInterval = savedGh.syncInterval !== undefined ? Number(savedGh.syncInterval) : 5; 
+    ghConfig.syncPrompt = savedGh.syncPrompt !== false; 
+    ghConfig.apiProxy = savedGh.apiProxy || '';
+    ghConfig.autoFallback = savedGh.autoFallback !== false;
+} catch (e) { }
 let db = { master: {}, doggy: {} }; try { const local = localStorage.getItem('dawn-duo-data'); if (local) { const parsed = JSON.parse(local); db.master = parsed.master || {}; db.doggy = parsed.doggy || parsed.dog || {}; } } catch (e) { db = { master: {}, doggy: {} }; }
 let notifyLog = JSON.parse(localStorage.getItem('dawn-duo-notify-log') || '{}'); let lastLogicalDate = getLogicalDateStr();

@@ -113,11 +113,10 @@ async function triggerPartnerPush() {
     }
     if (!ghConfig.user || !ghConfig.repo || !ghConfig.token) return;
     try {
-        // 强制先上传最新数据到云端，防止云端脚本拉取旧数据防误触跳过，确保对方一定能收到
         if (typeof autoSyncToGitHub === 'function') {
             await autoSyncToGitHub(true); 
         }
-        await fetch(`https://api.github.com/repos/${ghConfig.user}/${ghConfig.repo}/actions/workflows/push.yml/dispatches`, {
+        await ghFetch(`/repos/${ghConfig.user}/${ghConfig.repo}/actions/workflows/push.yml/dispatches`, {
             method: 'POST',
             headers: { 'Authorization': `token ${ghConfig.token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
             body: JSON.stringify({ ref: 'main', inputs: { trigger_from: 'partner', test_mode: 'false' } })

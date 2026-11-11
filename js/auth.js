@@ -3,7 +3,7 @@ window.verifyAndUnlock = async function() {
   const token = tokenInput.value.trim(); if (!token) return showToast('小狗不乖哦，口令不能空着~', 'late');
   tokenInput.disabled = true; btn.disabled = true; btn.textContent = '正在献上忠诚...'; progressArea.classList.add('show'); progressBar.classList.remove('error'); progressBar.style.width = '10%'; progressText.classList.remove('error'); progressText.textContent = '正在核对主人的印记...';
   try {
-    const res = await fetch(`https://api.github.com/repos/${ghConfig.user}/${ghConfig.repo}`, { headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json' } });
+    const res = await ghFetch(`/repos/${ghConfig.user}/${ghConfig.repo}`, { headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json' } });
     if (!res.ok) throw new Error('Token无效或无权限');
     progressBar.style.width = '40%'; progressText.textContent = '主人已确认，正在解开小狗的项圈...';
     setTimeout(() => {

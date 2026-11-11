@@ -3,6 +3,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const style = document.createElement('style');
   style.innerHTML = `
+    #settings-modal .modal { height: 82vh; max-height: 800px; }
+    @media (max-width: 600px) {
+      #settings-modal .modal { height: 88vh; max-height: none; }
+    }
     .action-item { display:flex; align-items:center; gap:12px; width:100%; padding:14px 16px; border:1px solid var(--border); background:var(--bg); border-radius:12px; font-size:0.95rem; color:var(--text); cursor:pointer; transition:all 0.2s; text-align:left; font-weight:500; }
     .action-item:hover { background:var(--settings-bg); border-color:var(--tab-active); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
     .action-item .icon { font-size:1.1rem; width:20px; text-align:center; }

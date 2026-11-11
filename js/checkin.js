@@ -147,11 +147,13 @@ function updatePartnerStatusPanel() {
   const nTexts = P().notifyTexts || DEFAULT_NOTIFY_TEXTS.daily;
   if (rec?.sleep?.done && !rec?.wake?.done) {
     panel.style.display = 'flex'; panel.className = 'partner-status-panel sleep-status';
-    const tpl = getRandomText(nTexts[`status_${partnerUser}_sleep`] || `🌙 {name} 已经休息啦 ({time})`) || `🌙 {name} 已经休息啦 ({time})`;
+    const sObj = nTexts[`status_${partnerUser}_sleep`] || { texts: [`🌙 {name} 已经休息啦 ({time})`] };
+    const tpl = getRandomText(sObj.texts) || `🌙 {name} 已经休息啦 ({time})`;
     panel.innerHTML = tpl.replace(/{name}/g, pName).replace(/{time}/g, rec.sleep.time || '已休息');
   } else if (rec?.wake?.done) {
     panel.style.display = 'flex'; panel.className = 'partner-status-panel wake-status';
-    const tpl = getRandomText(nTexts[`status_${partnerUser}_wake`] || `☀️ {name} 已经醒来啦 ({time})`) || `☀️ {name} 已经醒来啦 ({time})`;
+    const wObj = nTexts[`status_${partnerUser}_wake`] || { texts: [`☀️ {name} 已经醒来啦 ({time})`] };
+    const tpl = getRandomText(wObj.texts) || `☀️ {name} 已经醒来啦 ({time})`;
     panel.innerHTML = tpl.replace(/{name}/g, pName).replace(/{time}/g, rec.wake.time || '已起床');
   } else panel.style.display = 'none';
 }

@@ -9,55 +9,106 @@ function calculateDiff(localData, remoteData, isUpload) {
             const lDay = lUser[date] || {}, rDay = rUser[date] || {};
             ['sleep', 'wake'].forEach(type => {
                 const lRec = lDay[type], rRec = rDay[type], tName = type === 'sleep' ? '休息' : '起床';
-                if (!lRec && rRec) dbDiff.push({ type: isUpload ? 'remove' : 'add', text: `【${date}】${uName} ${tName}：将${isUpload ? '删除' : '新增'} (${rRec.time})` });
-                else if (lRec && !rRec) dbDiff.push({ type: isUpload ? 'add' : 'remove', text: `【${date}】${uName} ${tName}：将${isUpload ? '新增' : '删除'} (${lRec.time})` });
-                else if (lRec && rRec) { if (lRec.time !== rRec.time || lRec.done !== rRec.done) { const targetTime = isUpload ? lRec.time : rRec.time; dbDiff.push({ type: 'modify', text: `【${date}】${uName} ${tName}：修改 -> ${targetTime}` }); } }
+                const id = `db_${user}_${date}_${type}`;
+                if (!lRec && rRec) dbDiff.push({ id, path: ['db', user, date, type], type: isUpload ? 'remove' : 'add', local: lRec, remote: rRec, text: `【${date}】${uName} ${tName}：将${isUpload ? '删除' : '新增'} (${rRec.time})` });
+                else if (lRec && !rRec) dbDiff.push({ id, path: ['db', user, date, type], type: isUpload ? 'add' : 'remove', local: lRec, remote: rRec, text: `【${date}】${uName} ${tName}：将${isUpload ? '新增' : '删除'} (${lRec.time})` });
+                else if (lRec && rRec) { if (lRec.time !== rRec.time || lRec.done !== rRec.done) { const targetTime = isUpload ? lRec.time : rRec.time; dbDiff.push({ id, path: ['db', user, date, type], type: 'modify', local: lRec, remote: rRec, text: `【${date}】${uName} ${tName}：修改 -> ${targetTime}` }); } }
             });
         });
     });
     if (localData.config && localData.config.profiles) {
         ['daily', 'service'].forEach(mode => {
             const modeName = mode === 'daily' ? '日常' : '主仆', lProf = deepMerge(DEFAULT_CONFIGS.profiles[mode], localData.config.profiles?.[mode] || {}), rProf = deepMerge(DEFAULT_CONFIGS.profiles[mode], remoteData.config?.profiles?.[mode] || {});
-            const lTexts = lProf.texts || {}, rTexts = rProf.texts || {}, textKeys = new Set([...Object.keys(lTexts), ...Object.keys(rTexts)]);
-            textKeys.forEach(k => { const lv = lTexts[k], rv = rTexts[k]; if (lv !== rv) { const label = CONFIG_KEY_MAP[`texts.${k}`] || `文案 ${k}`, target = isUpload ? lv : rv; cfgDiff.push({ type: 'modify', text: `[${modeName}] ${label}：修改 -> ${target}` }); } });
-            const lNt = lProf.notifyTexts || {}, rNt = rProf.notifyTexts || {}, ntKeys = new Set([...Object.keys(lNt), ...Object.keys(rNt)]);
-            ntKeys.forEach(k => { const lv = lNt[k], rv = rNt[k]; if (JSON.stringify(lv) !== JSON.stringify(rv)) { const label = CONFIG_KEY_MAP[`notifyTexts.${k}`] || `通知 ${k}`, target = isUpload ? lv : rv; cfgDiff.push({ type: 'modify', text: `[${modeName}] ${label}：修改 -> ${target}` }); } });
-            if (!isObjectEqual(lProf.msgPool || {}, rProf.msgPool || {})) cfgDiff.push({ type: 'modify', text: `[${modeName}] 互动弹窗文案池 发生更新` });
-            if (!isObjectEqual(lProf.progressTexts || {}, rProf.progressTexts || {})) cfgDiff.push({ type: 'modify', text: `[${modeName}] 加载进度条文案 发生更新` });
-            if (!isObjectEqual(lProf.sleepTexts || {}, rProf.sleepTexts || {})) cfgDiff.push({ type: 'modify', text: `[${modeName}] 多段睡眠文案 发生更新` });
-            if (!isObjectEqual(lProf.wakeTexts || {}, rProf.wakeTexts || {})) cfgDiff.push({ type: 'modify', text: `[${modeName}] 起床弹窗文案 发生更新` });
+            const compareObj = (lObj, rObj, pathArr) => {
+                for (const k in lObj) {
+                    if (typeof lObj[k] === 'object' && lObj[k] !== null && !Array.isArray(lObj[k])) {
+                        compareObj(lObj[k], rObj[k] || {}, [...pathArr, k]);
+                    } else if (JSON.stringify(lObj[k]) !== JSON.stringify(rObj[k])) {
+                        const pStr = [...pathArr, k].join('.');
+                        const label = CONFIG_KEY_MAP[pStr.replace(`profiles.${mode}.`, '')] || pStr;
+                        cfgDiff.push({ id: `cfg_${mode}_${pStr}`, path: ['config', 'profiles', mode, ...pathArr, k], type: 'modify', local: lObj[k], remote: rObj[k], text: `[${modeName}] ${label}：修改 -> ${JSON.stringify(isUpload ? lObj[k] : rObj[k])}` });
+                    }
+                }
+            };
+            compareObj(lProf, rProf, []);
         });
     }
-    if (localData.config && localData.config.goals) { ['master', 'doggy'].forEach(user => { ['sleep', 'wake'].forEach(type => { const lv = localData.config.goals[user]?.[type], rv = remoteData.config?.goals[user]?.[type]; if (lv !== rv) { const label = CONFIG_KEY_MAP[`goals.${user}.${type}`], target = isUpload ? lv : rv; cfgDiff.push({ type: 'modify', text: `${label}：修改 -> ${target}` }); } }); }); }
+    if (localData.config && localData.config.goals) { ['master', 'doggy'].forEach(user => { ['sleep', 'wake'].forEach(type => { const lv = localData.config.goals[user]?.[type], rv = remoteData.config?.goals[user]?.[type]; if (lv !== rv) { const label = CONFIG_KEY_MAP[`goals.${user}.${type}`], target = isUpload ? lv : rv; cfgDiff.push({ id: `cfg_goals_${user}_${type}`, path: ['config', 'goals', user, type], type: 'modify', local: lv, remote: rv, text: `${label}：修改 -> ${target}` }); } }); }); }
     return { dbDiff, cfgDiff };
 }
 let pendingSyncData = null;
+function toggleAllDiff(checked) { document.querySelectorAll('.diff-chk').forEach(chk => { chk.checked = checked; }); const master = document.getElementById('diff-select-all'); if (master) master.checked = checked; }
+window.toggleAllDiff = toggleAllDiff;
 function renderDiffModal(diff, isUpload, remoteDb = null, remoteCfg = null) {
     document.getElementById('diff-modal-title').textContent = isUpload ? '⬆️ 推送：本地 → 云端' : '⬇️ 拉取：云端 → 本地';
     const modalBox = document.querySelector('#diff-modal .diff-modal-box'); if (modalBox) { modalBox.classList.remove('upload-mode', 'pull-mode'); modalBox.classList.add(isUpload ? 'upload-mode' : 'pull-mode'); }
-    const confirmBtn = document.getElementById('diff-confirm-btn'), forceBtn = document.getElementById('diff-force-btn');
-    confirmBtn.textContent = isUpload ? '⬆️ 确认上传' : '⬇️ 应用云端差异'; confirmBtn.className = 'btn ' + (isUpload ? 'upload-btn' : 'pull-btn');
-    forceBtn.style.display = 'block'; forceBtn.textContent = isUpload ? '💥 强制覆盖云端' : '💥 直接完全覆盖本地';
+    const confirmBtn = document.getElementById('diff-confirm-btn'); confirmBtn.textContent = isUpload ? '⬆️ 应用选中并上传' : '⬇️ 应用选中并拉取'; confirmBtn.className = 'btn ' + (isUpload ? 'upload-btn' : 'pull-btn');
     const content = document.getElementById('diff-content'); content.innerHTML = '';
-    if (diff.dbDiff.length === 0 && diff.cfgDiff.length === 0) { content.innerHTML = '<div class="diff-empty">两边数据完全一致。</div>'; confirmBtn.style.display = 'none'; forceBtn.style.display = 'none'; document.getElementById('diff-modal').classList.add('show'); return; }
-    confirmBtn.style.display = 'block'; forceBtn.style.display = 'block';
+    if (diff.dbDiff.length === 0 && diff.cfgDiff.length === 0) { content.innerHTML = '<div class="diff-empty">两边数据完全一致。</div>'; confirmBtn.style.display = 'none'; document.getElementById('diff-modal').classList.add('show'); return; }
+    confirmBtn.style.display = 'block';
     const stats = { add: 0, remove: 0, modify: 0 }; [...diff.dbDiff, ...diff.cfgDiff].forEach(it => { if (stats[it.type] !== undefined) stats[it.type]++; });
     let summary = '<div class="diff-summary">'; if (stats.add > 0) summary += `<span class="diff-stat add">➕ 新增 ${stats.add}</span>`; if (stats.remove > 0) summary += `<span class="diff-stat remove">➖ 删除 ${stats.remove}</span>`; if (stats.modify > 0) summary += `<span class="diff-stat modify">✏️ 修改 ${stats.modify}</span>`; summary += '</div>'; content.innerHTML = summary;
     const icons = { add: '➕', remove: '➖', modify: '✏️' };
-    if (diff.dbDiff.length > 0) { let html = '<div class="diff-section"><div class="diff-section-title">📅 打卡记录变动</div><div class="diff-list">'; diff.dbDiff.forEach(item => { html += `<div class="diff-item ${item.type}"><span class="diff-icon">${icons[item.type]}</span><span class="diff-text">${item.text}</span></div>`; }); html += '</div></div>'; content.innerHTML += html; }
-    if (diff.cfgDiff.length > 0) { let html = '<div class="diff-section"><div class="diff-section-title">⚙️ 配置/文案变动</div><div class="diff-list">'; diff.cfgDiff.forEach(item => { html += `<div class="diff-item ${item.type}"><span class="diff-icon">${icons[item.type]}</span><span class="diff-text">${item.text}</span></div>`; }); html += '</div></div>'; content.innerHTML += html; }
+    const renderList = (arr, title) => {
+        if (arr.length === 0) return '';
+        let html = `<details open style="margin-bottom:12px; background:var(--card-bg); border:1px solid var(--border); border-radius:12px; overflow:hidden;"><summary style="padding:10px 14px; cursor:pointer; font-weight:800; font-size:0.9rem; color:var(--text); background:var(--btn-bg); user-select:none;">${title} (${arr.length})</summary><div style="padding:6px;">`;
+        arr.forEach(item => {
+            let detailHtml = '';
+            if (item.type === 'modify' && (JSON.stringify(item.local).length > 20 || JSON.stringify(item.remote).length > 20)) {
+                detailHtml = `<details class="diff-details"><summary>查看具体变动</summary><div class="diff-content-pre"><b>本地:</b> ${JSON.stringify(item.local, null, 2)}\n<b>云端:</b> ${JSON.stringify(item.remote, null, 2)}</div></details>`;
+            }
+            html += `<div class="diff-item ${item.type}" style="display:flex; gap:10px; padding:10px 12px;"><input type="checkbox" class="diff-chk" data-id="${item.id}" checked><div style="flex:1;"><div><span class="diff-icon">${icons[item.type]}</span> <span class="diff-text">${item.text}</span></div>${detailHtml}</div></div>`;
+        });
+        html += '</div></details>';
+        return html;
+    };
+    content.innerHTML += renderList(diff.dbDiff, '📅 打卡记录变动');
+    content.innerHTML += renderList(diff.cfgDiff, '⚙️ 配置/文案变动');
     pendingSyncData = { isUpload, localData: getSyncableData(), remoteDb, remoteCfg }; document.getElementById('diff-modal').classList.add('show');
 }
 window.closeDiffModal = function() { document.getElementById('diff-modal').classList.remove('show'); const modalBox = document.querySelector('#diff-modal .diff-modal-box'); if (modalBox) modalBox.classList.remove('upload-mode', 'pull-mode'); pendingSyncData = null; };
-window.confirmSyncDiff = async function(isForce = false) {
+function setDeepValue(obj, pathArr, value) { let cur = obj; for (let i = 1; i < pathArr.length - 1; i++) { const k = pathArr[i]; if (!cur[k]) cur[k] = {}; cur = cur[k]; } cur[pathArr[pathArr.length - 1]] = value; }
+window.confirmSyncDiff = async function() {
     if (!pendingSyncData) return; const { isUpload, localData, remoteDb, remoteCfg } = pendingSyncData; closeDiffModal();
+    const checkedIds = Array.from(document.querySelectorAll('.diff-chk:checked')).map(chk => chk.dataset.id);
+    if (checkedIds.length === 0) return showToast('未选择任何差异', 'late');
+    
+    showBar('sync', 'sync', 30);
+    
+    let finalDb = isUpload ? JSON.parse(JSON.stringify(localData.db)) : JSON.parse(JSON.stringify(remoteDb || { master: {}, doggy: {} }));
+    let finalCfg = isUpload ? JSON.parse(JSON.stringify(localData.config)) : JSON.parse(JSON.stringify(remoteCfg ? deepMerge(DEFAULT_CONFIGS, remoteCfg) : DEFAULT_CONFIGS));
+    
+    if (!isUpload) {
+        if (!finalDb.master) finalDb.master = {}; if (!finalDb.doggy) finalDb.doggy = {};
+        // 如果是拉取，最终合并的是本地，基于云端改动
+        finalDb = JSON.parse(JSON.stringify(localData.db));
+        finalCfg = JSON.parse(JSON.stringify(localData.config));
+    }
+    
+    const diffData = calculateDiff(localData, { db: remoteDb || { master: {}, doggy: {} }, config: remoteCfg ? deepMerge(DEFAULT_CONFIGS, remoteCfg) : null }, isUpload);
+    const allDiffs = [...diffData.dbDiff, ...diffData.cfgDiff];
+    
+    allDiffs.forEach(item => {
+        if (checkedIds.includes(item.id)) {
+            const valToSet = isUpload ? item.local : item.remote;
+            if (item.id.startsWith('db_')) {
+                const [, user, date, type] = item.path;
+                if (valToSet) { if (!finalDb[user][date]) finalDb[user][date] = {}; finalDb[user][date][type] = valToSet; }
+                else { if (finalDb[user][date]) delete finalDb[user][date][type]; if (Object.keys(finalDb[user][date]).length === 0) delete finalDb[user][date]; }
+            } else {
+                setDeepValue(finalCfg, item.path, valToSet);
+            }
+        }
+    });
+    
     if (isUpload) {
-        showBar('sync', 'sync', 20); const dbStr = JSON.stringify(localData.db, null, 2), cfgStr = JSON.stringify(localData.config, null, 2);
+        updateBar('sync', 'sync', 60);
+        const dbStr = JSON.stringify(finalDb, null, 2), cfgStr = JSON.stringify(finalCfg, null, 2);
         const dbRemote = await fetchGHFile(ghConfig.path), cfgRemote = await fetchGHFile(ghConfig.configPath);
         const ok1 = await pushGHFile(ghConfig.path, dbStr, dbRemote?.sha), ok2 = await pushGHFile(ghConfig.configPath, cfgStr, cfgRemote?.sha);
         if (ok1 && ok2) { updateBar('sync', getProgressText('success') || '✅', 100); setTimeout(() => { hideBar('sync'); showToast('⬆️ 数据上传成功', 'success'); closeSettings(); }, 800); } else { hideBar('sync'); showToast('上传失败，请检查网络/权限', 'late'); }
     } else {
-        showBar('sync', 'sync', 60);
-        setTimeout(() => { updateBar('sync', getProgressText('success') || '✅', 100); applySyncData(remoteDb, deepMerge(DEFAULT_CONFIGS, remoteCfg), isForce); setTimeout(() => { hideBar('sync'); showToast('⬇️ 数据更新成功', 'success'); closeSettings(); }, 800); }, 500);
+        updateBar('sync', 'sync', 80);
+        setTimeout(() => { updateBar('sync', getProgressText('success') || '✅', 100); applySyncData(finalDb, finalCfg, true); setTimeout(() => { hideBar('sync'); showToast('⬇️ 数据更新成功', 'success'); closeSettings(); }, 800); }, 500);
     }
 };

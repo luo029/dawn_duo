@@ -2,44 +2,49 @@ const CONFIG_KEY_MAP = { 'texts.title': '主标题', 'texts.subtitle': '副标�
 function isObjectEqual(a, b) { if (a === b) return true; if (typeof a !== 'object' || a === null || typeof b !== 'object' || b === null) return false; const keysA = Object.keys(a); const keysB = Object.keys(b); if (keysA.length !== keysB.length) return false; for (let key of keysA) { if (!keysB.includes(key)) return false; if (!isObjectEqual(a[key], b[key])) return false; } return true; }
 function calculateDiff(localData, remoteData, isUpload) {
     const dbDiff = [], cfgDiff = [], t = P().texts || DEFAULT_TEXTS_DAILY;
+    const lDb = localData.db || {}, rDb = remoteData.db || {};
     ['master', 'doggy'].forEach(user => {
-        const lUser = localData.db[user] || {}, rUser = remoteData.db[user] || {}, allDates = new Set([...Object.keys(lUser), ...Object.keys(rUser)]);
+        const lUser = lDb[user] || {}, rUser = rDb[user] || {}, allDates = new Set([...Object.keys(lUser), ...Object.keys(rUser)]);
         const uName = user === 'master' ? (getPureName(t.masterName) || '主人') : (getPureName(t.doggyName) || '小狗');
         Array.from(allDates).sort().forEach(date => {
             const lDay = lUser[date] || {}, rDay = rUser[date] || {};
             ['sleep', 'wake'].forEach(type => {
                 const lRec = lDay[type], rRec = rDay[type], tName = type === 'sleep' ? '休息' : '起床';
                 const id = `db_${user}_${date}_${type}`;
-                if (!lRec && rRec) dbDiff.push({ id, path: ['db', user, date, type], type: isUpload ? 'remove' : 'add', local: lRec, remote: rRec, text: `【${date}】${uName} ${tName}：将${isUpload ? '删除' : '新增'} (${rRec.time})` });
-                else if (lRec && !rRec) dbDiff.push({ id, path: ['db', user, date, type], type: isUpload ? 'add' : 'remove', local: lRec, remote: rRec, text: `【${date}】${uName} ${tName}：将${isUpload ? '新增' : '删除'} (${lRec.time})` });
-                else if (lRec && rRec) { if (lRec.time !== rRec.time || lRec.done !== rRec.done) { const targetTime = isUpload ? lRec.time : rRec.time; dbDiff.push({ id, path: ['db', user, date, type], type: 'modify', local: lRec, remote: rRec, text: `【${date}】${uName} ${tName}：修改 -> ${targetTime}` }); } }
+                if (!lRec && rRec) dbDiff.push({ id, path: ['db', user, date, type], type: isUpload ? 'remove' : 'add', local: lRec, remote: rRec, text: `【${date}】${uName} ${tName}：将${isUpload ? '删除' : '新增'} (${rRec.time || '已打卡'})` });
+                else if (lRec && !rRec) dbDiff.push({ id, path: ['db', user, date, type], type: isUpload ? 'add' : 'remove', local: lRec, remote: rRec, text: `【${date}】${uName} ${tName}：将${isUpload ? '新增' : '删除'} (${lRec.time || '已打卡'})` });
+                else if (lRec && rRec) { if (lRec.time !== rRec.time || lRec.done !== rRec.done) { const targetTime = isUpload ? (lRec.time || '') : (rRec.time || ''); dbDiff.push({ id, path: ['db', user, date, type], type: 'modify', local: lRec, remote: rRec, text: `【${date}】${uName} ${tName}：修改 -> ${targetTime}` }); } }
             });
         });
     });
     if (localData.config && localData.config.profiles) {
         ['daily', 'service'].forEach(mode => {
-            const modeName = mode === 'daily' ? '日常' : '主仆', lProf = deepMerge(DEFAULT_CONFIGS.profiles[mode], localData.config.profiles?.[mode] || {}), rProf = deepMerge(DEFAULT_CONFIGS.profiles[mode], remoteData.config?.profiles?.[mode] || {});
+            const modeName = mode === 'daily' ? '日常' : '主仆', lProf = deepMerge(DEFAULT_CONFIGS.profiles[mode], localData.config.profiles?.[mode] || {}), rProf = deepMerge(DEFAULT_CONFIGS.profiles[mode], (remoteData.config && remoteData.config.profiles) ? remoteData.config.profiles[mode] || {} : {});
             const compareObj = (lObj, rObj, pathArr) => {
+                if (!lObj || typeof lObj !== 'object') return;
                 for (const k in lObj) {
                     if (typeof lObj[k] === 'object' && lObj[k] !== null && !Array.isArray(lObj[k])) {
-                        compareObj(lObj[k], rObj[k] || {}, [...pathArr, k]);
-                    } else if (JSON.stringify(lObj[k]) !== JSON.stringify(rObj[k])) {
+                        compareObj(lObj[k], (rObj && typeof rObj === 'object') ? rObj[k] || {} : {}, [...pathArr, k]);
+                    } else if (JSON.stringify(lObj[k]) !== JSON.stringify(rObj ? rObj[k] : undefined)) {
                         const pStr = [...pathArr, k].join('.');
                         const label = CONFIG_KEY_MAP[pStr.replace(`profiles.${mode}.`, '')] || pStr;
-                        cfgDiff.push({ id: `cfg_${mode}_${pStr}`, path: ['config', 'profiles', mode, ...pathArr, k], type: 'modify', local: lObj[k], remote: rObj[k], text: `[${modeName}] ${label}：修改 -> ${JSON.stringify(isUpload ? lObj[k] : rObj[k])}` });
+                        cfgDiff.push({ id: `cfg_${mode}_${pStr}`, path: ['config', 'profiles', mode, ...pathArr, k], type: 'modify', local: lObj[k], remote: rObj ? rObj[k] : undefined, text: `[${modeName}] ${label}：修改 -> ${JSON.stringify(isUpload ? lObj[k] : (rObj ? rObj[k] : undefined))}` });
                     }
                 }
             };
             compareObj(lProf, rProf, []);
         });
     }
-    if (localData.config && localData.config.goals) { ['master', 'doggy'].forEach(user => { ['sleep', 'wake'].forEach(type => { const lv = localData.config.goals[user]?.[type], rv = remoteData.config?.goals[user]?.[type]; if (lv !== rv) { const label = CONFIG_KEY_MAP[`goals.${user}.${type}`], target = isUpload ? lv : rv; cfgDiff.push({ id: `cfg_goals_${user}_${type}`, path: ['config', 'goals', user, type], type: 'modify', local: lv, remote: rv, text: `${label}：修改 -> ${target}` }); } }); }); }
+    if (localData.config && localData.config.goals) { ['master', 'doggy'].forEach(user => { ['sleep', 'wake'].forEach(type => { const lv = localData.config.goals[user]?.[type], rv = (remoteData.config && remoteData.config.goals) ? remoteData.config.goals[user]?.[type] : undefined; if (lv !== rv) { const label = CONFIG_KEY_MAP[`goals.${user}.${type}`], target = isUpload ? lv : rv; cfgDiff.push({ id: `cfg_goals_${user}_${type}`, path: ['config', 'goals', user, type], type: 'modify', local: lv, remote: rv, text: `${label}：修改 -> ${target || '空'}` }); } }); }); }
     return { dbDiff, cfgDiff };
 }
 let pendingSyncData = null;
 function toggleAllDiff(checked) { document.querySelectorAll('.diff-chk').forEach(chk => { chk.checked = checked; }); const master = document.getElementById('diff-select-all'); if (master) master.checked = checked; }
 window.toggleAllDiff = toggleAllDiff;
 function renderDiffModal(diff, isUpload, remoteDb = null, remoteCfg = null) {
+    if (!diff || typeof diff !== 'object') diff = { dbDiff: [], cfgDiff: [] };
+    if (!Array.isArray(diff.dbDiff)) diff.dbDiff = [];
+    if (!Array.isArray(diff.cfgDiff)) diff.cfgDiff = [];
     document.getElementById('diff-modal-title').textContent = isUpload ? '⬆️ 推送：本地 → 云端' : '⬇️ 拉取：云端 → 本地';
     const modalBox = document.querySelector('#diff-modal .diff-modal-box'); if (modalBox) { modalBox.classList.remove('upload-mode', 'pull-mode'); modalBox.classList.add(isUpload ? 'upload-mode' : 'pull-mode'); }
     const confirmBtn = document.getElementById('diff-confirm-btn'); confirmBtn.textContent = isUpload ? '⬆️ 应用选中并上传' : '⬇️ 应用选中并拉取'; confirmBtn.className = 'btn ' + (isUpload ? 'upload-btn' : 'pull-btn');
@@ -50,12 +55,14 @@ function renderDiffModal(diff, isUpload, remoteDb = null, remoteCfg = null) {
     let summary = '<div class="diff-summary">'; if (stats.add > 0) summary += `<span class="diff-stat add">➕ 新增 ${stats.add}</span>`; if (stats.remove > 0) summary += `<span class="diff-stat remove">➖ 删除 ${stats.remove}</span>`; if (stats.modify > 0) summary += `<span class="diff-stat modify">✏️ 修改 ${stats.modify}</span>`; summary += '</div>'; content.innerHTML = summary;
     const icons = { add: '➕', remove: '➖', modify: '✏️' };
     const renderList = (arr, title) => {
-        if (arr.length === 0) return '';
+        if (!Array.isArray(arr) || arr.length === 0) return '';
         let html = `<details open style="margin-bottom:12px; background:var(--card-bg); border:1px solid var(--border); border-radius:12px; overflow:hidden;"><summary style="padding:10px 14px; cursor:pointer; font-weight:800; font-size:0.9rem; color:var(--text); background:var(--btn-bg); user-select:none;">${title} (${arr.length})</summary><div style="padding:6px;">`;
         arr.forEach(item => {
             let detailHtml = '';
-            if (item.type === 'modify' && (JSON.stringify(item.local).length > 20 || JSON.stringify(item.remote).length > 20)) {
-                detailHtml = `<details class="diff-details"><summary>查看具体变动</summary><div class="diff-content-pre"><b>本地:</b> ${JSON.stringify(item.local, null, 2)}\n<b>云端:</b> ${JSON.stringify(item.remote, null, 2)}</div></details>`;
+            const localStr = JSON.stringify(item.local) || '';
+            const remoteStr = JSON.stringify(item.remote) || '';
+            if (item.type === 'modify' && (localStr.length > 20 || remoteStr.length > 20)) {
+                detailHtml = `<details class="diff-details"><summary>查看具体变动</summary><div class="diff-content-pre"><b>本地:</b> ${item.local !== undefined ? JSON.stringify(item.local, null, 2) : '空'}\n<b>云端:</b> ${item.remote !== undefined ? JSON.stringify(item.remote, null, 2) : '空'}</div></details>`;
             }
             html += `<div class="diff-item ${item.type}" style="display:flex; gap:10px; padding:10px 12px;"><input type="checkbox" class="diff-chk" data-id="${item.id}" checked><div style="flex:1;"><div><span class="diff-icon">${icons[item.type]}</span> <span class="diff-text">${item.text}</span></div>${detailHtml}</div></div>`;
         });
@@ -67,7 +74,7 @@ function renderDiffModal(diff, isUpload, remoteDb = null, remoteCfg = null) {
     pendingSyncData = { isUpload, localData: getSyncableData(), remoteDb, remoteCfg }; document.getElementById('diff-modal').classList.add('show');
 }
 window.closeDiffModal = function() { document.getElementById('diff-modal').classList.remove('show'); const modalBox = document.querySelector('#diff-modal .diff-modal-box'); if (modalBox) modalBox.classList.remove('upload-mode', 'pull-mode'); pendingSyncData = null; };
-function setDeepValue(obj, pathArr, value) { let cur = obj; for (let i = 1; i < pathArr.length - 1; i++) { const k = pathArr[i]; if (!cur[k]) cur[k] = {}; cur = cur[k]; } cur[pathArr[pathArr.length - 1]] = value; }
+function setDeepValue(obj, pathArr, value) { if (!obj || !Array.isArray(pathArr)) return; let cur = obj; for (let i = 1; i < pathArr.length - 1; i++) { const k = pathArr[i]; if (!cur[k]) cur[k] = {}; cur = cur[k]; } cur[pathArr[pathArr.length - 1]] = value; }
 window.confirmSyncDiff = async function() {
     if (!pendingSyncData) return; const { isUpload, localData, remoteDb, remoteCfg } = pendingSyncData; closeDiffModal();
     const checkedIds = Array.from(document.querySelectorAll('.diff-chk:checked')).map(chk => chk.dataset.id);
@@ -85,15 +92,17 @@ window.confirmSyncDiff = async function() {
     }
     
     const diffData = calculateDiff(localData, { db: remoteDb || { master: {}, doggy: {} }, config: remoteCfg ? deepMerge(DEFAULT_CONFIGS, remoteCfg) : null }, isUpload);
-    const allDiffs = [...diffData.dbDiff, ...diffData.cfgDiff];
+    const allDiffs = [...(diffData.dbDiff || []), ...(diffData.cfgDiff || [])];
     
     allDiffs.forEach(item => {
         if (checkedIds.includes(item.id)) {
             const valToSet = isUpload ? item.local : item.remote;
             if (item.id.startsWith('db_')) {
                 const [, user, date, type] = item.path;
-                if (valToSet) { if (!finalDb[user][date]) finalDb[user][date] = {}; finalDb[user][date][type] = valToSet; }
-                else { if (finalDb[user][date]) delete finalDb[user][date][type]; if (Object.keys(finalDb[user][date]).length === 0) delete finalDb[user][date]; }
+                if (!finalDb[user]) finalDb[user] = {};
+                if (!finalDb[user][date]) finalDb[user][date] = {};
+                if (valToSet) { finalDb[user][date][type] = valToSet; }
+                else { if (finalDb[user] && finalDb[user][date]) delete finalDb[user][date][type]; if (finalDb[user] && finalDb[user][date] && Object.keys(finalDb[user][date]).length === 0) delete finalDb[user][date]; }
             } else {
                 setDeepValue(finalCfg, item.path, valToSet);
             }
@@ -102,9 +111,9 @@ window.confirmSyncDiff = async function() {
     
     if (isUpload) {
         updateBar('sync', 'sync', 60);
-        const dbStrM = JSON.stringify(finalDb.master, null, 2);
-        const dbStrD = JSON.stringify(finalDb.doggy, null, 2);
-        const cfgStr = JSON.stringify(finalCfg, null, 2);
+        const dbStrM = JSON.stringify(finalDb.master || {}, null, 2);
+        const dbStrD = JSON.stringify(finalDb.doggy || {}, null, 2);
+        const cfgStr = JSON.stringify(finalCfg || {}, null, 2);
         
         const mRemote = await fetchGHFile('master_records.json');
         const dRemote = await fetchGHFile('doggy_records.json');

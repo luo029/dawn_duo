@@ -7,11 +7,11 @@ window.syncFromGitHub = async function() {
         if (!remoteData.hasData) { hideBar('sync'); return showToast('云端无数据', 'late'); }
         updateBar('sync', getProgressText('sync') || '正在同步...', 70);
         
-        const diff = calculateDiff(getSyncableData(), { db: remoteData.db, config: remoteData.cfg || getSyncableData().config }, false);
+        const diff = calculateDiff(getSyncableData(), { db: remoteData.db, config: remoteData.cfg }, false);
         hideBar('sync');
-        if (diff.dbDiff.length === 0 && diff.cfgDiff.length === 0) return showToast('数据一致，无需拉取', 'success');
+        if (!diff || ((!diff.dbDiff || diff.dbDiff.length === 0) && (!diff.cfgDiff || diff.cfgDiff.length === 0))) return showToast('数据一致，无需拉取', 'success');
         renderDiffModal(diff, false, remoteData.db, remoteData.cfgRaw);
-    } catch(e) { hideBar('sync'); showToast('对比失败: ' + e.message, 'late'); }
+    } catch(e) { hideBar('sync'); showToast('对比失败: ' + (e.message || '未知错误'), 'late'); console.error(e); }
 };
 
 window.saveToGitHub = async function() {
@@ -24,38 +24,45 @@ window.saveToGitHub = async function() {
         
         const diff = calculateDiff(getSyncableData(), { db: remoteData.db, config: remoteData.cfg }, true);
         hideBar('sync');
-        if (diff.dbDiff.length === 0 && diff.cfgDiff.length === 0) {
-            if (!confirm('本地和云端一致，是否强制覆盖云端？')) return;
-            showBar('sync', 'sync', 30);
-            await pushAllData(getSyncableData().db, getSyncableData().config, remoteData.shas);
-            updateBar('sync', getProgressText('success') || '上传成功', 100); 
-            setTimeout(() => { hideBar('sync'); showToast('⬆️ 上传成功', 'success'); closeSettings(); }, 800); 
+        
+        if (!diff || ((!diff.dbDiff || diff.dbDiff.length === 0) && (!diff.cfgDiff || diff.cfgDiff.length === 0))) {
+            window.showCustomConfirm('⬆️ 强制上传', '本地和云端数据完全一致，是否强制覆盖云端配置？', async () => {
+                showBar('sync', 'sync', 30);
+                await pushAllData(getSyncableData().db, getSyncableData().config, remoteData.shas);
+                updateBar('sync', getProgressText('success') || '上传成功', 100); 
+                setTimeout(() => { hideBar('sync'); showToast('⬆️ 上传成功', 'success'); closeSettings(); }, 800); 
+            });
             return;
         }
         renderDiffModal(diff, true, remoteData.db, remoteData.cfgRaw);
-    } catch(e) { hideBar('sync'); showToast('对比失败: ' + e.message, 'late'); }
+    } catch(e) { hideBar('sync'); showToast('对比失败: ' + (e.message || '未知错误'), 'late'); console.error(e); }
 };
 
 async function fetchAllRemoteData() {
     let mRemote = await fetchGHFile('master_records.json');
     let dRemote = await fetchGHFile('doggy_records.json');
     const cfgRemote = await fetchGHFile(ghConfig.configPath);
-    const oldRemote = await fetchGHFile('records.json'); // 兼容旧数据
+    const oldRemote = await fetchGHFile('records.json'); 
 
     let remoteDb = { master: {}, doggy: {} };
     let hasData = false;
+    let cfg = null;
 
-    if (oldRemote && !mRemote && !dRemote) {
-        const parsed = JSON.parse(oldRemote.content);
-        remoteDb = { master: parsed.master || {}, doggy: parsed.doggy || {} };
-        hasData = true;
-    } else {
-        if (mRemote) { remoteDb.master = JSON.parse(mRemote.content); hasData = true; }
-        if (dRemote) { remoteDb.doggy = JSON.parse(dRemote.content); hasData = true; }
-    }
-    if (cfgRemote) hasData = true;
+    try {
+        if (oldRemote && !mRemote && !dRemote && oldRemote.content) {
+            const parsed = JSON.parse(oldRemote.content);
+            remoteDb = { master: parsed.master || {}, doggy: parsed.doggy || {} };
+            hasData = true;
+        } else {
+            if (mRemote && mRemote.content) { remoteDb.master = JSON.parse(mRemote.content) || {}; hasData = true; }
+            if (dRemote && dRemote.content) { remoteDb.doggy = JSON.parse(dRemote.content) || {}; hasData = true; }
+        }
+        if (cfgRemote && cfgRemote.content) {
+            cfg = JSON.parse(cfgRemote.content);
+            hasData = true;
+        }
+    } catch(e) { console.warn('远端数据解析异常，已触发数据重置保护', e); }
 
-    const cfg = cfgRemote ? JSON.parse(cfgRemote.content) : null;
     const fullCfg = cfg ? deepMerge(DEFAULT_CONFIGS, cfg) : null;
 
     return {
@@ -70,12 +77,12 @@ async function fetchAllRemoteData() {
 async function pushAllData(localDb, localCfg, shas = {}) {
     const currentIdentity = identity || 'master';
     if (currentIdentity === 'master' || currentIdentity === 'both') {
-        await pushGHFile('master_records.json', JSON.stringify(localDb.master, null, 2), shas.m);
+        await pushGHFile('master_records.json', JSON.stringify(localDb.master || {}, null, 2), shas.m);
     }
     if (currentIdentity === 'doggy' || currentIdentity === 'both') {
-        await pushGHFile('doggy_records.json', JSON.stringify(localDb.doggy, null, 2), shas.d);
+        await pushGHFile('doggy_records.json', JSON.stringify(localDb.doggy || {}, null, 2), shas.d);
     }
-    await pushGHFile(ghConfig.configPath, JSON.stringify(localCfg, null, 2), shas.cfg);
+    await pushGHFile(ghConfig.configPath, JSON.stringify(localCfg || {}, null, 2), shas.cfg);
 }
 
 let syncTimer = null;
@@ -85,9 +92,9 @@ async function autoSyncToGitHub(force = false) {
     if (ghConfig.autoSync === false && !force) return;
     try {
         const payload = getSyncableData();
-        const mStr = JSON.stringify(payload.db.master, null, 2);
-        const dStr = JSON.stringify(payload.db.doggy, null, 2);
-        const cfgStr = JSON.stringify(payload.config, null, 2);
+        const mStr = JSON.stringify(payload.db.master || {}, null, 2);
+        const dStr = JSON.stringify(payload.db.doggy || {}, null, 2);
+        const cfgStr = JSON.stringify(payload.config || {}, null, 2);
         
         const mRemote = await fetchGHFile('master_records.json');
         const dRemote = await fetchGHFile('doggy_records.json');
@@ -134,7 +141,11 @@ async function autoPullOnLoad(force = false) {
             const remoteDbObj = dbPayload || db; const remoteCfgObj = cfgPayload || configs;
             if (ghConfig.syncPrompt) {
                 const diff = calculateDiff(getSyncableData(), { db: remoteDbObj, config: deepMerge(DEFAULT_CONFIGS, remoteCfgObj) }, false);
-                if (diff.dbDiff.length > 0 || diff.cfgDiff.length > 0) { renderDiffModal(diff, false, remoteDbObj, cfgPayload); showToast('发现云端差异，请确认拉取', 'success'); }
+                if (!diff || ((!diff.dbDiff || diff.dbDiff.length === 0) && (!diff.cfgDiff || diff.cfgDiff.length === 0))) {
+                    // 无差异
+                } else {
+                    renderDiffModal(diff, false, remoteDbObj, cfgPayload); showToast('发现云端差异，请确认拉取', 'success');
+                }
             } else {
                 if (dbPayload) detectPartnerCheckin(dbPayload); applySyncData(dbPayload, cfgPayload, force); showToast('已自动同步 📥', 'success');
             }
@@ -147,9 +158,9 @@ window.startSyncTimer = function() { if (pullIntervalTimer) clearInterval(pullIn
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { autoPullOnLoad(false); startSyncTimer(); } else { if (pullIntervalTimer) clearInterval(pullIntervalTimer); } });
 
 function getSyncableData() { 
-    const syncableConfig = JSON.parse(JSON.stringify(configs)); 
+    const syncableConfig = JSON.parse(JSON.stringify(configs || {})); 
     delete syncableConfig.mode; delete syncableConfig.simpleMode; delete syncableConfig.notifications; delete syncableConfig.showLogicalDate; delete syncableConfig.clockLayout; delete syncableConfig.showMasterClock; delete syncableConfig.showDoggyClock; delete syncableConfig.showSeconds; delete syncableConfig.showShichen; delete syncableConfig.showWellness; delete syncableConfig.showPartnerCard; delete syncableConfig.showPartnerStatus; 
-    return { db: db, config: syncableConfig }; 
+    return { db: db || { master: {}, doggy: {} }, config: syncableConfig }; 
 }
 
 function applySyncData(payloadDB, payloadConfig, force = false) {

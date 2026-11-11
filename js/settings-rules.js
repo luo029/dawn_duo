@@ -46,3 +46,6 @@ window.getTabRulesHTML = () => `
     </div>
   </div>
 </div>`;
+
+window.toggleHistoryTypeOptions = function() { const type = document.getElementById('cfg-history-type').value; document.getElementById('group-history-days').style.display = type === 'days' ? 'block' : 'none'; document.getElementById('group-history-month').style.display = type === 'month' ? 'flex' : 'none'; };
+window.toggleTzInput = function(user) { const type = document.getElementById(`cfg-tz-${user}-type`).value; document.getElementById(`group-tz-${user}-iana`).style.display = type === 'iana' ? 'block' : 'none'; document.getElementById(`group-tz-${user}-offset`).style.display = type === 'offset' ? 'block' : 'none'; };

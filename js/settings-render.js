@@ -37,10 +37,15 @@ document.addEventListener('DOMContentLoaded', () => {
     .device-badge { padding: 2px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 700; }
     .device-badge.master { background: rgba(56, 189, 248, 0.15); color: var(--master-color); }
     .device-badge.doggy { background: rgba(244, 114, 182, 0.15); color: var(--doggy-color); }
+    
+    /* 滴滴模式专属切换 Tabs（完美适配移动端） */
+    .dual-tabs { display: none; gap: 4px; margin-bottom: 16px; background: var(--input-bg); padding: 4px; border-radius: 12px; border: 1px solid var(--border); }
+    .dual-tab-btn { flex: 1; padding: 10px 4px; border-radius: 8px; font-size: 0.85rem; font-weight: 700; border: none; background: transparent; color: var(--text-muted); cursor: pointer; transition: all 0.2s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; justify-content: center; align-items: center; gap: 4px; }
+    .dual-tab-btn.active { background: var(--card-bg); color: var(--tab-active); box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+    @media(max-width: 400px) { .dual-tab-btn { font-size: 0.75rem; padding: 8px 2px; } }
   `;
   document.head.appendChild(style);
 
-  // 防崩溃处理
   const safeCall = (fnName) => (typeof window[fnName] === 'function' ? window[fnName]() : `<div style="padding:20px;color:red;text-align:center;">⚠️ 模块 [${fnName}] 加载失败，请刷新页面重试</div>`);
 
   const container = document.createElement('div');

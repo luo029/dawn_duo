@@ -20,43 +20,49 @@ window.getTabMsgsHTML = () => `
     </div>
   </div>
   
-  <div class="config-card" data-user="master">
-    <div class="config-title">👑 <span class="text-master-name"></span> 提醒文案</div>
-    <div class="section-label">🔔 定时通知 (系统推送)</div>
-    <div class="flex-btn-group two-cols" style="margin-bottom: 8px;"><button class="btn outline" onclick="openNotifyTextModal('master_sleep')">休息提醒</button><button class="btn outline" onclick="openNotifyTextModal('master_wake')">起床提醒</button></div>
-    <div class="flex-btn-group two-cols" style="margin-bottom: 8px;"><button class="btn outline" onclick="openNotifyTextModal('master_sleep_overtime')">熬夜警告</button><button class="btn outline" onclick="openNotifyTextModal('master_wake_overtime')">赖床警告</button></div>
-    <div class="flex-btn-group two-cols"><button class="btn outline" onclick="openNotifyTextModal('partner_doggy_sleep')"><span class="text-doggy-name"></span>已休息通知</button><button class="btn outline" onclick="openNotifyTextModal('partner_doggy_wake')"><span class="text-doggy-name"></span>已起床通知</button></div>
-    <div class="section-label">📱 页面状态展示</div>
-    <div class="flex-btn-group two-cols"><button class="btn outline" onclick="openStatusTextModal('status_master_sleep')"><span class="text-master-name"></span> 休息中</button><button class="btn outline" onclick="openStatusTextModal('status_master_wake')"><span class="text-master-name"></span> 已醒来</button></div>
-  </div>
-
-  <div class="config-card" data-user="doggy">
-    <div class="config-title doggy-title">🎀 <span class="text-doggy-name"></span> 提醒文案</div>
-    <div class="section-label">🔔 定时通知 (系统推送)</div>
-    <div class="flex-btn-group two-cols" style="margin-bottom: 8px;"><button class="btn outline" onclick="openNotifyTextModal('doggy_sleep')">睡觉提醒</button><button class="btn outline" onclick="openNotifyTextModal('doggy_wake')">起床提醒</button></div>
-    <div class="flex-btn-group two-cols" style="margin-bottom: 8px;"><button class="btn outline" onclick="openNotifyTextModal('doggy_sleep_overtime')">熬夜警告</button><button class="btn outline" onclick="openNotifyTextModal('doggy_wake_overtime')">赖床警告</button></div>
-    <div class="flex-btn-group two-cols"><button class="btn outline" onclick="openNotifyTextModal('partner_master_sleep')"><span class="text-master-name"></span>已休息通知</button><button class="btn outline" onclick="openNotifyTextModal('partner_master_wake')"><span class="text-master-name"></span>已起床通知</button></div>
-    <div class="section-label">📱 页面状态展示</div>
-    <div class="flex-btn-group two-cols"><button class="btn outline" onclick="openStatusTextModal('status_doggy_sleep')"><span class="text-doggy-name"></span> 休息中</button><button class="btn outline" onclick="openStatusTextModal('status_doggy_wake')"><span class="text-doggy-name"></span> 已醒来</button></div>
-  </div>
-
-  <div class="config-card" data-user="master">
-    <div class="config-title">👑 <span class="text-master-name"></span> 随机打卡文案</div>
-    <div class="flex-btn-group">
-      <button class="msg-entry-btn" onclick="openSubMsg('master_sleep_success', '休息(达标)')"><span class="msg-entry-title">休息(达标)</span><span class="msg-entry-count" id="cnt_master_sleep_success">0 条</span></button>
-      <button class="msg-entry-btn" onclick="openSubMsg('master_sleep_late', '休息(晚睡)')"><span class="msg-entry-title">休息(晚睡)</span><span class="msg-entry-count" id="cnt_master_sleep_late">0 条</span></button>
-      <button class="msg-entry-btn" onclick="openSubMsg('master_wake_success', '起床(达标)')"><span class="msg-entry-title">起床(达标)</span><span class="msg-entry-count" id="cnt_master_wake_success">0 条</span></button>
-      <button class="msg-entry-btn" onclick="openSubMsg('master_wake_late', '起床(赖床)')"><span class="msg-entry-title">起床(赖床)</span><span class="msg-entry-count" id="cnt_master_wake_late">0 条</span></button>
+  <div class="config-card">
+    <div class="config-title">💬 专属提醒与文案</div>
+    <div class="dual-tabs">
+      <button class="btn dual-tab-btn active" data-target="master" onclick="switchDualSettings('master', this)">👑 <span class="text-master-name"></span></button>
+      <button class="btn dual-tab-btn" data-target="doggy" onclick="switchDualSettings('doggy', this)">🎀 <span class="text-doggy-name"></span></button>
     </div>
-  </div>
 
-  <div class="config-card" data-user="doggy">
-    <div class="config-title doggy-title">🎀 <span class="text-doggy-name"></span> 随机打卡文案</div>
-    <div class="flex-btn-group">
-      <button class="msg-entry-btn" onclick="openSubMsg('doggy_sleep_success', '睡觉(达标)')"><span class="msg-entry-title">睡觉(达标)</span><span class="msg-entry-count" id="cnt_doggy_sleep_success">0 条</span></button>
-      <button class="msg-entry-btn" onclick="openSubMsg('doggy_sleep_late', '睡觉(晚睡)')"><span class="msg-entry-title">睡觉(晚睡)</span><span class="msg-entry-count" id="cnt_doggy_sleep_late">0 条</span></button>
-      <button class="msg-entry-btn" onclick="openSubMsg('doggy_wake_success', '起床(达标)')"><span class="msg-entry-title">起床(达标)</span><span class="msg-entry-count" id="cnt_doggy_wake_success">0 条</span></button>
-      <button class="msg-entry-btn" onclick="openSubMsg('doggy_wake_late', '起床(赖床)')"><span class="msg-entry-title">起床(赖床)</span><span class="msg-entry-count" id="cnt_doggy_wake_late">0 条</span></button>
+    <div class="dual-user-group" data-active="master">
+      <div data-user="master">
+        <div class="config-title" style="margin-top:10px;">👑 <span class="text-master-name"></span> 提醒文案</div>
+        <div class="section-label">🔔 定时通知 (系统推送)</div>
+        <div class="flex-btn-group two-cols" style="margin-bottom: 8px;"><button class="btn outline" onclick="openNotifyTextModal('master_sleep')">休息提醒</button><button class="btn outline" onclick="openNotifyTextModal('master_wake')">起床提醒</button></div>
+        <div class="flex-btn-group two-cols" style="margin-bottom: 8px;"><button class="btn outline" onclick="openNotifyTextModal('master_sleep_overtime')">熬夜警告</button><button class="btn outline" onclick="openNotifyTextModal('master_wake_overtime')">赖床警告</button></div>
+        <div class="flex-btn-group two-cols"><button class="btn outline" onclick="openNotifyTextModal('partner_doggy_sleep')"><span class="text-doggy-name"></span>已休息</button><button class="btn outline" onclick="openNotifyTextModal('partner_doggy_wake')"><span class="text-doggy-name"></span>已起床</button></div>
+        <div class="section-label">📱 页面状态展示</div>
+        <div class="flex-btn-group two-cols"><button class="btn outline" onclick="openStatusTextModal('status_master_sleep')"><span class="text-master-name"></span> 休息中</button><button class="btn outline" onclick="openStatusTextModal('status_master_wake')"><span class="text-master-name"></span> 已醒来</button></div>
+
+        <div class="config-title" style="margin-top:20px;">👑 <span class="text-master-name"></span> 随机打卡文案</div>
+        <div class="flex-btn-group">
+          <button class="msg-entry-btn" onclick="openSubMsg('master_sleep_success', '休息(达标)')"><span class="msg-entry-title">休息(达标)</span><span class="msg-entry-count" id="cnt_master_sleep_success">0 条</span></button>
+          <button class="msg-entry-btn" onclick="openSubMsg('master_sleep_late', '休息(晚睡)')"><span class="msg-entry-title">休息(晚睡)</span><span class="msg-entry-count" id="cnt_master_sleep_late">0 条</span></button>
+          <button class="msg-entry-btn" onclick="openSubMsg('master_wake_success', '起床(达标)')"><span class="msg-entry-title">起床(达标)</span><span class="msg-entry-count" id="cnt_master_wake_success">0 条</span></button>
+          <button class="msg-entry-btn" onclick="openSubMsg('master_wake_late', '起床(赖床)')"><span class="msg-entry-title">起床(赖床)</span><span class="msg-entry-count" id="cnt_master_wake_late">0 条</span></button>
+        </div>
+      </div>
+
+      <div data-user="doggy" style="display: none;">
+        <div class="config-title doggy-title" style="margin-top:10px;">🎀 <span class="text-doggy-name"></span> 提醒文案</div>
+        <div class="section-label">🔔 定时通知 (系统推送)</div>
+        <div class="flex-btn-group two-cols" style="margin-bottom: 8px;"><button class="btn outline" onclick="openNotifyTextModal('doggy_sleep')">休息提醒</button><button class="btn outline" onclick="openNotifyTextModal('doggy_wake')">起床提醒</button></div>
+        <div class="flex-btn-group two-cols" style="margin-bottom: 8px;"><button class="btn outline" onclick="openNotifyTextModal('doggy_sleep_overtime')">熬夜警告</button><button class="btn outline" onclick="openNotifyTextModal('doggy_wake_overtime')">赖床警告</button></div>
+        <div class="flex-btn-group two-cols"><button class="btn outline" onclick="openNotifyTextModal('partner_master_sleep')"><span class="text-master-name"></span>已休息</button><button class="btn outline" onclick="openNotifyTextModal('partner_master_wake')"><span class="text-master-name"></span>已起床</button></div>
+        <div class="section-label">📱 页面状态展示</div>
+        <div class="flex-btn-group two-cols"><button class="btn outline" onclick="openStatusTextModal('status_doggy_sleep')"><span class="text-doggy-name"></span> 休息中</button><button class="btn outline" onclick="openStatusTextModal('status_doggy_wake')"><span class="text-doggy-name"></span> 已醒来</button></div>
+
+        <div class="config-title doggy-title" style="margin-top:20px;">🎀 <span class="text-doggy-name"></span> 随机打卡文案</div>
+        <div class="flex-btn-group">
+          <button class="msg-entry-btn" onclick="openSubMsg('doggy_sleep_success', '休息(达标)')"><span class="msg-entry-title">休息(达标)</span><span class="msg-entry-count" id="cnt_doggy_sleep_success">0 条</span></button>
+          <button class="msg-entry-btn" onclick="openSubMsg('doggy_sleep_late', '休息(晚睡)')"><span class="msg-entry-title">休息(晚睡)</span><span class="msg-entry-count" id="cnt_doggy_sleep_late">0 条</span></button>
+          <button class="msg-entry-btn" onclick="openSubMsg('doggy_wake_success', '起床(达标)')"><span class="msg-entry-title">起床(达标)</span><span class="msg-entry-count" id="cnt_doggy_wake_success">0 条</span></button>
+          <button class="msg-entry-btn" onclick="openSubMsg('doggy_wake_late', '起床(赖床)')"><span class="msg-entry-title">起床(赖床)</span><span class="msg-entry-count" id="cnt_doggy_wake_late">0 条</span></button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -78,7 +84,7 @@ window.openNotifyTextModal = function(key) {
     if (!obj) obj = { channel: 'both', texts: [] }; 
     if (Array.isArray(obj)) obj = { channel: 'both', texts: obj }; 
     const isService = configs.mode === 'service', mTitle = isService ? '主人' : '先生', dTitle = isService ? '小狗' : '宝宝'; 
-    const nameMap = { master_sleep: `${mTitle} - 到点休息`, master_wake: `${mTitle} - 到点起床`, doggy_sleep: `${dTitle} - 到点睡觉`, doggy_wake: `${dTitle} - 到点起床`, overtime_sleep: '熬夜超时警告 (通用)', overtime_wake: '赖床超时警告 (通用)', master_sleep_overtime: `${mTitle} - 熬夜超时警告`, master_wake_overtime: `${mTitle} - 赖床超时警告`, doggy_sleep_overtime: `${dTitle} - 熬夜超时警告`, doggy_wake_overtime: `${dTitle} - 赖床超时警告`, partner_master_sleep: `对方 - ${mTitle}休息`, partner_master_wake: `对方 - ${mTitle}起床`, partner_doggy_sleep: `对方 - ${dTitle}休息`, partner_doggy_wake: `对方 - ${dTitle}起床` }; 
+    const nameMap = { master_sleep: `${mTitle} - 到点休息`, master_wake: `${mTitle} - 到点起床`, doggy_sleep: `${dTitle} - 到点休息`, doggy_wake: `${dTitle} - 到点起床`, overtime_sleep: '熬夜超时警告 (通用)', overtime_wake: '赖床超时警告 (通用)', master_sleep_overtime: `${mTitle} - 熬夜超时警告`, master_wake_overtime: `${mTitle} - 赖床超时警告`, doggy_sleep_overtime: `${dTitle} - 熬夜超时警告`, doggy_wake_overtime: `${dTitle} - 赖床超时警告`, partner_master_sleep: `对方 - ${mTitle}休息`, partner_master_wake: `对方 - ${mTitle}起床`, partner_doggy_sleep: `对方 - ${dTitle}休息`, partner_doggy_wake: `对方 - ${dTitle}起床` }; 
     const defaultTitles = { master_sleep: '🌙 休息提醒', master_wake: '☀️ 起床提醒', doggy_sleep: '🌙 休息提醒', doggy_wake: '☀️ 起床提醒', overtime_sleep: '⚠️ 熬夜警告', overtime_wake: '⚠️ 赖床警告', master_sleep_overtime: '⚠️ 熬夜警告', master_wake_overtime: '⚠️ 赖床警告', doggy_sleep_overtime: '⚠️ 熬夜警告', doggy_wake_overtime: '⚠️ 赖床警告', partner_master_sleep: '👑 主人已休息', partner_master_wake: '👑 主人已起床', partner_doggy_sleep: '🎀 小狗已休息', partner_doggy_wake: '🎀 小狗已起床' };
     const titleEl = document.getElementById('notify-text-modal-title'); if (titleEl) titleEl.innerHTML = `编辑：${nameMap[key] || key} <span class="help-icon" onclick="openVarsHelpModal()">?</span>`; 
     const tipEl = document.getElementById('notify-text-default-title-tip');
@@ -144,7 +150,7 @@ window.openNotifyTestModal = function() {
     selectEl.dataset.customized = 'false'; 
     
     const isService = configs.mode === 'service', mTitle = isService ? '主人' : '先生', dTitle = isService ? '小狗' : '宝宝'; 
-    const options = [ { val: 'master_sleep', text: `👑 ${mTitle} - 休息提醒` }, { val: 'master_wake', text: `👑 ${mTitle} - 起床提醒` }, { val: 'doggy_sleep', text: `🎀 ${dTitle} - 睡觉提醒` }, { val: 'doggy_wake', text: `🎀 ${dTitle} - 起床提醒` }, { val: 'master_sleep_overtime', text: `⏳ ${mTitle} - 熬夜警告` }, { val: 'master_wake_overtime', text: `⏳ ${mTitle} - 赖床警告` }, { val: 'doggy_sleep_overtime', text: `⏳ ${dTitle} - 熬夜警告` }, { val: 'doggy_wake_overtime', text: `⏳ ${dTitle} - 赖床警告` }, { val: 'partner_master_sleep', text: `📡 对方 - ${mTitle}休息` }, { val: 'partner_master_wake', text: `📡 对方 - ${mTitle}起床` }, { val: 'partner_doggy_sleep', text: `📡 对方 - ${dTitle}休息` }, { val: 'partner_doggy_wake', text: `📡 对方 - ${dTitle}起床` } ]; 
+    const options = [ { val: 'master_sleep', text: `👑 ${mTitle} - 休息提醒` }, { val: 'master_wake', text: `👑 ${mTitle} - 起床提醒` }, { val: 'doggy_sleep', text: `🎀 ${dTitle} - 休息提醒` }, { val: 'doggy_wake', text: `🎀 ${dTitle} - 起床提醒` }, { val: 'master_sleep_overtime', text: `⏳ ${mTitle} - 熬夜警告` }, { val: 'master_wake_overtime', text: `⏳ ${mTitle} - 赖床警告` }, { val: 'doggy_sleep_overtime', text: `⏳ ${dTitle} - 熬夜警告` }, { val: 'doggy_wake_overtime', text: `⏳ ${dTitle} - 赖床警告` }, { val: 'partner_master_sleep', text: `📡 对方 - ${mTitle}休息` }, { val: 'partner_master_wake', text: `📡 对方 - ${mTitle}起床` }, { val: 'partner_doggy_sleep', text: `📡 对方 - ${dTitle}休息` }, { val: 'partner_doggy_wake', text: `📡 对方 - ${dTitle}起床` } ]; 
     selectEl.innerHTML = options.map(o => `<option value="${o.val}">${o.text}</option>`).join(''); 
 
     const targetSelect = document.getElementById('test-notify-target');
@@ -296,10 +302,10 @@ window.readLibraryFile = function(event) {
             const poolNames = {
                 master_sleep_success: '👑 主人-休息(达标)', master_sleep_late: '👑 主人-休息(晚睡)',
                 master_wake_success: '👑 主人-起床(达标)', master_wake_late: '👑 主人-起床(赖床)',
-                doggy_sleep_success: '🎀 小狗-睡觉(达标)', doggy_sleep_late: '🎀 小狗-睡觉(晚睡)',
+                doggy_sleep_success: '🎀 小狗-休息(达标)', doggy_sleep_late: '🎀 小狗-休息(晚睡)',
                 doggy_wake_success: '🎀 小狗-起床(达标)', doggy_wake_late: '🎀 小狗-起床(赖床)',
                 master_sleep: '🔔 主人-休息提醒', master_wake: '🔔 主人-起床提醒',
-                doggy_sleep: '🔔 小狗-睡觉提醒', doggy_wake: '🔔 小狗-起床提醒',
+                doggy_sleep: '🔔 小狗-休息提醒', doggy_wake: '🔔 小狗-起床提醒',
                 master_sleep_overtime: '⏳ 主人-熬夜警告', master_wake_overtime: '⏳ 主人-赖床警告',
                 doggy_sleep_overtime: '⏳ 小狗-熬夜警告', doggy_wake_overtime: '⏳ 小狗-赖床警告',
                 overtime_sleep: '⏳ 通用-熬夜警告', overtime_wake: '⏳ 通用-赖床警告',

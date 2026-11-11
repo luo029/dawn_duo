@@ -1,9 +1,9 @@
 function deepMerge(base, override) { if (Array.isArray(base) || Array.isArray(override)) { if (Array.isArray(override)) return override.slice(); return Array.isArray(base) ? base.slice() : override; } const isObj = (v) => v && typeof v === 'object'; if (isObj(base)) { const ov = isObj(override) ? override : {}; const out = {}; for (const k of Object.keys(base)) out[k] = deepMerge(base[k], ov[k]); for (const k of Object.keys(ov)) if (!(k in out)) out[k] = deepMerge(undefined, ov[k]); return out; } return override === undefined ? base : override; }
 function migrateConfigs(raw) { 
   if (!raw || typeof raw !== 'object') return {}; 
-  if (raw.configVersion >= 16) return raw; 
+  if (raw.configVersion >= 17) return raw; 
   const out = Object.assign({}, raw); 
-  out.configVersion = 16; 
+  out.configVersion = 17; 
   if (out.timeZones && typeof out.timeZones.master === 'string') out.timeZones = { master: { type: 'iana', value: out.timeZones.master }, doggy: { type: 'iana', value: out.timeZones.doggy } }; 
   if (!out.profiles) out.profiles = { daily: {}, service: {} }; 
   const oldNotifyTexts = out.notifySettings && out.notifySettings.texts ? out.notifySettings.texts : null; 
@@ -38,6 +38,7 @@ function migrateConfigs(raw) {
           ns.doggy_max_times = ns.overtime_max_times !== undefined ? ns.overtime_max_times : 3;
           delete ns.overtime_window_enabled; delete ns.overtime_sleep_start; delete ns.overtime_sleep_end; delete ns.overtime_wake_start; delete ns.overtime_wake_end; delete ns.overtime_max_times;
       }
+      if (ns.master_on_time_before === undefined) { ns.master_on_time_before = 15; ns.master_on_time_after = 15; ns.doggy_on_time_before = 15; ns.doggy_on_time_after = 15; }
   }
   return out; 
 }

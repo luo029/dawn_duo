@@ -138,7 +138,7 @@ function checkPushText(notifyTexts, key, replacements) {
     const dSleepGoal = toMins(goals.doggy?.sleep || '22:30');
     const dWakeGoal = toMins(goals.doggy?.wake || '07:30');
 
-    let targetUser = '';
+    let targetUser = '', textKey = '', replacements = {}, sendType = '';
 
     if (TRIGGER_FROM === 'partner') {
       if (sendMaster) {
@@ -191,6 +191,9 @@ function checkPushText(notifyTexts, key, replacements) {
     const isDone = sendType === 'sleep' ? (isMaster ? remoteDb.master[mDateStr]?.sleep?.done : remoteDb.doggy[dDateStr]?.sleep?.done) : (isMaster ? remoteDb.master[mDateStr]?.wake?.done : remoteDb.doggy[dDateStr]?.wake?.done);
     if (isDone && !TEST_MODE) continue;
 
+    const beforeMins = isMaster ? (notifySettings.master_on_time_before !== undefined ? notifySettings.master_on_time_before : 15) : (notifySettings.doggy_on_time_before !== undefined ? notifySettings.doggy_on_time_before : 15);
+    const afterMins = isMaster ? (notifySettings.master_on_time_after !== undefined ? notifySettings.master_on_time_after : 15) : (notifySettings.doggy_on_time_after !== undefined ? notifySettings.doggy_on_time_after : 15);
+
     const targetNow = isMaster ? mNow : dNow;
     const shichenInfo = getShichenInfo(targetNow.getHours());
     let commonReplacements = { 
@@ -221,12 +224,12 @@ function checkPushText(notifyTexts, key, replacements) {
         else inWindow = currentMins >= start && currentMins < end;
     }
 
-    if (diff >= -15 && diff <= 15) {
+    if (diff >= -beforeMins && diff <= afterMins) {
         if (notifyItems[`${targetUser}_${sendType}`] === false && !TEST_MODE) continue;
         if (!inWindow && !TEST_MODE) continue;
         textKey = `${targetUser}_${sendType}`;
         replacements = commonReplacements;
-    } else if (diff >= 30) {
+    } else if (diff > afterMins) {
         if (notifyItems[`${targetUser}_${sendType}_overtime`] === false && !TEST_MODE) continue;
         if (!inWindow && !TEST_MODE) continue;
         

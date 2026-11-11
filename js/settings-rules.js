@@ -1,28 +1,41 @@
 window.getTabRulesHTML = () => `
 <div class="tab-content" id="tab-rules">
   <div class="config-card">
-    <div class="config-title">⏰ 目标时间</div>
-    <div class="flex-row">
-      <div class="form-group"><label id="label-goal-master-sleep">主人休息目标</label><input type="time" id="cfg-goal-master-sleep" value="23:00"></div>
-      <div class="form-group"><label id="label-goal-master-wake">主人起床目标</label><input type="time" id="cfg-goal-master-wake" value="07:00"></div>
+    <div class="config-title">⏰ 作息与时间设定</div>
+    <div class="dual-tabs">
+      <button class="btn dual-tab-btn active" data-target="master" onclick="switchDualSettings('master', this)">👑 <span class="text-master-name"></span></button>
+      <button class="btn dual-tab-btn" data-target="doggy" onclick="switchDualSettings('doggy', this)">🎀 <span class="text-doggy-name"></span></button>
     </div>
-    <div class="flex-row">
-      <div class="form-group"><label id="label-goal-doggy-sleep">小狗睡觉目标</label><input type="time" id="cfg-goal-doggy-sleep" value="22:30"></div>
-      <div class="form-group"><label id="label-goal-doggy-wake">小狗起床目标</label><input type="time" id="cfg-goal-doggy-wake" value="07:30"></div>
-    </div>
-  </div>
-  
-  <div class="config-card">
-    <div class="config-title">🌍 时区设置</div>
-    <div class="flex-row">
-      <div class="form-group"><label id="label-tz-master-type">主人 时区类型</label><select id="cfg-tz-master-type" onchange="toggleTzInput('master')"><option value="iana">标准时区</option><option value="offset">自定义时差</option></select></div>
-      <div class="form-group" id="group-tz-master-iana"><label>时区</label><select id="cfg-tz-master-iana"><option value="Asia/Shanghai">中国标准时间</option><option value="Asia/Tokyo">日本标准时间</option><option value="America/New_York">美东时间 (纽约)</option><option value="America/Los_Angeles">美西时间 (洛杉矶)</option><option value="Europe/London">英国时间 (伦敦)</option><option value="Europe/Paris">中欧时间 (巴黎)</option></select></div>
-      <div class="form-group" id="group-tz-master-offset" style="display:none;"><label>时差</label><input type="number" id="cfg-tz-master-offset" step="0.5" placeholder="例如: -13"></div>
-    </div>
-    <div class="flex-row">
-      <div class="form-group"><label id="label-tz-doggy-type">小狗 时区类型</label><select id="cfg-tz-doggy-type" onchange="toggleTzInput('doggy')"><option value="iana">标准时区</option><option value="offset">自定义时差</option></select></div>
-      <div class="form-group" id="group-tz-doggy-iana"><label>时区</label><select id="cfg-tz-doggy-iana"><option value="Asia/Shanghai">中国标准时间</option><option value="Asia/Tokyo">日本标准时间</option><option value="America/New_York">美东时间 (纽约)</option><option value="America/Los_Angeles">美西时间 (洛杉矶)</option><option value="Europe/London">英国时间 (伦敦)</option><option value="Europe/Paris">中欧时间 (巴黎)</option></select></div>
-      <div class="form-group" id="group-tz-doggy-offset" style="display:none;"><label>时差</label><input type="number" id="cfg-tz-doggy-offset" step="0.5" placeholder="例如: -13"></div>
+    <div class="dual-user-group" data-active="master">
+      
+      <div data-user="master">
+        <div class="section-label">⏰ 目标时间</div>
+        <div class="flex-row">
+          <div class="form-group"><label>休息目标</label><input type="time" id="cfg-goal-master-sleep" value="23:00"></div>
+          <div class="form-group"><label>起床目标</label><input type="time" id="cfg-goal-master-wake" value="07:00"></div>
+        </div>
+        <div class="section-label" style="margin-top: 12px;">🌍 时区设置</div>
+        <div class="flex-row">
+          <div class="form-group"><label>时区类型</label><select id="cfg-tz-master-type" onchange="toggleTzInput('master')"><option value="iana">标准时区</option><option value="offset">自定义时差</option></select></div>
+          <div class="form-group" id="group-tz-master-iana"><label>时区</label><select id="cfg-tz-master-iana"><option value="Asia/Shanghai">中国标准时间</option><option value="Asia/Tokyo">日本标准时间</option><option value="America/New_York">美东时间 (纽约)</option><option value="America/Los_Angeles">美西时间 (洛杉矶)</option><option value="Europe/London">英国时间 (伦敦)</option><option value="Europe/Paris">中欧时间 (巴黎)</option></select></div>
+          <div class="form-group" id="group-tz-master-offset" style="display:none;"><label>时差</label><input type="number" id="cfg-tz-master-offset" step="0.5" placeholder="例如: -13"></div>
+        </div>
+      </div>
+
+      <div data-user="doggy" style="display: none;">
+        <div class="section-label">⏰ 目标时间</div>
+        <div class="flex-row">
+          <div class="form-group"><label>休息目标</label><input type="time" id="cfg-goal-doggy-sleep" value="22:30"></div>
+          <div class="form-group"><label>起床目标</label><input type="time" id="cfg-goal-doggy-wake" value="07:30"></div>
+        </div>
+        <div class="section-label" style="margin-top: 12px;">🌍 时区设置</div>
+        <div class="flex-row">
+          <div class="form-group"><label>时区类型</label><select id="cfg-tz-doggy-type" onchange="toggleTzInput('doggy')"><option value="iana">标准时区</option><option value="offset">自定义时差</option></select></div>
+          <div class="form-group" id="group-tz-doggy-iana"><label>时区</label><select id="cfg-tz-doggy-iana"><option value="Asia/Shanghai">中国标准时间</option><option value="Asia/Tokyo">日本标准时间</option><option value="America/New_York">美东时间 (纽约)</option><option value="America/Los_Angeles">美西时间 (洛杉矶)</option><option value="Europe/London">英国时间 (伦敦)</option><option value="Europe/Paris">中欧时间 (巴黎)</option></select></div>
+          <div class="form-group" id="group-tz-doggy-offset" style="display:none;"><label>时差</label><input type="number" id="cfg-tz-doggy-offset" step="0.5" placeholder="例如: -13"></div>
+        </div>
+      </div>
+
     </div>
   </div>
   

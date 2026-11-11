@@ -20,7 +20,11 @@ function checkNotifications() {
         const nowMins = toMins(nowTimeStr); const goalMins = toMins(configs.goals?.[it.user]?.[it.type]); if (!Number.isFinite(nowMins) || !Number.isFinite(goalMins)) return;
         let offset = nowMins - goalMins; if (offset < -720) offset += 1440; else if (offset > 720) offset -= 1440;
         
-        if (offset >= -15 && offset <= 15) { 
+        const isMaster = it.user === 'master';
+        const beforeMins = isMaster ? (nSettings.master_on_time_before !== undefined ? nSettings.master_on_time_before : 15) : (nSettings.doggy_on_time_before !== undefined ? nSettings.doggy_on_time_before : 15);
+        const afterMins = isMaster ? (nSettings.master_on_time_after !== undefined ? nSettings.master_on_time_after : 15) : (nSettings.doggy_on_time_after !== undefined ? nSettings.doggy_on_time_after : 15);
+        
+        if (offset >= -beforeMins && offset <= afterMins) { 
             if (!notifyLog[it.key]) { 
                 const obj = nTexts[it.key] || { channel: 'both', texts: [] };
                 if (obj.channel === 'both' || obj.channel === 'page') {
@@ -41,7 +45,6 @@ function checkNotifications() {
         const oKey = `${it.user}_${it.type}_overtime`;
         if (nItems[oKey] === false) return; 
         
-        const isMaster = it.user === 'master';
         const targetWindowEnabled = isMaster ? (nSettings.master_window_enabled !== false) : (nSettings.doggy_window_enabled !== false);
         const tSleepStart = toMins(isMaster ? (nSettings.master_sleep_start || '21:00') : (nSettings.doggy_sleep_start || '21:00'));
         const tSleepEnd = toMins(isMaster ? (nSettings.master_sleep_end || '05:00') : (nSettings.doggy_sleep_end || '05:00'));
@@ -49,7 +52,7 @@ function checkNotifications() {
         const tWakeEnd = toMins(isMaster ? (nSettings.master_wake_end || '12:00') : (nSettings.doggy_wake_end || '12:00'));
         const tMaxTimes = isMaster ? (nSettings.master_max_times !== undefined ? nSettings.master_max_times : 3) : (nSettings.doggy_max_times !== undefined ? nSettings.doggy_max_times : 3);
         
-        let isOvertime = false, overtimeMins = 0; if (it.type === 'sleep' && offset > 30) { isOvertime = true; overtimeMins = offset; } else if (it.type === 'wake' && offset > 30) { isOvertime = true; overtimeMins = offset; }
+        let isOvertime = false, overtimeMins = 0; if (it.type === 'sleep' && offset > afterMins) { isOvertime = true; overtimeMins = offset; } else if (it.type === 'wake' && offset > afterMins) { isOvertime = true; overtimeMins = offset; }
         
         if (isOvertime) { 
             if (targetWindowEnabled) {

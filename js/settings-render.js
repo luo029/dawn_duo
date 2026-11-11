@@ -174,10 +174,38 @@ document.addEventListener('DOMContentLoaded', () => {
           <div id="backend-push-status" class="tip-text" style="margin-bottom: 12px;">正在检查订阅状态...</div>
           <div class="progress-area" id="push-progress" style="display: none; margin-bottom: 12px;"><div class="progress-bar-wrap"><div class="progress-bar" id="push-progress-bar" style="width: 0%;"></div></div><div class="progress-text" id="push-progress-text">正在处理...</div></div>
         </div>
+        
         <div class="config-card">
-          <div class="config-title">⏳ 超时监控</div>
-          <div class="switch-row"><label>开启熬夜/赖床提醒<span class="help-icon" data-tip="超过了设定的目标时间还没打卡，会持续发送警告提醒">i</span></label><label class="toggle-switch"><input type="checkbox" id="cfg-notify-overtime"><span class="slider"></span></label></div>
-          <div class="form-group" style="margin-top: 8px;"><label>超时重复提醒间隔 (分钟)</label><input type="number" id="cfg-notify-interval" value="30" min="10" step="10"></div>
+          <div class="config-title">🎯 提醒开关<span class="help-icon" data-tip="关闭某项后，页面通知和云端推送将不再发送该项提醒">i</span></div>
+          
+          <div data-user="master">
+            <div class="section-label">👑 <span class="text-master-name"></span> 提醒</div>
+            <div class="switch-row"><label>🌙 休息提醒</label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="master_sleep"><span class="slider"></span></label></div>
+            <div class="switch-row"><label>☀️ 起床提醒</label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="master_wake"><span class="slider"></span></label></div>
+            <div class="section-label" style="margin-top: 16px;">📡 <span class="text-doggy-name"></span> 动态</div>
+            <div class="switch-row"><label>对方已休息通知</label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="partner_doggy_sleep"><span class="slider"></span></label></div>
+            <div class="switch-row"><label>对方已起床通知</label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="partner_doggy_wake"><span class="slider"></span></label></div>
+          </div>
+
+          <div data-user="doggy">
+            <div class="section-label">🎀 <span class="text-doggy-name"></span> 提醒</div>
+            <div class="switch-row"><label>🌙 睡觉提醒</label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="doggy_sleep"><span class="slider"></span></label></div>
+            <div class="switch-row"><label>☀️ 起床提醒</label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="doggy_wake"><span class="slider"></span></label></div>
+            <div class="section-label" style="margin-top: 16px;">📡 <span class="text-master-name"></span> 动态</div>
+            <div class="switch-row"><label>对方已休息通知</label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="partner_master_sleep"><span class="slider"></span></label></div>
+            <div class="switch-row"><label>对方已起床通知</label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="partner_master_wake"><span class="slider"></span></label></div>
+          </div>
+
+          <div class="card-divider"></div>
+          
+          <div class="section-label">⏳ 超时警告 (通用)</div>
+          <div class="switch-row"><label>熬夜超时警告</label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="overtime_sleep"><span class="slider"></span></label></div>
+          <div class="switch-row"><label>赖床超时警告</label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="overtime_wake"><span class="slider"></span></label></div>
+          
+          <div class="switch-row" style="margin-top: 8px; border-top: 1px dashed var(--border); padding-top: 12px;">
+            <label>重复提醒间隔 (分钟)</label>
+            <input type="number" id="cfg-notify-interval" value="30" min="10" step="10" style="width: 80px; padding: 6px; text-align: center;">
+          </div>
         </div>
       </div>
 

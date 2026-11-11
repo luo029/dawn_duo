@@ -55,5 +55,102 @@ window.getTabDataHTML = () => `
   </div>
 </div>`;
 
-window.loadPushDevices = async function() { const container = document.getElementById('device-list-container'); if (!container) return; container.innerHTML = '<div style="text-align: center; color: var(--text-muted); font-size: 0.8rem; padding: 10px;">读取云端设备中...</div>'; try { const res = await fetchGHFile('subscriptions.json'); if (!res) { container.innerHTML = '<div style="text-align: center; color: var(--text-muted); font-size: 0.8rem; padding: 10px;">暂无绑定的推送设备</div>'; return; } const subs = JSON.parse(res.content); if (!Array.isArray(subs) || subs.length === 0) { container.innerHTML = '<div style="text-align: center; color: var(--text-muted); font-size: 0.8rem; padding: 10px;">暂无绑定的推送设备</div>'; return; } container.innerHTML = ''; const isService = configs.mode === 'service'; const mName = getPureName(P().texts.masterName) || (isService ? '主人' : '先生'); const dName = getPureName(P().texts.doggyName) || (isService ? '小狗' : '宝宝'); subs.forEach((sub, idx) => { let displayId = sub.identity || 'both'; let badgeClass = 'master'; let icon = '👑'; if (displayId === 'doggy' || displayId.includes(dName) || displayId === '小狗') { displayId = dName; badgeClass = 'doggy'; icon = '🎀'; } else if (displayId === 'master' || displayId.includes(mName) || displayId === '主人') { displayId = mName; badgeClass = 'master'; icon = '👑'; } else { displayId = '联合身份'; badgeClass = 'both'; icon = '🍉'; } const device = sub.device || '未记录设备（请重新授权）'; const authTime = sub.authTime || '未记录时间'; const el = document.createElement('div'); el.className = 'device-item'; el.innerHTML = ` <div class="device-info" style="min-width: 0; flex: 1;"> <div class="device-id" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${icon} ${displayId}</div> <div class="device-meta" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${device} · ${authTime}</div> </div> <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px; flex-shrink: 0; margin-left: 8px;"> <div class="device-badge ${badgeClass}" style="margin-bottom: 4px;">${badgeClass === 'master' ? '主人端' : (badgeClass === 'doggy' ? '小狗端' : '双端')}</div> <button class="btn danger outline" style="padding: 4px 8px; font-size: 0.75rem; white-space: nowrap;" onclick="removePushDevice(${idx})">🗑️ 移除</button> </div> `; container.appendChild(el); }); } catch(e) { container.innerHTML = '<div style="text-align: center; color: var(--warn); font-size: 0.8rem; padding: 10px;">读取失败，请检查网络或 Token</div>'; } };
-window.removePushDevice = function(idx) { if (!ghConfig.user || !ghConfig.repo || !ghConfig.token) return; fetchGHFile('subscriptions.json').then(async res => { if (!res) return; const subs = JSON.parse(res.content); if (!subs[idx]) return; const removedSub = subs[idx]; let isCurrentDevice = false; try { const localAuth = JSON.parse(localStorage.getItem('dawn-duo-push-auth') || '{}'); if (localAuth.endpoint === removedSub.endpoint) isCurrentDevice = true; } catch(e) {} const deviceName = removedSub.device || '未知设备'; const msg = `确定要彻底移除设备 <b>${deviceName}</b> 的推送授权吗？<br><br>移除后，该设备将无法接收到云端后台推送。<br>（如需恢复，请去【提醒】页面重新开启后台推送）`; window.showCustomConfirm('📵 移除推送设备', msg, async () => { try { subs.splice(idx, 1); const ok = await pushGHFile('subscriptions.json', JSON.stringify(subs, null, 2), res.sha); if (ok) { showToast('✅ 设备已移除', 'success'); if (isCurrentDevice) { try { const registration = await navigator.serviceWorker.ready; const subscription = await registration.pushManager.getSubscription(); if (subscription) await subscription.unsubscribe(); localStorage.removeItem('dawn-duo-push-auth'); if (window.updateBackendPushStatus) window.updateBackendPushStatus(); } catch(e) { console.warn('本地取消订阅失败', e); } showToast('当前设备的后台推送已关闭', 'late'); } if (window.loadPushDevices) window.loadPushDevices(); } else { showToast('移除失败，请重试', 'late'); } } catch(e) { console.warn(e); showToast('移除出错', 'late'); } }); }).catch(e => { console.warn(e); showToast('读取数据出错', 'late'); }); };
+window.loadPushDevices = async function() { 
+    const container = document.getElementById('device-list-container'); 
+    if (!container) return; 
+    container.innerHTML = '<div style="text-align: center; color: var(--text-muted); font-size: 0.8rem; padding: 10px;">读取云端设备中...</div>'; 
+    try { 
+        const res = await fetchGHFile('subscriptions.json'); 
+        if (!res) { 
+            container.innerHTML = '<div style="text-align: center; color: var(--text-muted); font-size: 0.8rem; padding: 10px;">暂无绑定的推送设备</div>'; 
+            return; 
+        } 
+        const subs = JSON.parse(res.content); 
+        if (!Array.isArray(subs) || subs.length === 0) { 
+            container.innerHTML = '<div style="text-align: center; color: var(--text-muted); font-size: 0.8rem; padding: 10px;">暂无绑定的推送设备</div>'; 
+            return; 
+        } 
+        container.innerHTML = ''; 
+        const isService = configs.mode === 'service'; 
+        const mName = getPureName(P().texts.masterName) || (isService ? '主人' : '先生'); 
+        const dName = getPureName(P().texts.doggyName) || (isService ? '小狗' : '宝宝'); 
+        subs.forEach((sub, idx) => { 
+            let displayId = sub.identity || 'both'; 
+            let badgeClass = 'master'; 
+            let icon = '👑'; 
+            if (displayId === 'doggy' || displayId.includes(dName) || displayId === '小狗') { 
+                displayId = dName; badgeClass = 'doggy'; icon = '🎀'; 
+            } else if (displayId === 'master' || displayId.includes(mName) || displayId === '主人') { 
+                displayId = mName; badgeClass = 'master'; icon = '👑'; 
+            } else { 
+                displayId = '联合身份'; badgeClass = 'both'; icon = '🍉'; 
+            } 
+            const device = sub.device || '未记录设备（请重新授权）'; 
+            const authTime = sub.authTime || '未记录时间'; 
+            const el = document.createElement('div'); 
+            el.className = 'device-item'; 
+            el.innerHTML = ` 
+            <div class="device-info" style="min-width: 0; flex: 1;"> 
+                <div class="device-id" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${icon} ${displayId}</div> 
+                <div class="device-meta" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${device} · ${authTime}</div> 
+            </div> 
+            <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px; flex-shrink: 0; margin-left: 8px;"> 
+                <div class="device-badge ${badgeClass}" style="margin-bottom: 4px;">${badgeClass === 'master' ? '主人端' : (badgeClass === 'doggy' ? '小狗端' : '双端')}</div> 
+                <button class="btn danger outline" style="padding: 4px 8px; font-size: 0.75rem; white-space: nowrap;" onclick="removePushDevice(${idx})">🗑️ 移除</button> 
+            </div> `; 
+            container.appendChild(el); 
+        }); 
+    } catch(e) { 
+        console.error('设备读取失败:', e);
+        // 将真实报错展示在界面上
+        container.innerHTML = `<div style="text-align: center; color: var(--warn); font-size: 0.8rem; padding: 10px;">
+            读取失败: ${e.message || '网络错误'}<br>
+            <span style="font-size: 0.7rem; opacity: 0.7; margin-top: 4px; display: block;">（如在国内，请检查能否正常直连 GitHub API）</span>
+        </div>`; 
+    } 
+};
+
+window.removePushDevice = function(idx) { 
+    if (!ghConfig.user || !ghConfig.repo || !ghConfig.token) return; 
+    fetchGHFile('subscriptions.json').then(async res => { 
+        if (!res) return; 
+        const subs = JSON.parse(res.content); 
+        if (!subs[idx]) return; 
+        const removedSub = subs[idx]; 
+        let isCurrentDevice = false; 
+        try { 
+            const localAuth = JSON.parse(localStorage.getItem('dawn-duo-push-auth') || '{}'); 
+            if (localAuth.endpoint === removedSub.endpoint) isCurrentDevice = true; 
+        } catch(e) {} 
+        const deviceName = removedSub.device || '未知设备'; 
+        const msg = `确定要彻底移除设备 <b>${deviceName}</b> 的推送授权吗？<br><br>移除后，该设备将无法接收到云端后台推送。<br>（如需恢复，请去【提醒】页面重新开启后台推送）`; 
+        window.showCustomConfirm('📵 移除推送设备', msg, async () => { 
+            try { 
+                subs.splice(idx, 1); 
+                const ok = await pushGHFile('subscriptions.json', JSON.stringify(subs, null, 2), res.sha); 
+                if (ok) { 
+                    showToast('✅ 设备已移除', 'success'); 
+                    if (isCurrentDevice) { 
+                        try { 
+                            const registration = await navigator.serviceWorker.ready; 
+                            const subscription = await registration.pushManager.getSubscription(); 
+                            if (subscription) await subscription.unsubscribe(); 
+                            localStorage.removeItem('dawn-duo-push-auth'); 
+                            if (window.updateBackendPushStatus) window.updateBackendPushStatus(); 
+                        } catch(e) { console.warn('本地取消订阅失败', e); } 
+                        showToast('当前设备的后台推送已关闭', 'late'); 
+                    } 
+                    if (window.loadPushDevices) window.loadPushDevices(); 
+                } else { 
+                    showToast('移除失败，请重试', 'late'); 
+                } 
+            } catch(e) { 
+                console.warn(e); 
+                showToast('移除出错: ' + e.message, 'late'); 
+            } 
+        }); 
+    }).catch(e => { 
+        console.warn(e); 
+        showToast('读取数据出错: ' + e.message, 'late'); 
+    }); 
+};

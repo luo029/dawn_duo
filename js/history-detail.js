@@ -3,42 +3,48 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const style = document.createElement('style');
   style.innerHTML = `
-    #history-detail-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 300; display: none; justify-content: center; align-items: center; opacity: 0; transition: opacity 0.25s; }
+    #history-detail-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 300; display: none; justify-content: center; align-items: center; opacity: 0; transition: opacity 0.25s; padding: 16px; }
     #history-detail-modal.show { display: flex; opacity: 1; }
-    .hd-box { background: var(--card-bg); border-radius: 24px; width: 90%; max-width: 420px; padding: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.3); transform: translateY(20px) translateZ(0); transition: transform 0.3s; border: 1px solid var(--border); }
+    .hd-box { background: var(--card-bg); border-radius: 24px; width: 100%; max-width: 420px; max-height: 88vh; display: flex; flex-direction: column; box-shadow: 0 20px 50px rgba(0,0,0,0.3); transform: translateY(20px) translateZ(0); transition: transform 0.3s; border: 1px solid var(--border); overflow: hidden; }
     #history-detail-modal.show .hd-box { transform: translateY(0) translateZ(0); }
-    .hd-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    
+    .hd-head { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px dashed var(--border); flex-shrink: 0; }
     .hd-title { font-size: 1.15rem; font-weight: 800; color: var(--text); }
     .hd-close { background: var(--btn-bg); border: none; color: var(--text-muted); width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 1rem; display: flex; justify-content: center; align-items: center; transition: all 0.2s; }
     .hd-close:hover { background: var(--warn-bg); color: var(--warn); }
 
-    .hd-view-tabs { display: flex; background: var(--input-bg); border-radius: 12px; padding: 4px; margin-bottom: 16px; gap: 4px; border: 1px solid var(--border); }
+    .hd-view-tabs { display: flex; background: var(--input-bg); border-radius: 12px; padding: 4px; margin: 12px 20px; gap: 4px; border: 1px solid var(--border); flex-shrink: 0; }
     .hd-view-tabs button { flex: 1; padding: 6px 0; border-radius: 8px; border: none; background: transparent; color: var(--text-muted); font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
     .hd-view-tabs button.active { background: var(--card-bg); color: var(--tab-active); box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
 
-    .hd-user-card { background: var(--bg); border-radius: 14px; padding: 14px 16px; margin-bottom: 10px; border: 1px solid var(--border); position: relative; overflow: hidden; animation: fadeIn 0.3s ease; }
+    .hd-body { padding: 0 20px 12px; overflow-y: auto; flex: 1; -webkit-overflow-scrolling: touch; }
+    
+    .hd-user-card { background: var(--bg); border-radius: 16px; padding: 16px; margin-bottom: 12px; border: 1px solid var(--border); position: relative; overflow: hidden; animation: fadeIn 0.3s ease; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
     .hd-user-card.master::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--master-color); }
     .hd-user-card.doggy::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--doggy-color); }
-    .hd-user-name { font-size: 0.95rem; font-weight: 700; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+    .hd-user-name { font-size: 1rem; font-weight: 800; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
     .hd-user-card.master .hd-user-name { color: var(--master-color); }
     .hd-user-card.doggy .hd-user-name { color: var(--doggy-color); }
     
-    .hd-flex-row { display: flex; gap: 12px; margin-bottom: 12px; }
-    .hd-col { flex: 1; display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; background: var(--card-bg); border-radius: 10px; border: 1px solid var(--border); }
-    .hd-label { color: var(--text-muted); font-weight: 600; font-size: 0.7rem; display: flex; align-items: center; gap: 4px; }
-    .hd-time { color: var(--text); font-size: 1.3rem; font-weight: 800; font-family: 'DIN Alternate', sans-serif; margin: 2px 0; }
-    .hd-badge { font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: 600; display: inline-block; width: fit-content; }
+    .hd-flex-row { display: flex; align-items: stretch; margin-bottom: 12px; background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border); padding: 12px 10px; }
+    .hd-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+    .hd-divider { width: 1px; background: var(--border); margin: 0 8px; }
+    .hd-label { color: var(--text-muted); font-weight: 700; font-size: 0.75rem; display: flex; align-items: center; gap: 4px; }
+    .hd-time { color: var(--text); font-size: clamp(1.3rem, 5vw, 1.6rem); font-weight: 900; font-family: 'DIN Alternate', sans-serif; margin: 2px 0; letter-spacing: 1px; }
+    .hd-badge { font-size: 0.7rem; padding: 4px 10px; border-radius: 12px; font-weight: 700; display: inline-block; letter-spacing: 1px; }
     .hd-badge.success { background: var(--success-bg); color: var(--success); }
     .hd-badge.late { background: var(--warn-bg); color: var(--warn); }
     .hd-badge.none { background: var(--btn-bg); color: var(--text-muted); }
-    .hd-badge.dom { background: rgba(139,0,0,0.1); color: #8B0000; }
-    .hd-badge.sub { background: rgba(0,0,0,0.06); color: #555555; }
+    .hd-badge.dom { background: rgba(212,175,55,0.15); color: #D4AF37; border: 1px solid rgba(212,175,55,0.3); }
+    .hd-badge.sub-dom { background: rgba(21,128,61,0.15); color: #15803D; border: 1px solid rgba(21,128,61,0.3); }
+    .hd-badge.sub-bad { background: rgba(230,57,70,0.15); color: #E63946; border: 1px solid rgba(230,57,70,0.3); }
     
-    .hd-duration-bar { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 12px; background: var(--btn-bg); border: 1px dashed var(--border); border-radius: 10px; font-size: 0.8rem; color: var(--text-muted); font-weight: 600; }
-    .hd-duration-bar.excellent { background: rgba(184, 134, 11, 0.1); border-color: rgba(184, 134, 11, 0.4); color: #B8860B; border-style: solid; }
+    .hd-duration-bar { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 8px 12px; background: var(--btn-bg); border: 1px dashed var(--border); border-radius: 10px; font-size: 0.75rem; color: var(--text-muted); font-weight: 700; }
+    .hd-duration-bar.excellent { background: rgba(234, 179, 8, 0.1); border-color: rgba(234, 179, 8, 0.4); color: #eab308; border-style: solid; }
+    .hd-duration-bar.excellent-dom { background: rgba(212, 175, 55, 0.1); border-color: rgba(212, 175, 55, 0.4); color: #D4AF37; border-style: solid; }
     
-    .hd-actions { display: flex; gap: 12px; margin-top: 16px; }
+    .hd-actions { display: flex; gap: 12px; padding: 12px 20px 16px; border-top: 1px dashed var(--border); flex-shrink: 0; background: var(--card-bg); }
     .hd-actions button { flex: 1; padding: 12px; border-radius: 12px; border: none; font-weight: 700; font-size: 0.95rem; cursor: pointer; transition: all 0.2s; display: flex; justify-content: center; align-items: center; gap: 8px; }
     .hd-btn-img { background: linear-gradient(135deg, var(--master-color), var(--doggy-color)); color: white; box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3); }
     .hd-btn-img:hover { opacity: 0.9; transform: translateY(-2px); }
@@ -57,11 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   window.openHistoryDetail = function(dateStr) {
     currentHdDate = dateStr;
-    if (identity === 'master' || identity === 'doggy') {
-      currentHdView = identity;
-    } else {
-      currentHdView = 'both';
-    }
+    currentHdView = (identity === 'master' || identity === 'doggy') ? identity : 'both';
     renderHdModal();
     modal.classList.add('show');
   };
@@ -95,10 +97,16 @@ document.addEventListener('DOMContentLoaded', () => {
       const wake = data.wake || {};
       const isDoggy = user === 'doggy';
       
+      let sLabel = '🌙 休息', wLabel = '☀️ 起床';
+      if (isService) {
+        if (isDoggy) { sLabel = '⛓️ 拘束'; wLabel = '🔔 侍奉'; }
+        else { sLabel = '👑 安寝'; wLabel = '☀️ 苏醒'; }
+      }
+
       let sBadge, wBadge;
       if (isService && isDoggy) {
-        sBadge = sleep.done ? `<span class="hd-badge ${sleep.ontime ? 'dom' : 'sub'}">${sleep.ontime ? '服从' : '抗命'}</span>` : `<span class="hd-badge none">未打卡</span>`;
-        wBadge = wake.done ? `<span class="hd-badge ${wake.ontime ? 'dom' : 'sub'}">${wake.ontime ? '服从' : '抗命'}</span>` : `<span class="hd-badge none">未打卡</span>`;
+        sBadge = sleep.done ? `<span class="hd-badge ${sleep.ontime ? 'sub-dom' : 'sub-bad'}">${sleep.ontime ? '服从' : '抗命'}</span>` : `<span class="hd-badge none">未打卡</span>`;
+        wBadge = wake.done ? `<span class="hd-badge ${wake.ontime ? 'sub-dom' : 'sub-bad'}">${wake.ontime ? '服从' : '抗命'}</span>` : `<span class="hd-badge none">未打卡</span>`;
       } else {
         sBadge = sleep.done ? `<span class="hd-badge ${sleep.ontime ? 'success' : 'late'}">${sleep.ontime ? '达标' : '晚睡'}</span>` : `<span class="hd-badge none">未打卡</span>`;
         wBadge = wake.done ? `<span class="hd-badge ${wake.ontime ? 'success' : 'late'}">${wake.ontime ? '达标' : '赖床'}</span>` : `<span class="hd-badge none">未打卡</span>`;
@@ -111,8 +119,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (sleepSec > 0) {
         const h = Math.floor(sleepSec / 3600);
         const m = Math.floor((sleepSec % 3600) / 60);
-        if (h >= 8) durationHtml = `<div class="hd-duration-bar excellent"><span>✨</span> 优质安睡 ${h}h${m}m <span>✨</span></div>`;
-        else durationHtml = `<div class="hd-duration-bar"><span>💤</span> 睡眠时长 ${h}h${m}m</div>`;
+        const isEx = h >= 8;
+        const barClass = isEx ? (isService && isDoggy ? 'excellent-dom' : 'excellent') : '';
+        durationHtml = `<div class="hd-duration-bar ${barClass}">${isEx ? '✨' : '💤'} ${isEx ? '优质安睡' : '睡眠时长'} ${h}h${m}m ${isEx ? '✨' : ''}</div>`;
       }
 
       return `
@@ -120,12 +129,13 @@ document.addEventListener('DOMContentLoaded', () => {
           <div class="hd-user-name">${isDoggy ? (isService ? '⛓️' : '🎀') : '👑'} ${name}</div>
           <div class="hd-flex-row">
             <div class="hd-col">
-              <div class="hd-label">🌙 休息</div>
+              <div class="hd-label">${sLabel}</div>
               <div class="hd-time">${sleep.done ? sleep.time : '--:--'}</div>
               ${sBadge}
             </div>
+            <div class="hd-divider"></div>
             <div class="hd-col">
-              <div class="hd-label">☀️ 起床</div>
+              <div class="hd-label">${wLabel}</div>
               <div class="hd-time">${wake.done ? wake.time : '--:--'}</div>
               ${wBadge}
             </div>
@@ -183,7 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const W = 600;
     const startY = 180;
-    const cardH = 230;
+    const cardH = 210;
     const gap = 20;
     const H = startY + userCount * (cardH + gap) + 60;
     
@@ -192,16 +202,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const ctx = canvas.getContext('2d');
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     
-    // 主题配色 - 彻底抛弃纯暗黑，主仆模式采用高级浅色
-    let bg, text, muted, masterColor, doggyColor, cardBg, borderColor;
+    // 奶白底色，极致清晰
+    let bg, text, muted, masterColor, doggyColor, cardBg, borderColor, dividerColor;
     if (isService) {
-      bg = '#F6F4F5';       // 极浅灰粉色
-      cardBg = '#FFFFFF';   // 纯白卡片
-      text = '#1A1A1A';     // 深黑文字
-      muted = '#888888';    // 灰色辅助文字
-      masterColor = '#8B0000'; // 暗红
-      doggyColor = '#C71585';  // 紫红
-      borderColor = 'rgba(139,0,0,0.15)';
+      bg = '#FAF7F5';         
+      cardBg = '#FFFFFF';     
+      text = '#1A1A1A';       // 统一深黑时间
+      muted = '#7A7A7A';      
+      masterColor = '#D4AF37'; // 主人的暗金色
+      doggyColor = '#E63946';  // 小狗的鲜血红
+      borderColor = 'rgba(212,175,55,0.3)'; 
+      dividerColor = 'rgba(230,57,70,0.15)';
     } else {
       bg = isDark ? '#120f17' : '#f4f8fc';
       cardBg = isDark ? '#1c1825' : '#ffffff';
@@ -209,37 +220,38 @@ document.addEventListener('DOMContentLoaded', () => {
       muted = isDark ? '#9c8fa6' : '#706881';
       masterColor = (P().colors || {}).master || '#38bdf8';
       doggyColor = (P().colors || {}).doggy || '#f472b6';
-      borderColor = 'rgba(0,0,0,0.06)';
+      borderColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+      dividerColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)';
     }
 
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, W, H);
 
-    // 顶部装饰条
+    // 顶部装饰线
+    const grad = ctx.createLinearGradient(0, 0, W, 0);
     if (isService) {
-      const grad = ctx.createLinearGradient(0, 0, W, 0);
       grad.addColorStop(0, masterColor);
-      grad.addColorStop(1, doggyColor);
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, W, 6);
+      grad.addColorStop(0.5, doggyColor);
+      grad.addColorStop(1, masterColor);
     } else {
-      const grad = ctx.createLinearGradient(0, 0, W, 0);
       grad.addColorStop(0, masterColor);
       grad.addColorStop(1, doggyColor);
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, W, 8);
     }
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, isService ? 4 : 8);
 
-    ctx.fillStyle = isService ? masterColor : text;
+    // 标题
+    ctx.fillStyle = isService ? '#2D262F' : text;
     ctx.font = 'bold 32px "PingFang SC", "Microsoft YaHei", sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(isService ? '契约调教日报' : '契约打卡日报', W/2, 70);
+    ctx.fillText(isService ? '契 约 调 教 日 报' : '契约打卡日报', W/2, 70);
 
+    // 日期
     ctx.fillStyle = muted;
     ctx.font = '18px "PingFang SC", sans-serif';
     ctx.fillText(dateTitle, W/2, 110);
 
-    // 顶部摘要
+    // 摘要
     function countOntime(data) {
       let c = 0;
       if (data.sleep?.done && data.sleep.ontime) c++;
@@ -253,16 +265,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const summaryText = isService ? `今日履约 ${ontimeCount}/${total}` : `今日达标 ${ontimeCount}/${total}`;
     
     ctx.font = 'bold 15px "PingFang SC", sans-serif';
-    const sw = ctx.measureText(summaryText).width + 36;
-    ctx.fillStyle = isService ? 'rgba(139,0,0,0.08)' : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)');
+    const sw = ctx.measureText(summaryText).width + 40;
+    ctx.fillStyle = isService ? 'rgba(212,175,55,0.1)' : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)');
     ctx.beginPath(); ctx.roundRect((W - sw) / 2, 135, sw, 32, 16); ctx.fill();
+    if (isService) {
+      ctx.strokeStyle = 'rgba(212,175,55,0.3)';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.roundRect((W - sw) / 2, 135, sw, 32, 16); ctx.stroke();
+    }
     
-    const excellentColor = isService ? masterColor : '#10b981';
-    ctx.fillStyle = ontimeCount === total ? excellentColor : (ontimeCount > 0 ? text : muted);
+    ctx.fillStyle = ontimeCount === total ? (isService ? masterColor : '#10b981') : text;
     ctx.textAlign = 'center';
     ctx.fillText(summaryText, W/2, 157);
 
-    // 绘制用户卡片
+    // 绘制卡片
     function drawUserCard(user, name, data, y) {
       const color = user === 'master' ? masterColor : doggyColor;
       const isMaster = user === 'master';
@@ -271,9 +287,19 @@ document.addEventListener('DOMContentLoaded', () => {
       const wake = data.wake || {};
 
       // 卡片背景
+      ctx.shadowColor = isService ? 'rgba(0,0,0,0.04)' : 'rgba(0,0,0,0.05)';
+      ctx.shadowBlur = 15;
+      ctx.shadowOffsetY = 5;
       ctx.fillStyle = cardBg;
       ctx.beginPath(); ctx.roundRect(40, y, W - 80, cardH, 20); ctx.fill();
-      
+      ctx.shadowColor = 'transparent';
+
+      if (isService) {
+        ctx.strokeStyle = borderColor;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.roundRect(40, y, W - 80, cardH, 20); ctx.stroke();
+      }
+
       // 左侧强调线
       ctx.fillStyle = color;
       ctx.beginPath(); ctx.roundRect(40, y, 8, cardH, [20, 0, 0, 20]); ctx.fill();
@@ -281,56 +307,96 @@ document.addEventListener('DOMContentLoaded', () => {
       // 名字
       ctx.fillStyle = color;
       ctx.font = 'bold 24px "PingFang SC", sans-serif';
-      ctx.textAlign = 'left';
-      ctx.fillText(`${isMaster ? '👑' : (isService ? '⛓️' : '🎀')} ${name}`, 70, y + 45);
+      ctx.textAlign = 'center';
+      ctx.fillText(`${isMaster ? '👑' : (isService ? '⛓️' : '🎀')} ${name}`, W/2, y + 40);
 
-      // 分割线
-      ctx.strokeStyle = isService ? 'rgba(139,0,0,0.1)' : borderColor;
-      ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(70, y + 65); ctx.lineTo(W - 70, y + 65); ctx.stroke();
-
-      const leftX = 70, rightX = 320, dataY = y + 90;
-
-      function drawBlock(title, icon, time, isDone, isOntime, x) {
-        ctx.fillStyle = muted;
-        ctx.font = '14px "PingFang SC", sans-serif';
-        ctx.textAlign = 'left';
-        ctx.fillText(`${icon} ${title}`, x, dataY);
-
-        ctx.fillStyle = isDone ? (isOntime ? (isService ? masterColor : '#10b981') : text) : muted;
-        ctx.font = 'bold 32px "DIN Alternate", "PingFang SC", sans-serif';
-        ctx.fillText(isDone ? time : '--:--', x, dataY + 42);
-
-        if (isDone) {
-          let label, badgeBg, badgeColor;
-          if (isService && isDoggy) {
-            label = isOntime ? '服从' : '抗命';
-            badgeBg = isOntime ? 'rgba(139,0,0,0.1)' : 'rgba(0,0,0,0.06)';
-            badgeColor = isOntime ? masterColor : '#555555';
-          } else {
-            label = isOntime ? '达标' : (title === '休息' ? '晚睡' : '赖床');
-            badgeBg = isOntime ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)';
-            badgeColor = isOntime ? '#10b981' : '#ef4444';
-          }
-          
-          ctx.font = 'bold 12px sans-serif';
-          const tw = ctx.measureText(label).width + 16;
-          ctx.fillStyle = badgeBg;
-          ctx.beginPath(); ctx.roundRect(x, dataY + 55, tw, 24, 12); ctx.fill();
-          ctx.fillStyle = badgeColor;
-          ctx.textAlign = 'center';
-          ctx.fillText(label, x + tw/2, dataY + 72);
-        } else {
-          ctx.fillStyle = muted;
-          ctx.font = '12px "PingFang SC", sans-serif';
-          ctx.fillText('未打卡', x, dataY + 65);
-        }
+      // 标签定义
+      let sLabel = '🌙 休息', wLabel = '☀️ 起床';
+      if (isService) {
+        if (isDoggy) { sLabel = '⛓️ 拘束'; wLabel = '🔔 侍奉'; }
+        else { sLabel = '👑 安寝'; wLabel = '☀️ 苏醒'; }
       }
 
-      drawBlock('休息', '🌙', sleep.time, sleep.done, sleep.ontime, leftX);
-      drawBlock('起床', '☀️', wake.time, wake.done, wake.ontime, rightX);
+      const midX = W / 2;
+      const boxY = y + 65;
+      
+      // 左区块
+      const leftCX = 40 + (W - 80) / 4;
+      ctx.fillStyle = muted;
+      ctx.font = '14px "PingFang SC", sans-serif';
+      ctx.fillText(sLabel, leftCX, boxY + 20);
 
-      // 底部睡眠时长条
+      // 时间统一深色
+      ctx.fillStyle = sleep.done ? text : muted;
+      ctx.font = 'bold 38px "DIN Alternate", "PingFang SC", sans-serif';
+      ctx.fillText(sleep.done ? sleep.time : '--:--', leftCX, boxY + 65);
+
+      if (sleep.done) {
+        let label, bgColor, txtColor;
+        if (isService && isDoggy) {
+          label = sleep.ontime ? '服从' : '抗命';
+          bgColor = sleep.ontime ? 'rgba(21,128,61,0.15)' : 'rgba(230,57,70,0.15)';
+          txtColor = sleep.ontime ? '#15803D' : doggyColor;
+        } else {
+          label = sleep.ontime ? '达标' : '晚睡';
+          bgColor = sleep.ontime ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)';
+          txtColor = sleep.ontime ? '#10b981' : '#ef4444';
+        }
+        ctx.font = 'bold 12px sans-serif';
+        const tw = ctx.measureText(label).width + 20;
+        ctx.fillStyle = bgColor;
+        ctx.beginPath(); ctx.roundRect(leftCX - tw/2, boxY + 75, tw, 22, 11); ctx.fill();
+        ctx.fillStyle = txtColor;
+        ctx.fillText(label, leftCX, boxY + 91);
+      } else {
+        ctx.fillStyle = muted;
+        ctx.font = '12px "PingFang SC", sans-serif';
+        ctx.fillText('未打卡', leftCX, boxY + 85);
+      }
+
+      // 右区块
+      const rightCX = 40 + (W - 80) * 3 / 4;
+      ctx.fillStyle = muted;
+      ctx.font = '14px "PingFang SC", sans-serif';
+      ctx.fillText(wLabel, rightCX, boxY + 20);
+
+      // 时间统一深色
+      ctx.fillStyle = wake.done ? text : muted;
+      ctx.font = 'bold 38px "DIN Alternate", "PingFang SC", sans-serif';
+      ctx.fillText(wake.done ? wake.time : '--:--', rightCX, boxY + 65);
+
+      if (wake.done) {
+        let label, bgColor, txtColor;
+        if (isService && isDoggy) {
+          label = wake.ontime ? '服从' : '抗命';
+          bgColor = wake.ontime ? 'rgba(21,128,61,0.15)' : 'rgba(230,57,70,0.15)';
+          txtColor = wake.ontime ? '#15803D' : doggyColor;
+        } else {
+          label = wake.ontime ? '达标' : '赖床';
+          bgColor = wake.ontime ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)';
+          txtColor = wake.ontime ? '#10b981' : '#ef4444';
+        }
+        ctx.font = 'bold 12px sans-serif';
+        const tw = ctx.measureText(label).width + 20;
+        ctx.fillStyle = bgColor;
+        ctx.beginPath(); ctx.roundRect(rightCX - tw/2, boxY + 75, tw, 22, 11); ctx.fill();
+        ctx.fillStyle = txtColor;
+        ctx.fillText(label, rightCX, boxY + 91);
+      } else {
+        ctx.fillStyle = muted;
+        ctx.font = '12px "PingFang SC", sans-serif';
+        ctx.fillText('未打卡', rightCX, boxY + 85);
+      }
+
+      // 中间分割线
+      ctx.strokeStyle = dividerColor;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(midX, boxY + 10);
+      ctx.lineTo(midX, boxY + 90);
+      ctx.stroke();
+
+      // 睡眠时长条
       let sleepSec = wake.meta?.sleepDuration;
       if (!sleepSec && sleep.done && wake.done) sleepSec = calcDuration(sleep.time, wake.time);
       
@@ -339,23 +405,26 @@ document.addEventListener('DOMContentLoaded', () => {
         const m = Math.floor((sleepSec % 3600) / 60);
         const isEx = h >= 8;
         
-        const barY = y + cardH - 50;
+        const barY = y + cardH - 45;
         const barW = W - 140;
+        const barX = 70;
         
-        ctx.fillStyle = isEx ? (isService ? 'rgba(184,134,11,0.1)' : 'rgba(234,179,8,0.1)') : (isService ? 'rgba(0,0,0,0.03)' : 'rgba(0,0,0,0.03)');
-        ctx.beginPath(); ctx.roundRect(70, barY, barW, 32, 8); ctx.fill();
+        ctx.fillStyle = isEx 
+          ? (isService ? 'rgba(212,175,55,0.1)' : 'rgba(234,179,8,0.1)') 
+          : (isService ? 'rgba(0,0,0,0.03)' : 'rgba(0,0,0,0.03)');
+        ctx.beginPath(); ctx.roundRect(barX, barY, barW, 26, 13); ctx.fill();
         
         if (isEx) {
-          ctx.strokeStyle = isService ? 'rgba(184,134,11,0.4)' : 'rgba(234,179,8,0.4)';
+          ctx.strokeStyle = isService ? 'rgba(212,175,55,0.4)' : 'rgba(234,179,8,0.4)';
           ctx.lineWidth = 1;
-          ctx.beginPath(); ctx.roundRect(70, barY, barW, 32, 8); ctx.stroke();
+          ctx.beginPath(); ctx.roundRect(barX, barY, barW, 26, 13); ctx.stroke();
         }
 
-        ctx.fillStyle = isEx ? (isService ? '#B8860B' : '#eab308') : muted;
-        ctx.font = 'bold 13px "PingFang SC", sans-serif';
+        ctx.fillStyle = isEx ? (isService ? masterColor : '#eab308') : muted;
+        ctx.font = 'bold 12px "PingFang SC", sans-serif';
         ctx.textAlign = 'center';
         const durText = isEx ? `✨ 优质安睡 ${h}h${m}m ✨` : `💤 睡眠时长 ${h}h${m}m`;
-        ctx.fillText(durText, W/2, barY + 21);
+        ctx.fillText(durText, W/2, barY + 17);
       }
     }
 

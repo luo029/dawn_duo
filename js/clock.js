@@ -52,13 +52,13 @@ function updateClocks(force) {
           } else if (showM) {
             if (refs.cardMaster) { refs.cardMaster.style.borderRadius = '20px'; refs.cardMaster.style.borderRight = '1px solid var(--border)'; }
           } else if (showD) {
-            if (refs.cardDoggy) refs.cardDoggy.style.borderRadius = '20px';
+            if (refs.cardDoggy) { refs.cardDoggy.style.borderRadius = '20px'; }
           }
           refs.container.style.gridTemplateColumns = '';
         } else {
           refs.container.classList.remove('merge-layout');
           if (refs.cardMaster) { refs.cardMaster.style.borderRadius = ''; refs.cardMaster.style.borderRight = ''; }
-          if (refs.cardDoggy) refs.cardDoggy.style.borderRadius = '';
+          if (refs.cardDoggy) { refs.cardDoggy.style.borderRadius = ''; }
           refs.container.style.gridTemplateColumns = (!showM || !showD) ? '1fr' : '';
         }
       }
@@ -114,10 +114,17 @@ function updateClocks(force) {
       if (Number.isFinite(d)) daysTogether = d;
       if (refs.diffHours) refs.diffHours.textContent = diffHours;
       if (refs.daysTogether) refs.daysTogether.textContent = daysTogether;
+      
       const currentLogicalDate = getLogicalDateStr();
       if (currentLogicalDate !== lastLogicalDate) { lastLogicalDate = currentLogicalDate; render(); }
-      const dateObj = new Date(lastLogicalDate);
-      if (!isNaN(dateObj.getTime()) && refs.logicalDateDisplay) refs.logicalDateDisplay.textContent = `契约日: ${dateObj.getMonth()+1}月${dateObj.getDate()}日`;
+      
+      // 修复：读取绑定纪念日（契约日），而不是默认当前的逻辑日期
+      if (refs.logicalDateDisplay) {
+          let displayAnnDate = new Date(configs.anniversary || '2026-11-04');
+          if (isNaN(displayAnnDate.getTime())) displayAnnDate = new Date(); // 容错
+          refs.logicalDateDisplay.textContent = `契约日: ${displayAnnDate.getMonth()+1}月${displayAnnDate.getDate()}日`;
+      }
+      
       if (localStorage.getItem('dawn-duo-theme-locked') !== 'true') {
         try {
           const hourStr = getTimeInTZ(configs.timeZones.master, { hour: 'numeric', hourCycle: 'h23' });

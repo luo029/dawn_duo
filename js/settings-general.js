@@ -24,8 +24,8 @@ window.getTabGeneralHTML = () => `
   </div>
   
   <div class="config-card">
-    <div class="config-title">📅 界面与纪念日</div>
-    <div class="form-group"><label>纪念日</label><input type="date" id="cfg-anniversary" value="2026-11-04"></div>
+    <div class="config-title">📅 界面与契约日</div>
+    <div class="form-group"><label>契约日</label><input type="date" id="cfg-anniversary" value="2026-11-04"></div>
     <div class="switch-row"><label>显示对方打卡卡片<span class="help-icon" data-tip="在当前身份下，是否在主界面显示对方（只读）的打卡按钮">i</span></label><label class="toggle-switch"><input type="checkbox" id="cfg-show-partner-card"><span class="slider"></span></label></div>
     <div class="switch-row"><label>显示对方独立状态栏<span class="help-icon" data-tip="在打卡区域顶部，显示对方当前是休息还是醒着的状态提示">i</span></label><label class="toggle-switch"><input type="checkbox" id="cfg-show-partner-status"><span class="slider"></span></label></div>
     <div class="switch-row"><label>简洁模式<span class="help-icon" data-tip="隐藏时钟、日历统计等非核心模块，界面更清爽">i</span></label><label class="toggle-switch"><input type="checkbox" id="cfg-simple-mode"><span class="slider"></span></label></div>

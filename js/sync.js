@@ -169,7 +169,17 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 
 function getSyncableData() { 
     const syncableConfig = JSON.parse(JSON.stringify(configs || {})); 
-    delete syncableConfig.mode; delete syncableConfig.simpleMode; delete syncableConfig.notifications; delete syncableConfig.showLogicalDate; delete syncableConfig.clockLayout; delete syncableConfig.showMasterClock; delete syncableConfig.showDoggyClock; delete syncableConfig.showSeconds; delete syncableConfig.showShichen; delete syncableConfig.showWellness; delete syncableConfig.showPartnerCard; delete syncableConfig.showPartnerStatus; 
+    // 删除所有纯本地界面偏好，不参与同步，防止互相覆盖
+    delete syncableConfig.mode; delete syncableConfig.simpleMode; delete syncableConfig.notifications; 
+    delete syncableConfig.showLogicalDate; delete syncableConfig.clockLayout; delete syncableConfig.showMasterClock; 
+    delete syncableConfig.showDoggyClock; delete syncableConfig.showSeconds; delete syncableConfig.showShichen; 
+    delete syncableConfig.showWellness; delete syncableConfig.showPartnerCard; delete syncableConfig.showPartnerStatus; 
+    
+    // 【修复】发情卡片和日历的展示开关也属于本地偏好，不同步
+    delete syncableConfig.showHeatCard; delete syncableConfig.showPartnerHeat; delete syncableConfig.heatLayout;
+    delete syncableConfig.showHistory; delete syncableConfig.historyType; delete syncableConfig.historyDays; 
+    delete syncableConfig.historyYear; delete syncableConfig.historyMonth;
+
     return { db: db || { master: {}, doggy: {} }, heatDb: heatDb || { master: {}, doggy: {} }, config: syncableConfig }; 
 }
 
@@ -179,8 +189,35 @@ function applySyncData(payloadDB, payloadConfig, payloadHeat = null, force = fal
         if (payloadHeat && (payloadHeat.master || payloadHeat.doggy)) { heatDb = payloadHeat; localStorage.setItem('dawn-duo-heat-data', JSON.stringify(heatDb)); }
         const isSettingsOpen = document.getElementById('settings-modal') && document.getElementById('settings-modal').classList.contains('show');
         if (payloadConfig) {
-            const localMode = configs.mode; const localSimple = configs.simpleMode; const localNotify = configs.notifications; const localShowMasterClock = configs.showMasterClock; const localShowDoggyClock = configs.showDoggyClock; const localShowSeconds = configs.showSeconds; const localShowShichen = configs.showShichen; const localShowWellness = configs.showWellness; const localClockLayout = configs.clockLayout; const localShowLogicalDate = configs.showLogicalDate; const localShowPartnerCard = configs.showPartnerCard; const localShowPartnerStatus = configs.showPartnerStatus;
-            configs = deepMerge(DEFAULT_CONFIGS, payloadConfig); configs.mode = localMode; configs.simpleMode = localSimple; configs.notifications = localNotify; configs.showMasterClock = localShowMasterClock; configs.showDoggyClock = localShowDoggyClock; configs.showSeconds = localShowSeconds; configs.showShichen = localShowShichen; configs.showWellness = localShowWellness; configs.clockLayout = localClockLayout; configs.showLogicalDate = localShowLogicalDate; configs.showPartnerCard = localShowPartnerCard; configs.showPartnerStatus = localShowPartnerStatus;
+            // 保存所有本地界面偏好
+            const localMode = configs.mode; const localSimple = configs.simpleMode; const localNotify = configs.notifications; 
+            const localShowMasterClock = configs.showMasterClock; const localShowDoggyClock = configs.showDoggyClock; 
+            const localShowSeconds = configs.showSeconds; const localShowShichen = configs.showShichen; 
+            const localShowWellness = configs.showWellness; const localClockLayout = configs.clockLayout; 
+            const localShowLogicalDate = configs.showLogicalDate; const localShowPartnerCard = configs.showPartnerCard; 
+            const localShowPartnerStatus = configs.showPartnerStatus;
+            
+            // 【修复】保存本地发情卡片和日历偏好
+            const localShowHeatCard = configs.showHeatCard; const localShowPartnerHeat = configs.showPartnerHeat; const localHeatLayout = configs.heatLayout;
+            const localShowHistory = configs.showHistory; const localHistoryType = configs.historyType; 
+            const localHistoryDays = configs.historyDays; const localHistoryYear = configs.historyYear; const localHistoryMonth = configs.historyMonth;
+
+            // 合并云端下发的配置
+            configs = deepMerge(DEFAULT_CONFIGS, payloadConfig); 
+            
+            // 覆盖回本地设置
+            configs.mode = localMode; configs.simpleMode = localSimple; configs.notifications = localNotify; 
+            configs.showMasterClock = localShowMasterClock; configs.showDoggyClock = localShowDoggyClock; 
+            configs.showSeconds = localShowSeconds; configs.showShichen = localShowShichen; 
+            configs.showWellness = localShowWellness; configs.clockLayout = localClockLayout; 
+            configs.showLogicalDate = localShowLogicalDate; configs.showPartnerCard = localShowPartnerCard; 
+            configs.showPartnerStatus = localShowPartnerStatus;
+            
+            // 【修复】覆盖回本地发情卡片和日历偏好
+            configs.showHeatCard = localShowHeatCard; configs.showPartnerHeat = localShowPartnerHeat; configs.heatLayout = localHeatLayout;
+            configs.showHistory = localShowHistory; configs.historyType = localHistoryType; 
+            configs.historyDays = localHistoryDays; configs.historyYear = localHistoryYear; configs.historyMonth = localHistoryMonth;
+
             localStorage.setItem('dawn-duo-configs', JSON.stringify(configs));
             if (isSettingsOpen) { fillTextInputs(); updateColorInputs(); updateMsgCounts(); updateModeCards(); if(window.refreshCustomSelects) window.refreshCustomSelects(); renderFixPanel(); }
         }

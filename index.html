@@ -14,11 +14,13 @@
   <div class="diff-pill"><span>相隔 <span id="diff-hours">--</span> 小时 · 契约已绑定 <span id="days-together">0</span> 天 💗</span><span class="logical-date" id="logical-date-display">--</span></div>
   <div class="grid-clocks" id="clock-container"><div class="clock-card master" id="clock-card-master"><div class="clock-city" id="master-city-text">📍 先生</div><div class="clock-time" id="time-master">--:--:--</div><div class="clock-date" id="date-master">--</div><div id="shichen-master" class="shichen-badge" style="display:none;"></div></div><div class="clock-card doggy" id="clock-card-doggy"><div class="clock-city" id="doggy-city-text">📍 宝宝</div><div class="clock-time" id="time-doggy">--:--:--</div><div class="clock-date" id="date-doggy">--</div><div id="shichen-doggy" class="shichen-badge" style="display:none;"></div></div></div>
   <div id="wellness-panel" class="wellness-box" style="display:none;"><div id="wellness-text"></div></div>
+  
   <div class="section-title">🔗 今日契约打卡</div><div class="partner-status-panel" id="partner-status-panel" style="display:none;"></div>
   <div class="grid-users" id="grid-users">
     <div class="user-card master-card"><div class="role-tag" id="display-master-tag">👑 先生</div><div class="user-header"><div class="user-name" id="display-master-name">🧘 先生</div><div class="user-role" id="master-goal-text">目标: --:-- / --:--</div></div><div class="checkin-group"><button class="checkin-btn" id="btn-master-sleep" onclick="toggle('master', 'sleep')"><div class="btn-left"><span class="btn-icon">🌙</span><span class="btn-label" id="display-master-sleep-btn">先生休息</span></div><span class="btn-time" id="time-master-sleep">未打卡</span></button><button class="checkin-btn" id="btn-master-wake" onclick="toggle('master', 'wake')"><div class="btn-left"><span class="btn-icon">☀️</span><span class="btn-label" id="display-master-wake-btn">先生起床</span></div><span class="btn-time" id="time-master-wake">未打卡</span></button></div></div>
     <div class="user-card doggy-card"><div class="role-tag" id="display-doggy-tag">🎀 宝宝</div><div class="user-header"><div class="user-name" id="display-doggy-name">🍼 宝宝</div><div class="user-role" id="doggy-goal-text">目标: --:-- / --:--</div></div><div class="checkin-group"><button class="checkin-btn" id="btn-doggy-sleep" onclick="toggle('doggy', 'sleep')"><div class="btn-left"><span class="btn-icon">🛏️</span><span class="btn-label" id="display-doggy-sleep-btn">宝宝睡觉</span></div><span class="btn-time" id="time-doggy-sleep">未打卡</span></button><button class="checkin-btn" id="btn-doggy-wake" onclick="toggle('doggy', 'wake')"><div class="btn-left"><span class="btn-icon">🌸</span><span class="btn-label" id="display-doggy-wake-btn">宝宝起床</span></div><span class="btn-time" id="time-doggy-wake">未打卡</span></button></div></div>
   </div>
+
   <div class="section-title">📊 契约统计</div><div class="stat-box"><div class="stat-item"><h3 id="stat-total">0</h3><p>累计履约次数</p></div><div class="stat-item"><h3 id="stat-streak">0</h3><p>连续自律天数</p></div></div>
   <div class="history-box" id="history-box"><div class="history-header"><div class="history-title" id="history-title-text">打卡回顾</div></div><div class="history-scroll" id="history-view-days"><div class="history-grid-days" id="history-grid-days"></div></div><div class="history-grid-calendar" id="history-grid-calendar"></div><div class="empty-state" id="history-empty" style="display:none;">计划尚未开启，快去打第一个卡吧 💗</div><div class="history-legend"><div class="legend-item"><div class="legend-color" style="background: var(--master-color);"></div><span id="legend-master-text">先生满勤</span></div><div class="legend-item"><div class="legend-color" style="background: var(--doggy-color);"></div><span id="legend-doggy-text">宝宝满勤</span></div><div class="legend-item"><div class="legend-color" style="background: linear-gradient(135deg, var(--master-color) 50%, var(--doggy-color) 50%);"></div>双人满勤</div><div class="legend-item"><div class="legend-color" style="background: var(--master-color); opacity: 0.4;"></div>仅一半</div></div></div>
 </div>
@@ -33,8 +35,10 @@
 <script src="js/settings-data.js"></script>
 <script src="js/settings-modals.js"></script>
 <script src="js/settings-fix.js"></script>
+<script src="js/heat-fix.js"></script>
 <script src="js/settings.js"></script>
 <script src="js/api.js"></script><script src="js/diff.js"></script><script src="js/sync.js"></script><script src="js/export.js"></script><script src="js/custom-select.js"></script><script src="js/pickers.js"></script>
 <script src="js/settings-render.js"></script><script src="js/app.js"></script><script src="js/checkin-mode.js"></script>
+<script src="js/heat-mode.js"></script>
 </body>
 </html>

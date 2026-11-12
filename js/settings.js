@@ -12,7 +12,7 @@ window.switchDualSettings = function(targetUser, btn) {
     if (window.applyIdentityFilter) window.applyIdentityFilter(); 
 };
 
-function fillTextInputs() { const t = P().texts || DEFAULT_TEXTS_DAILY; const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; }; const setChk = (id, val) => { const el = document.getElementById(id); if (el) el.checked = val; }; setVal('cfg-title', t.title || ''); setVal('cfg-subtitle', t.subtitle || ''); setVal('cfg-master-name', t.masterName || ''); setVal('cfg-master-tag', t.masterTag || ''); setVal('cfg-master-region', t.masterRegion || ''); setVal('cfg-doggy-name', t.doggyName || ''); setVal('cfg-doggy-tag', t.doggyTag || ''); setVal('cfg-doggy-region', t.doggyRegion || ''); setVal('cfg-master-sleep-btn', t.masterSleepBtn || ''); setVal('cfg-master-wake-btn', t.masterWakeBtn || ''); setVal('cfg-doggy-sleep-btn', t.doggySleepBtn || ''); setVal('cfg-doggy-wake-btn', t.doggyWakeBtn || ''); setVal('cfg-icon-daily', t.dailyModeIcon || '💕'); setVal('cfg-icon-service', t.serviceModeIcon || '🐕'); const n = configs.notifySettings || {}; setVal('cfg-notify-interval', n.overtimeInterval || 30); setChk('cfg-show-partner-card', configs.showPartnerCard !== false); setChk('cfg-show-partner-status', configs.showPartnerStatus !== false); setChk('cfg-auto-sync', ghConfig.autoSync !== false); setVal('cfg-sync-interval', ghConfig.syncInterval !== undefined ? String(ghConfig.syncInterval) : '5'); setChk('cfg-sync-prompt', ghConfig.syncPrompt !== false); setVal('cfg-gh-proxy', ghConfig.apiProxy || ''); setChk('cfg-gh-auto-fallback', ghConfig.autoFallback !== false); if (window.togglePartnerNotifyInputs) window.togglePartnerNotifyInputs(); }
+function fillTextInputs() { const t = P().texts || DEFAULT_TEXTS_DAILY; const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; }; const setChk = (id, val) => { const el = document.getElementById(id); if (el) el.checked = val; }; setVal('cfg-title', t.title || ''); setVal('cfg-subtitle', t.subtitle || ''); setVal('cfg-master-name', t.masterName || ''); setVal('cfg-master-tag', t.masterTag || ''); setVal('cfg-master-region', t.masterRegion || ''); setVal('cfg-doggy-name', t.doggyName || ''); setVal('cfg-doggy-tag', t.doggyTag || ''); setVal('cfg-doggy-region', t.doggyRegion || ''); setVal('cfg-master-sleep-btn', t.masterSleepBtn || ''); setVal('cfg-master-wake-btn', t.masterWakeBtn || ''); setVal('cfg-doggy-sleep-btn', t.doggySleepBtn || ''); setVal('cfg-doggy-wake-btn', t.doggyWakeBtn || ''); setVal('cfg-icon-daily', t.dailyModeIcon || '💕'); setVal('cfg-icon-service', t.serviceModeIcon || '🐕'); const n = configs.notifySettings || {}; setVal('cfg-notify-interval', n.overtimeInterval || 30); setChk('cfg-show-partner-card', configs.showPartnerCard !== false); setChk('cfg-show-partner-status', configs.showPartnerStatus !== false); setChk('cfg-auto-sync', ghConfig.autoSync !== false); setVal('cfg-sync-interval', ghConfig.syncInterval !== undefined ? String(ghConfig.syncInterval) : '5'); setChk('cfg-sync-prompt', ghConfig.syncPrompt !== false); setVal('cfg-gh-proxy', ghConfig.apiProxy || ''); setChk('cfg-gh-auto-fallback', ghConfig.autoFallback !== false); setChk('cfg-show-heat-card', configs.showHeatCard === true); setChk('cfg-show-partner-heat', configs.showPartnerHeat !== false); setChk('cfg-heat-notify-feeling', configs.notifySettings?.heatNotifyWithFeeling !== false); setVal('cfg-heat-layout', configs.heatLayout || 'separate'); if (window.togglePartnerNotifyInputs) window.togglePartnerNotifyInputs(); }
 function updateColorInputs() { const c = P().colors || DEFAULT_CONFIGS.profiles.daily.colors; const elMaster = document.getElementById('cfg-color-master'); if (elMaster) elMaster.value = c.master || '#38bdf8'; const elDoggy = document.getElementById('cfg-color-doggy'); if (elDoggy) elDoggy.value = c.doggy || '#f472b6'; }
 
 window.showCustomConfirm = function(title, desc, onConfirm) { document.getElementById('custom-confirm-title').textContent = title; document.getElementById('custom-confirm-desc').innerHTML = desc; const btn = document.getElementById('custom-confirm-btn'); const newBtn = btn.cloneNode(true); btn.parentNode.replaceChild(newBtn, btn); newBtn.onclick = () => { closeCustomConfirm(); if (onConfirm) onConfirm(); }; document.getElementById('custom-confirm-modal').classList.add('show'); };
@@ -50,12 +50,12 @@ window.openSettings = function() { try { fillTextInputs(); updateColorInputs(); 
         const winDetD = document.getElementById('overtime-window-details-doggy'); if (winDetD) winDetD.style.display = configs.notifySettings?.doggy_window_enabled !== false ? 'block' : 'none'; 
         if (window.loadPushDevices) window.loadPushDevices(); 
         
-        let startYear = new Date().getFullYear(); try { const y = new Date(configs.anniversary).getFullYear(); if (Number.isFinite(y)) startYear = y; } catch (e) { } const endYear = new Date().getFullYear() + 1; const yearSelect = document.getElementById('cfg-history-year'); if (yearSelect) { yearSelect.innerHTML = ''; let yearOptions = ''; for (let y = startYear; y <= endYear; y++) yearOptions += `<option value="${y}">${y} 年</option>`; yearSelect.innerHTML = yearOptions; yearSelect.value = configs.historyYear; if (!yearSelect.value) yearSelect.selectedIndex = 0; } const monthSelect = document.getElementById('cfg-history-month'); if (monthSelect) { monthSelect.innerHTML = ''; let monthOptions = ''; for (let m = 1; m <= 12; m++) monthOptions += `<option value="${String(m).padStart(2,'0')}">${m} 月</option>`; monthSelect.innerHTML = monthOptions; monthSelect.value = configs.historyMonth; if (!monthSelect.value) monthSelect.selectedIndex = 0; } toggleHistoryTypeOptions(); const fixDateInput = document.getElementById('cfg-fix-date'); if (fixDateInput && !fixDateInput.value) fixDateInput.value = getLogicalDateStr(); if (window.renderFixPanel) window.renderFixPanel(); updateNotifyStatus(); updateIdentityCards(); if (window.updateBackendPushStatus) window.updateBackendPushStatus(); if (window.refreshCustomSelects) window.refreshCustomSelects(); const modal = document.getElementById('settings-modal'); if (modal) modal.classList.add('show'); document.body.style.overflow = 'hidden'; document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active')); document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active')); const firstTabBtn = document.querySelector('.tab-btn'); if (firstTabBtn) firstTabBtn.classList.add('active'); const firstTab = document.getElementById('tab-general'); if (firstTab) firstTab.classList.add('active'); if (window.applyIdentityFilter) window.applyIdentityFilter(); } catch(e) { console.error('打开设置面板时发生详细错误：', e); showToast('打开设置面板失败: ' + e.message, 'late'); } };
+        let startYear = new Date().getFullYear(); try { const y = new Date(configs.anniversary).getFullYear(); if (Number.isFinite(y)) startYear = y; } catch (e) { } const endYear = new Date().getFullYear() + 1; const yearSelect = document.getElementById('cfg-history-year'); if (yearSelect) { yearSelect.innerHTML = ''; let yearOptions = ''; for (let y = startYear; y <= endYear; y++) yearOptions += `<option value="${y}">${y} 年</option>`; yearSelect.innerHTML = yearOptions; yearSelect.value = configs.historyYear; if (!yearSelect.value) yearSelect.selectedIndex = 0; } const monthSelect = document.getElementById('cfg-history-month'); if (monthSelect) { monthSelect.innerHTML = ''; let monthOptions = ''; for (let m = 1; m <= 12; m++) monthOptions += `<option value="${String(m).padStart(2,'0')}">${m} 月</option>`; monthSelect.innerHTML = monthOptions; monthSelect.value = configs.historyMonth; if (!monthSelect.value) monthSelect.selectedIndex = 0; } toggleHistoryTypeOptions(); const fixDateInput = document.getElementById('cfg-fix-date'); if (fixDateInput && !fixDateInput.value) fixDateInput.value = getLogicalDateStr(); if (window.renderFixPanel) window.renderFixPanel(); const heatFixDateInput = document.getElementById('cfg-heat-fix-date'); if (heatFixDateInput && !heatFixDateInput.value) heatFixDateInput.value = getLogicalDateStr(); if (window.renderHeatFixPanel) window.renderHeatFixPanel(); updateNotifyStatus(); updateIdentityCards(); if (window.updateBackendPushStatus) window.updateBackendPushStatus(); if (window.refreshCustomSelects) window.refreshCustomSelects(); const modal = document.getElementById('settings-modal'); if (modal) modal.classList.add('show'); document.body.style.overflow = 'hidden'; document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active')); document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active')); const firstTabBtn = document.querySelector('.tab-btn'); if (firstTabBtn) firstTabBtn.classList.add('active'); const firstTab = document.getElementById('tab-general'); if (firstTab) firstTab.classList.add('active'); if (window.applyIdentityFilter) window.applyIdentityFilter(); } catch(e) { console.error('打开设置面板时发生详细错误：', e); showToast('打开设置面板失败: ' + e.message, 'late'); } };
 window.closeSettings = function() { const modal = document.getElementById('settings-modal'); if (modal) modal.classList.remove('show'); document.body.style.overflow = ''; };
 
 window.saveSettings = function(skipSync) { 
     try { 
-        const getVal = (id, fallback) => { const el = document.getElementById(id); return el ? el.value.trim() : fallback; }; 
+        const getVal = (id, fallback) => { const el = document.getElementById(id); return el && el.value != null ? String(el.value).trim() : fallback; }; 
         const getChk = (id, fallback) => { const el = document.getElementById(id); return el ? el.checked : fallback; }; 
         const prof = P(); 
         prof.texts = { title: getVal('cfg-title', ''), subtitle: getVal('cfg-subtitle', ''), masterName: getVal('cfg-master-name', ''), masterTag: getVal('cfg-master-tag', ''), masterRegion: getVal('cfg-master-region', ''), doggyName: getVal('cfg-doggy-name', ''), doggyTag: getVal('cfg-doggy-tag', ''), doggyRegion: getVal('cfg-doggy-region', ''), masterSleepBtn: getVal('cfg-master-sleep-btn', '') || (configs.mode === 'service' ? '主人休息' : '先生休息'), masterWakeBtn: getVal('cfg-master-wake-btn', '') || (configs.mode === 'service' ? '主人起床' : '先生起床'), doggySleepBtn: getVal('cfg-doggy-sleep-btn', '') || (configs.mode === 'service' ? '小狗休息' : '宝宝休息'), doggyWakeBtn: getVal('cfg-doggy-wake-btn', '') || (configs.mode === 'service' ? '小狗起床' : '宝宝起床'), dailyModeIcon: getVal('cfg-icon-daily', '') || '💕', serviceModeIcon: getVal('cfg-icon-service', '') || '🐕' }; 
@@ -78,6 +78,14 @@ window.saveSettings = function(skipSync) {
         configs.showSeconds = getChk('cfg-show-seconds', true); 
         configs.showShichen = getChk('cfg-show-shichen', false); 
         configs.showWellness = getChk('cfg-show-wellness', false); 
+        
+        configs.showHeatCard = getChk('cfg-show-heat-card', false) === true;
+        const elPartnerHeat = document.getElementById('cfg-show-partner-heat');
+        if (elPartnerHeat) configs.showPartnerHeat = elPartnerHeat.checked;
+        const elHeatNotifyFeeling = document.getElementById('cfg-heat-notify-feeling');
+        if (elHeatNotifyFeeling) configs.notifySettings.heatNotifyWithFeeling = elHeatNotifyFeeling.checked;
+        configs.heatLayout = getVal('cfg-heat-layout', 'separate');
+
         const wantNotify = getChk('cfg-notifications', false) === true; 
         if (wantNotify) { 
             if (!notificationSupported()) { configs.notifications = false; showToast('当前浏览器不支持系统通知', 'late'); } 
@@ -146,13 +154,14 @@ window.saveSettings = function(skipSync) {
         if (!skipSync && window.debounceSync) debounceSync(); 
     } catch (e) { 
         console.error(e); 
-        showToast('保存时发生错误', 'late'); 
+        showToast('保存时发生错误: ' + e.message, 'late'); 
     } 
 };
 
 function applyIdentityFilter() { 
     const role = identity || 'both'; 
-    document.querySelectorAll('.config-card').forEach(card => {
+    // 修复：严格限制作用域在设置面板内，防止误伤主界面的发情卡片
+    document.querySelectorAll('#settings-modal .config-card').forEach(card => {
         const group = card.querySelector('.dual-user-group');
         if (group) {
             const active = group.dataset.active || 'master';
@@ -165,7 +174,7 @@ function applyIdentityFilter() {
         }
     });
     
-    document.querySelectorAll('[data-user]').forEach(el => {
+    document.querySelectorAll('#settings-modal [data-user]').forEach(el => {
         if (el.closest('.dual-user-group')) return; 
         if (role === 'both') el.style.display = '';
         else el.style.display = (el.dataset.user === role) ? '' : 'none';

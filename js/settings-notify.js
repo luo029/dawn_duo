@@ -5,7 +5,6 @@ window.getTabNotifyHTML = () => `
     
     <div class="switch-row" id="row-notifications"><label>开启页面内通知<span class="help-icon" data-tip="网页开着的时候，到达目标时间会弹出浏览器通知">i</span></label><label class="toggle-switch"><input type="checkbox" id="cfg-notifications"><span class="slider"></span></label></div>
     <div id="notify-status" class="tip-text" style="margin-bottom: 8px;"></div>
-    <button class="btn outline" onclick="testNotification()" style="width: 100%; font-size: 0.8rem; padding: 8px;">🔔 测试页面通知</button>
     
     <div class="card-divider"></div>
     
@@ -32,24 +31,23 @@ window.getTabNotifyHTML = () => `
       <div data-user="master" class="dual-switches-area">
         <div class="switch-row" style="background: rgba(239,68,68,0.05); padding: 12px; border-radius: 10px; border: 1px dashed rgba(239,68,68,0.3); margin-bottom: 12px;">
             <div style="display:flex; flex-direction:column;">
-                <label style="color: var(--warn); font-weight: 800;">🔕 主人身份免打扰</label>
-                <span style="font-size:0.65rem; color:var(--text-muted); margin-top:2px;">开启后，主人名下的所有设备都不会收到任何提醒</span>
+                <label style="color: var(--warn); font-weight: 800;">🔕 主人身份免打扰<span class="help-icon" data-tip="开启后，主人名下的所有设备都不会收到任何提醒。">i</span></label>
             </div>
             <label class="toggle-switch"><input type="checkbox" class="dnd-chk" data-key="master_dnd" onchange="toggleDNDState('master', this.checked)"><span class="slider" style="background-color: var(--warn);"></span></label>
         </div>
         <div class="dnd-content">
           <div class="section-label">👑 <span class="text-master-name"></span> 提醒</div>
-          <div class="switch-row"><label>🌙 休息提醒</label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="master_sleep"><span class="slider"></span></label></div>
-          <div class="switch-row"><label>☀️ 起床提醒</label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="master_wake"><span class="slider"></span></label></div>
+          <div class="switch-row"><label>🌙 休息提醒<span class="help-icon" data-tip="到达设定的休息时间时，发出提醒。">i</span></label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="master_sleep"><span class="slider"></span></label></div>
+          <div class="switch-row"><label>☀️ 起床提醒<span class="help-icon" data-tip="到达设定的起床时间时，发出提醒。">i</span></label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="master_wake"><span class="slider"></span></label></div>
           
           <div class="section-label" style="margin-top: 16px;">⏳ 超时警告</div>
-          <div class="switch-row"><label>熬夜超时警告</label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="master_sleep_overtime"><span class="slider"></span></label></div>
-          <div class="switch-row"><label>赖床超时警告</label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="master_wake_overtime"><span class="slider"></span></label></div>
+          <div class="switch-row"><label>熬夜超时警告<span class="help-icon" data-tip="超过目标休息时间后，按间隔持续发送警告。">i</span></label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="master_sleep_overtime"><span class="slider"></span></label></div>
+          <div class="switch-row"><label>赖床超时警告<span class="help-icon" data-tip="超过目标起床时间后，按间隔持续发送警告。">i</span></label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="master_wake_overtime"><span class="slider"></span></label></div>
           
-          <div class="section-label" style="margin-top: 16px;">🛡️ 防轰炸与时间窗</div>
+          <div class="section-label" style="margin-top: 16px;">🛡️ 防轰炸与时间窗<span class="help-icon" data-tip="提前/延后：在目标时间前后多久内允许发送准时提醒。超出后延时间才开始发超时警告。">i</span></div>
           <div class="flex-row">
-              <div class="form-group"><label>提前 (分)</label><input type="number" id="cfg-on-time-before-master" value="15" min="0" max="60"></div>
-              <div class="form-group"><label>延后 (分)</label><input type="number" id="cfg-on-time-after-master" value="15" min="0" max="60"></div>
+              <div class="form-group"><label>提前 (分)<span class="help-icon" data-tip="目标时间前多少分钟开始发提醒。">i</span></label><input type="number" id="cfg-on-time-before-master" value="15" min="0" max="60"></div>
+              <div class="form-group"><label>延后 (分)<span class="help-icon" data-tip="目标时间后多少分钟内依然只发准时提醒，超过后判定迟到。">i</span></label><input type="number" id="cfg-on-time-after-master" value="15" min="0" max="60"></div>
           </div>
           <div class="switch-row"><label>开启超时时间窗<span class="help-icon" data-tip="只在特定时间段内发送超时提醒。关闭后，全天任何时间都发。">i</span></label><label class="toggle-switch"><input type="checkbox" id="cfg-overtime-window-master" onchange="document.getElementById('overtime-window-details-master').style.display = this.checked ? 'block' : 'none';"><span class="slider"></span></label></div>
           <div id="overtime-window-details-master" style="margin-top: 8px;">
@@ -59,32 +57,32 @@ window.getTabNotifyHTML = () => `
           <div class="switch-row" style="margin-top: 8px;"><label>每天最大发送次数<span class="help-icon" data-tip="触发超时后，每天最多发几次。填 0 代表不限制次数。">i</span></label><input type="number" id="cfg-overtime-max-master" value="3" min="0" step="1" style="width: 80px; padding: 6px; text-align: center;"></div>
     
           <div class="section-label" style="margin-top: 16px;">📡 <span class="text-doggy-name"></span> 动态</div>
-          <div class="switch-row"><label>对方已休息通知</label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="partner_doggy_sleep"><span class="slider"></span></label></div>
-          <div class="switch-row"><label>对方已起床通知</label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="partner_doggy_wake"><span class="slider"></span></label></div>
+          <div class="switch-row"><label>对方已休息通知<span class="help-icon" data-tip="当对方打卡休息时，立刻收到通知。">i</span></label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="partner_doggy_sleep"><span class="slider"></span></label></div>
+          <div class="switch-row"><label>对方已起床通知<span class="help-icon" data-tip="当对方打卡起床时，立刻收到通知。">i</span></label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="partner_doggy_wake"><span class="slider"></span></label></div>
+          <div class="switch-row"><label>对方发情通知<span class="help-icon" data-tip="当对方记录发情时，立刻收到通知。">i</span></label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="partner_doggy_heat"><span class="slider"></span></label></div>
         </div>
       </div>
       
       <div data-user="doggy" style="display: none;" class="dual-switches-area">
         <div class="switch-row" style="background: rgba(239,68,68,0.05); padding: 12px; border-radius: 10px; border: 1px dashed rgba(239,68,68,0.3); margin-bottom: 12px;">
             <div style="display:flex; flex-direction:column;">
-                <label style="color: var(--warn); font-weight: 800;">🔕 小狗身份免打扰</label>
-                <span style="font-size:0.65rem; color:var(--text-muted); margin-top:2px;">开启后，小狗名下的所有设备都不会收到任何提醒</span>
+                <label style="color: var(--warn); font-weight: 800;">🔕 小狗身份免打扰<span class="help-icon" data-tip="开启后，小狗名下的所有设备都不会收到任何提醒。">i</span></label>
             </div>
             <label class="toggle-switch"><input type="checkbox" class="dnd-chk" data-key="doggy_dnd" onchange="toggleDNDState('doggy', this.checked)"><span class="slider" style="background-color: var(--warn);"></span></label>
         </div>
         <div class="dnd-content">
           <div class="section-label">🎀 <span class="text-doggy-name"></span> 提醒</div>
-          <div class="switch-row"><label>🌙 休息提醒</label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="doggy_sleep"><span class="slider"></span></label></div>
-          <div class="switch-row"><label>☀️ 起床提醒</label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="doggy_wake"><span class="slider"></span></label></div>
+          <div class="switch-row"><label>🌙 休息提醒<span class="help-icon" data-tip="到达设定的休息时间时，发出提醒。">i</span></label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="doggy_sleep"><span class="slider"></span></label></div>
+          <div class="switch-row"><label>☀️ 起床提醒<span class="help-icon" data-tip="到达设定的起床时间时，发出提醒。">i</span></label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="doggy_wake"><span class="slider"></span></label></div>
           
           <div class="section-label" style="margin-top: 16px;">⏳ 超时警告</div>
-          <div class="switch-row"><label>熬夜超时警告</label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="doggy_sleep_overtime"><span class="slider"></span></label></div>
-          <div class="switch-row"><label>赖床超时警告</label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="doggy_wake_overtime"><span class="slider"></span></label></div>
+          <div class="switch-row"><label>熬夜超时警告<span class="help-icon" data-tip="超过目标休息时间后，按间隔持续发送警告。">i</span></label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="doggy_sleep_overtime"><span class="slider"></span></label></div>
+          <div class="switch-row"><label>赖床超时警告<span class="help-icon" data-tip="超过目标起床时间后，按间隔持续发送警告。">i</span></label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="doggy_wake_overtime"><span class="slider"></span></label></div>
     
-          <div class="section-label" style="margin-top: 16px;">🛡️ 防轰炸与时间窗</div>
+          <div class="section-label" style="margin-top: 16px;">🛡️ 防轰炸与时间窗<span class="help-icon" data-tip="提前/延后：在目标时间前后多久内允许发送准时提醒。超出后延时间才开始发超时警告。">i</span></div>
           <div class="flex-row">
-              <div class="form-group"><label>提前 (分)</label><input type="number" id="cfg-on-time-before-doggy" value="15" min="0" max="60"></div>
-              <div class="form-group"><label>延后 (分)</label><input type="number" id="cfg-on-time-after-doggy" value="15" min="0" max="60"></div>
+              <div class="form-group"><label>提前 (分)<span class="help-icon" data-tip="目标时间前多少分钟开始发提醒。">i</span></label><input type="number" id="cfg-on-time-before-doggy" value="15" min="0" max="60"></div>
+              <div class="form-group"><label>延后 (分)<span class="help-icon" data-tip="目标时间后多少分钟内依然只发准时提醒，超过后判定迟到。">i</span></label><input type="number" id="cfg-on-time-after-doggy" value="15" min="0" max="60"></div>
           </div>
           <div class="switch-row"><label>开启超时时间窗<span class="help-icon" data-tip="只在特定时间段内发送超时提醒。关闭后，全天任何时间都发。">i</span></label><label class="toggle-switch"><input type="checkbox" id="cfg-overtime-window-doggy" onchange="document.getElementById('overtime-window-details-doggy').style.display = this.checked ? 'block' : 'none';"><span class="slider"></span></label></div>
           <div id="overtime-window-details-doggy" style="margin-top: 8px;">
@@ -94,15 +92,22 @@ window.getTabNotifyHTML = () => `
           <div class="switch-row" style="margin-top: 8px;"><label>每天最大发送次数<span class="help-icon" data-tip="触发超时后，每天最多发几次。填 0 代表不限制次数。">i</span></label><input type="number" id="cfg-overtime-max-doggy" value="3" min="0" step="1" style="width: 80px; padding: 6px; text-align: center;"></div>
     
           <div class="section-label" style="margin-top: 16px;">📡 <span class="text-master-name"></span> 动态</div>
-          <div class="switch-row"><label>对方已休息通知</label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="partner_master_sleep"><span class="slider"></span></label></div>
-          <div class="switch-row"><label>对方已起床通知</label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="partner_master_wake"><span class="slider"></span></label></div>
+          <div class="switch-row"><label>对方已休息通知<span class="help-icon" data-tip="当对方打卡休息时，立刻收到通知。">i</span></label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="partner_master_sleep"><span class="slider"></span></label></div>
+          <div class="switch-row"><label>对方已起床通知<span class="help-icon" data-tip="当对方打卡起床时，立刻收到通知。">i</span></label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="partner_master_wake"><span class="slider"></span></label></div>
+          <div class="switch-row"><label>对方发情通知<span class="help-icon" data-tip="当对方记录发情时，立刻收到通知。">i</span></label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="partner_master_heat"><span class="slider"></span></label></div>
         </div>
       </div>
     </div>
     
     <div class="card-divider"></div>
+    
+    <div class="switch-row" style="margin-bottom: 12px;">
+        <label>发情推送附带感受<span class="help-icon" data-tip="开启后，若填写了感受，发情通知将直接使用感受内容作为正文，不再使用随机文案库。">i</span></label>
+        <label class="toggle-switch"><input type="checkbox" id="cfg-heat-notify-feeling"><span class="slider"></span></label>
+    </div>
+    
     <div class="switch-row">
-      <label>提醒重复间隔 (分钟)</label>
+      <label>超时提醒重复间隔 (分钟)<span class="help-icon" data-tip="如果一直未打卡，每隔多少分钟发一次警告。">i</span></label>
       <input type="number" id="cfg-notify-interval" value="30" min="10" step="10" style="width: 80px; padding: 6px; text-align: center;">
     </div>
   </div>

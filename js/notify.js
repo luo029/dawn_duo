@@ -131,9 +131,11 @@ window.testNotification = async function() {
     if (!notificationSupported()) return showToast('不支持通知', 'late'); if (!window.isSecureContext) return showToast('⚠️ 必须在 HTTPS 下', 'late');
     let perm = Notification.permission; if (perm === 'default') { try { perm = await Notification.requestPermission(); } catch (e) { perm = 'denied'; } } updateNotifyStatus(); if (perm !== 'granted') return showToast('未获权限', 'late');
     const nTexts = P().notifyTexts || {}; const mName = getPureName(P().texts.masterName) || '先生'; const dName = getPureName(P().texts.doggyName) || '小狗';
-    const testKey = identity === 'master' ? 'master_sleep' : (identity === 'doggy' ? 'doggy_sleep' : 'master_wake'); const obj = nTexts[testKey] || { texts: ['测试通知'] };
+    const testKey = identity === 'master' ? 'master_sleep' : (identity === 'doggy' ? 'doggy_sleep' : 'master_wake'); 
+    const obj = nTexts[testKey] || { texts: ['测试通知'] };
+    const titleObj = obj.title || '🔔 测试通知';
     let testBody = getRandomText(obj.texts)?.replace(/{name}/g, identity === 'master' ? mName : dName) || '测试通知';
-    try { new Notification('🔔 测试通知', { body: testBody, tag: 'dawn-test-' + Date.now(), requireInteraction: true }); showToast('测试已发送', 'success'); } catch (e) { showToast('发送失败：' + e.message, 'late'); }
+    try { new Notification(titleObj, { body: testBody, tag: 'dawn-test-' + Date.now(), requireInteraction: true }); showToast('测试已发送', 'success'); } catch (e) { showToast('发送失败：' + e.message, 'late'); }
 };
 function updateNotifyStatus() {
     const el = document.getElementById('notify-status'); if (!el) return;

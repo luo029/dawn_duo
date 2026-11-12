@@ -13,7 +13,7 @@ window.getTabDataHTML = () => `
   </div>
   
   <div class="config-card">
-    <div class="config-title">☁️ 云端数据同步<span class="help-icon" data-tip="仓库: luo029/dawn_duo_data\n系统会自动根据您的身份，将记录分离存放到云端 (master_records.json / doggy_records.json)，互不干扰。">i</span></div>
+    <div class="config-title">☁️ 云端数据同步<span class="help-icon" data-tip="仓库: luo029/dawn_duo_data\n系统会自动根据您的身份，将记录分离存放到云端 (master_records.json / doggy_records.json / heat 专属文件)，互不干扰。">i</span></div>
     <div class="switch-row" style="margin-bottom: 8px; padding: 0;"><label>开启自动拉取/推送</label><label class="toggle-switch"><input type="checkbox" id="cfg-auto-sync"><span class="slider"></span></label></div>
     <div class="flex-row" style="margin-bottom: 8px;">
       <div class="form-group"><label>自动拉取间隔</label><select id="cfg-sync-interval"><option value="0">关闭</option><option value="1">1 分钟</option><option value="5">5 分钟</option><option value="15">15 分钟</option><option value="30">30 分钟</option><option value="60">1 小时</option></select></div>
@@ -52,6 +52,12 @@ window.getTabDataHTML = () => `
     <div class="config-title">🛠️ 打卡记录修正</div>
     <div class="form-group"><input type="date" id="cfg-fix-date" onchange="window.renderFixPanel()"></div>
     <div class="fix-panel" id="fix-panel"></div>
+  </div>
+
+  <div class="config-card">
+    <div class="config-title">🔥 发情记录修正</div>
+    <div class="form-group"><input type="date" id="cfg-heat-fix-date" onchange="window.renderHeatFixPanel()"></div>
+    <div class="fix-panel" id="heat-fix-panel"></div>
   </div>
   
   <div class="config-card danger-zone">

@@ -33,7 +33,8 @@ window.getTabMsgsHTML = () => `
         <div class="section-label">🔔 定时通知 (系统推送)</div>
         <div class="flex-btn-group two-cols" style="margin-bottom: 8px;"><button class="btn outline" onclick="openNotifyTextModal('master_sleep')">休息提醒</button><button class="btn outline" onclick="openNotifyTextModal('master_wake')">起床提醒</button></div>
         <div class="flex-btn-group two-cols" style="margin-bottom: 8px;"><button class="btn outline" onclick="openNotifyTextModal('master_sleep_overtime')">熬夜警告</button><button class="btn outline" onclick="openNotifyTextModal('master_wake_overtime')">赖床警告</button></div>
-        <div class="flex-btn-group two-cols"><button class="btn outline" onclick="openNotifyTextModal('partner_doggy_sleep')"><span class="text-doggy-name"></span>已休息</button><button class="btn outline" onclick="openNotifyTextModal('partner_doggy_wake')"><span class="text-doggy-name"></span>已起床</button></div>
+        <div class="flex-btn-group two-cols" style="margin-bottom: 8px;"><button class="btn outline" onclick="openNotifyTextModal('partner_doggy_sleep')"><span class="text-doggy-name"></span>已休息</button><button class="btn outline" onclick="openNotifyTextModal('partner_doggy_wake')"><span class="text-doggy-name"></span>已起床</button></div>
+        <div class="flex-btn-group two-cols"><button class="btn outline" onclick="openNotifyTextModal('partner_doggy_heat')"><span class="text-doggy-name"></span>发情了</button></div>
         <div class="section-label">📱 页面状态展示</div>
         <div class="flex-btn-group two-cols"><button class="btn outline" onclick="openStatusTextModal('status_master_sleep')"><span class="text-master-name"></span> 休息中</button><button class="btn outline" onclick="openStatusTextModal('status_master_wake')"><span class="text-master-name"></span> 已醒来</button></div>
 
@@ -51,7 +52,8 @@ window.getTabMsgsHTML = () => `
         <div class="section-label">🔔 定时通知 (系统推送)</div>
         <div class="flex-btn-group two-cols" style="margin-bottom: 8px;"><button class="btn outline" onclick="openNotifyTextModal('doggy_sleep')">休息提醒</button><button class="btn outline" onclick="openNotifyTextModal('doggy_wake')">起床提醒</button></div>
         <div class="flex-btn-group two-cols" style="margin-bottom: 8px;"><button class="btn outline" onclick="openNotifyTextModal('doggy_sleep_overtime')">熬夜警告</button><button class="btn outline" onclick="openNotifyTextModal('doggy_wake_overtime')">赖床警告</button></div>
-        <div class="flex-btn-group two-cols"><button class="btn outline" onclick="openNotifyTextModal('partner_master_sleep')"><span class="text-master-name"></span>已休息</button><button class="btn outline" onclick="openNotifyTextModal('partner_master_wake')"><span class="text-master-name"></span>已起床</button></div>
+        <div class="flex-btn-group two-cols" style="margin-bottom: 8px;"><button class="btn outline" onclick="openNotifyTextModal('partner_master_sleep')"><span class="text-master-name"></span>已休息</button><button class="btn outline" onclick="openNotifyTextModal('partner_master_wake')"><span class="text-master-name"></span>已起床</button></div>
+        <div class="flex-btn-group two-cols"><button class="btn outline" onclick="openNotifyTextModal('partner_master_heat')"><span class="text-master-name"></span>发情了</button></div>
         <div class="section-label">📱 页面状态展示</div>
         <div class="flex-btn-group two-cols"><button class="btn outline" onclick="openStatusTextModal('status_doggy_sleep')"><span class="text-doggy-name"></span> 休息中</button><button class="btn outline" onclick="openStatusTextModal('status_doggy_wake')"><span class="text-doggy-name"></span> 已醒来</button></div>
 
@@ -84,8 +86,8 @@ window.openNotifyTextModal = function(key) {
     if (!obj) obj = { channel: 'both', texts: [] }; 
     if (Array.isArray(obj)) obj = { channel: 'both', texts: obj }; 
     const isService = configs.mode === 'service', mTitle = isService ? '主人' : '先生', dTitle = isService ? '小狗' : '宝宝'; 
-    const nameMap = { master_sleep: `${mTitle} - 到点休息`, master_wake: `${mTitle} - 到点起床`, doggy_sleep: `${dTitle} - 到点休息`, doggy_wake: `${dTitle} - 到点起床`, overtime_sleep: '熬夜超时警告 (通用)', overtime_wake: '赖床超时警告 (通用)', master_sleep_overtime: `${mTitle} - 熬夜超时警告`, master_wake_overtime: `${mTitle} - 赖床超时警告`, doggy_sleep_overtime: `${dTitle} - 熬夜超时警告`, doggy_wake_overtime: `${dTitle} - 赖床超时警告`, partner_master_sleep: `对方 - ${mTitle}休息`, partner_master_wake: `对方 - ${mTitle}起床`, partner_doggy_sleep: `对方 - ${dTitle}休息`, partner_doggy_wake: `对方 - ${dTitle}起床` }; 
-    const defaultTitles = { master_sleep: '🌙 休息提醒', master_wake: '☀️ 起床提醒', doggy_sleep: '🌙 休息提醒', doggy_wake: '☀️ 起床提醒', overtime_sleep: '⚠️ 熬夜警告', overtime_wake: '⚠️ 赖床警告', master_sleep_overtime: '⚠️ 熬夜警告', master_wake_overtime: '⚠️ 赖床警告', doggy_sleep_overtime: '⚠️ 熬夜警告', doggy_wake_overtime: '⚠️ 赖床警告', partner_master_sleep: '👑 主人已休息', partner_master_wake: '👑 主人已起床', partner_doggy_sleep: '🎀 小狗已休息', partner_doggy_wake: '🎀 小狗已起床' };
+    const nameMap = { master_sleep: `${mTitle} - 到点休息`, master_wake: `${mTitle} - 到点起床`, doggy_sleep: `${dTitle} - 到点休息`, doggy_wake: `${dTitle} - 到点起床`, overtime_sleep: '熬夜超时警告 (通用)', overtime_wake: '赖床超时警告 (通用)', master_sleep_overtime: `${mTitle} - 熬夜超时警告`, master_wake_overtime: `${mTitle} - 赖床超时警告`, doggy_sleep_overtime: `${dTitle} - 熬夜超时警告`, doggy_wake_overtime: `${dTitle} - 赖床超时警告`, partner_master_sleep: `对方 - ${mTitle}休息`, partner_master_wake: `对方 - ${mTitle}起床`, partner_doggy_sleep: `对方 - ${dTitle}休息`, partner_doggy_wake: `对方 - ${dTitle}起床`, partner_master_heat: `对方 - ${mTitle}发情`, partner_doggy_heat: `对方 - ${dTitle}发情` }; 
+    const defaultTitles = { master_sleep: '🌙 休息提醒', master_wake: '☀️ 起床提醒', doggy_sleep: '🌙 休息提醒', doggy_wake: '☀️ 起床提醒', overtime_sleep: '⚠️ 熬夜警告', overtime_wake: '⚠️ 赖床警告', master_sleep_overtime: '⚠️ 熬夜警告', master_wake_overtime: '⚠️ 赖床警告', doggy_sleep_overtime: '⚠️ 熬夜警告', doggy_wake_overtime: '⚠️ 赖床警告', partner_master_sleep: '👑 主人已休息', partner_master_wake: '👑 主人已起床', partner_doggy_sleep: '🎀 小狗已休息', partner_doggy_wake: '🎀 小狗已起床', partner_master_heat: '🔥 主人发情了', partner_doggy_heat: '🔥 小狗发情了' };
     const titleEl = document.getElementById('notify-text-modal-title'); if (titleEl) titleEl.innerHTML = `编辑：${nameMap[key] || key} <span class="help-icon" onclick="openVarsHelpModal()">?</span>`; 
     const tipEl = document.getElementById('notify-text-default-title-tip');
     if (tipEl) tipEl.textContent = `💡 留空时将使用默认标题："${defaultTitles[key] || '🔔 契约提醒'}"`;
@@ -139,7 +141,7 @@ window.saveStatusTextModal = function() {
     const prof = P(); if (!prof.notifyTexts) prof.notifyTexts = {}; 
     prof.notifyTexts[currentStatusKey] = { channel: 'page', texts: newArr.length > 0 ? newArr : [''] }; 
     try { localStorage.setItem('dawn-duo-configs', JSON.stringify(configs)); } catch (e) {} 
-    document.getElementById('status-text-modal').classList.remove('show'); if (window.debounceSync) debounceSync(); 
+    document.getElementById('status-text-modal').classList.remove('show'); if (window.debounceSync) window.debounceSync(); 
     showToast('状态栏文案已保存', 'success'); 
 };
 
@@ -150,7 +152,7 @@ window.openNotifyTestModal = function() {
     selectEl.dataset.customized = 'false'; 
     
     const isService = configs.mode === 'service', mTitle = isService ? '主人' : '先生', dTitle = isService ? '小狗' : '宝宝'; 
-    const options = [ { val: 'master_sleep', text: `👑 ${mTitle} - 休息提醒` }, { val: 'master_wake', text: `👑 ${mTitle} - 起床提醒` }, { val: 'doggy_sleep', text: `🎀 ${dTitle} - 休息提醒` }, { val: 'doggy_wake', text: `🎀 ${dTitle} - 起床提醒` }, { val: 'master_sleep_overtime', text: `⏳ ${mTitle} - 熬夜警告` }, { val: 'master_wake_overtime', text: `⏳ ${mTitle} - 赖床警告` }, { val: 'doggy_sleep_overtime', text: `⏳ ${dTitle} - 熬夜警告` }, { val: 'doggy_wake_overtime', text: `⏳ ${dTitle} - 赖床警告` }, { val: 'partner_master_sleep', text: `📡 对方 - ${mTitle}休息` }, { val: 'partner_master_wake', text: `📡 对方 - ${mTitle}起床` }, { val: 'partner_doggy_sleep', text: `📡 对方 - ${dTitle}休息` }, { val: 'partner_doggy_wake', text: `📡 对方 - ${dTitle}起床` } ]; 
+    const options = [ { val: 'master_sleep', text: `👑 ${mTitle} - 休息提醒` }, { val: 'master_wake', text: `👑 ${mTitle} - 起床提醒` }, { val: 'doggy_sleep', text: `🎀 ${dTitle} - 休息提醒` }, { val: 'doggy_wake', text: `🎀 ${dTitle} - 起床提醒` }, { val: 'master_sleep_overtime', text: `⏳ ${mTitle} - 熬夜警告` }, { val: 'master_wake_overtime', text: `⏳ ${mTitle} - 赖床警告` }, { val: 'doggy_sleep_overtime', text: `⏳ ${dTitle} - 熬夜警告` }, { val: 'doggy_wake_overtime', text: `⏳ ${dTitle} - 赖床警告` }, { val: 'partner_master_sleep', text: `📡 对方 - ${mTitle}休息` }, { val: 'partner_master_wake', text: `📡 对方 - ${mTitle}起床` }, { val: 'partner_doggy_sleep', text: `📡 对方 - ${dTitle}休息` }, { val: 'partner_doggy_wake', text: `📡 对方 - ${dTitle}起床` }, { val: 'partner_master_heat', text: `🔥 对方 - ${mTitle}发情` }, { val: 'partner_doggy_heat', text: `🔥 对方 - ${dTitle}发情` } ]; 
     selectEl.innerHTML = options.map(o => `<option value="${o.val}">${o.text}</option>`).join(''); 
 
     const targetSelect = document.getElementById('test-notify-target');
@@ -194,7 +196,7 @@ window.toggleTestTarget = function() {
 window.updateTestPreview = function() { 
     const key = document.getElementById('test-notify-key').value; 
     const prof = P(); const nTexts = prof.notifyTexts || {}; let obj = nTexts[key] || { texts: [] }; if (Array.isArray(obj)) obj = { channel: 'both', texts: obj }; 
-    const defaultTitles = { master_sleep: '🌙 休息提醒', master_wake: '☀️ 起床提醒', doggy_sleep: '🌙 休息提醒', doggy_wake: '☀️ 起床提醒', overtime_sleep: '⚠️ 熬夜警告', overtime_wake: '⚠️ 赖床警告', master_sleep_overtime: '⚠️ 熬夜警告', master_wake_overtime: '⚠️ 赖床警告', doggy_sleep_overtime: '⚠️ 熬夜警告', doggy_wake_overtime: '⚠️ 赖床警告', partner_master_sleep: '👑 主人已休息', partner_master_wake: '👑 主人已起床', partner_doggy_sleep: '🎀 小狗已休息', partner_doggy_wake: '🎀 小狗已起床' }; 
+    const defaultTitles = { master_sleep: '🌙 休息提醒', master_wake: '☀️ 起床提醒', doggy_sleep: '🌙 休息提醒', doggy_wake: '☀️ 起床提醒', overtime_sleep: '⚠️ 熬夜警告', overtime_wake: '⚠️ 赖床警告', master_sleep_overtime: '⚠️ 熬夜警告', master_wake_overtime: '⚠️ 赖床警告', doggy_sleep_overtime: '⚠️ 熬夜警告', doggy_wake_overtime: '⚠️ 赖床警告', partner_master_sleep: '👑 主人已休息', partner_master_wake: '👑 主人已起床', partner_doggy_sleep: '🎀 小狗已休息', partner_doggy_wake: '🎀 小狗已起床', partner_master_heat: '🔥 主人发情了', partner_doggy_heat: '🔥 小狗发情了' }; 
     const title = obj.title || defaultTitles[key] || '🔔 契约提醒'; 
     let body = ''; if (obj.texts && obj.texts.length > 0) { body = getRandomText(obj.texts); } 
     if (!body) body = '你有一条新的提醒'; 
@@ -202,14 +204,16 @@ window.updateTestPreview = function() {
     const mName = getPureName(P().texts.masterName) || (isService ? '主人' : '先生'); 
     const dName = getPureName(P().texts.doggyName) || (isService ? '小狗' : '宝宝'); 
     
-    const nowTime = formatCheckinTime(configs.timeZones.master); 
+    // 根据测试的类型，选择对应的时区
+    const targetTz = key.includes('doggy') ? configs.timeZones.doggy : configs.timeZones.master;
+    const nowTime = formatCheckinTime(targetTz); 
     const nowTimeS = nowTime + ':30';
     const mHour = parseInt(nowTime.split(':')[0], 10);
     const shichenInfo = getShichenInfo(isNaN(mHour) ? 0 : mHour);
     const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
     const dObj = new Date();
 
-    let rName = mName; if (key.includes('doggy') || key.includes('partner_doggy')) rName = dName; 
+    let rName = mName; if (key.includes('doggy')) rName = dName; 
     
     let rDuration = '0 m';
     let rMins = '0';
@@ -218,16 +222,31 @@ window.updateTestPreview = function() {
         rMins = '150';
     }
 
-    body = body.replace(/{name}/g, rName)
-               .replace(/{time_s}/g, nowTimeS)
-               .replace(/{time}/g, nowTime)
-               .replace(/{date}/g, `${dObj.getMonth()+1}月${dObj.getDate()}日`)
-               .replace(/{weekday}/g, weekdays[dObj.getDay()])
-               .replace(/{shichen_time}/g, shichenInfo.time)
-               .replace(/{shichen}/g, shichenInfo.name)
-               .replace(/{shichen_organ}/g, shichenInfo.organ)
-               .replace(/{duration}/g, rDuration)
-               .replace(/{mins}/g, rMins); 
+    // 针对发情附带感受的特殊处理
+    let testFeeling = '（测试感受）';
+    if (key.includes('heat') && configs.notifySettings?.heatNotifyWithFeeling !== false) {
+        // 尝试读取今天真正的发情记录
+        const today = getLogicalDateStr();
+        const targetUser = key.includes('doggy') ? 'doggy' : 'master';
+        const rec = heatDb[targetUser]?.[today];
+        if (rec && rec.feeling) testFeeling = rec.feeling;
+        
+        // 如果开启了附带感受，直接覆盖正文，不用文案池，且不加额外前缀
+        body = testFeeling;
+    } else {
+        body = body.replace(/{name}/g, rName)
+                   .replace(/{time_s}/g, nowTimeS)
+                   .replace(/{time}/g, nowTime)
+                   .replace(/{date}/g, `${dObj.getMonth()+1}月${dObj.getDate()}日`)
+                   .replace(/{weekday}/g, weekdays[dObj.getDay()])
+                   .replace(/{shichen_time}/g, shichenInfo.time)
+                   .replace(/{shichen}/g, shichenInfo.name)
+                   .replace(/{shichen_organ}/g, shichenInfo.organ)
+                   .replace(/{duration}/g, rDuration)
+                   .replace(/{mins}/g, rMins)
+                   .replace(/{feeling}/g, testFeeling);
+    }
+
     document.getElementById('test-notify-title-preview').textContent = title; 
     document.getElementById('test-notify-body-preview').textContent = body; 
 };
@@ -290,10 +309,10 @@ window.updateMsgCounts = function() {
 window.openSubMsg = function(key, title) { currentMsgKey = key; const t = P().texts || DEFAULT_TEXTS_DAILY; const name = key.startsWith('master') ? t.masterName : t.doggyName; const titleEl = document.getElementById('sub-modal-title'); if (titleEl) titleEl.textContent = `${getPureName(name)} - ${title} (${modeLabel()})`; const [user, type, status] = key.split('_'); const arr = (P().msgPool || {})?.[user]?.[type]?.[status] || []; const listEl = document.getElementById('sub-msg-list'); if (!listEl) return; listEl.innerHTML = ''; arr.forEach(text => addSubMsgItem(text)); const modal = document.getElementById('sub-modal'); if (modal) modal.classList.add('show'); };
 window.closeSubMsg = function() { const modal = document.getElementById('sub-modal'); if (modal) modal.classList.remove('show'); };
 window.addSubMsgItem = function(text = '') { const listEl = document.getElementById('sub-msg-list'); if (!listEl) return; const row = document.createElement('div'); row.className = 'msg-item'; const input = document.createElement('input'); input.type = 'text'; input.value = text; input.placeholder = '输入一条新文案...'; const delBtn = document.createElement('button'); delBtn.className = 'btn-del'; delBtn.type = 'button'; delBtn.textContent = '✕'; delBtn.onclick = () => row.remove(); row.appendChild(input); row.appendChild(delBtn); listEl.appendChild(row); };
-window.saveSubMsg = function() { const listEl = document.getElementById('sub-msg-list'); if (!listEl) return; const inputs = listEl.querySelectorAll('input'); const newArr = Array.from(inputs).map(inp => inp.value.trim()).filter(v => v !== ''); const [user, type, status] = currentMsgKey.split('_'); const prof = P(); if (!prof.msgPool) prof.msgPool = {}; if (!prof.msgPool[user]) prof.msgPool[user] = {}; if (!prof.msgPool[user][type]) prof.msgPool[user][type] = {}; prof.msgPool[user][type][status] = newArr; if(window.updateMsgCounts) window.updateMsgCounts(); closeSubMsg(); try { localStorage.setItem('dawn-duo-configs', JSON.stringify(configs)); } catch (e) { } if (window.debounceSync) debounceSync(); };
+window.saveSubMsg = function() { const listEl = document.getElementById('sub-msg-list'); if (!listEl) return; const inputs = listEl.querySelectorAll('input'); const newArr = Array.from(inputs).map(inp => inp.value.trim()).filter(v => v !== ''); const [user, type, status] = currentMsgKey.split('_'); const prof = P(); if (!prof.msgPool) prof.msgPool = {}; if (!prof.msgPool[user]) prof.msgPool[user] = {}; if (!prof.msgPool[user][type]) prof.msgPool[user][type] = {}; prof.msgPool[user][type][status] = newArr; if(window.updateMsgCounts) window.updateMsgCounts(); closeSubMsg(); try { localStorage.setItem('dawn-duo-configs', JSON.stringify(configs)); } catch (e) { } if (window.debounceSync) window.debounceSync(); };
 
 window.openSleepTextModal = function(role) { const sTexts = P().sleepTexts?.[role] || (configs.mode === 'service' ? DEFAULT_SLEEP_TEXTS_SERVICE[role] : DEFAULT_SLEEP_TEXTS_DAILY[role]) || {}; document.getElementById('cfg-sleep-role').value = role; document.getElementById('cfg-sleep-title').value = sTexts.title || ''; document.getElementById('cfg-sleep-desc').value = sTexts.desc || ''; document.getElementById('cfg-sleep-sub').value = sTexts.sub || ''; document.getElementById('cfg-sleep-cross').value = sTexts.cross || ''; document.getElementById('cfg-sleep-overwrite').value = sTexts.overwrite || ''; document.getElementById('cfg-sleep-cancel').value = sTexts.cancel || ''; document.getElementById('sleep-text-modal').classList.add('show'); };
-window.saveSleepTextModal = function() { const role = document.getElementById('cfg-sleep-role').value; const prof = P(); if (!prof.sleepTexts) prof.sleepTexts = {}; prof.sleepTexts[role] = { title: document.getElementById('cfg-sleep-title').value.trim(), desc: document.getElementById('cfg-sleep-desc').value.trim(), sub: document.getElementById('cfg-sleep-sub').value.trim(), cross: document.getElementById('cfg-sleep-cross').value.trim(), overwrite: document.getElementById('cfg-sleep-overwrite').value.trim(), cancel: document.getElementById('cfg-sleep-cancel').value.trim() }; try { localStorage.setItem('dawn-duo-configs', JSON.stringify(configs)); } catch (e) {} document.getElementById('sleep-text-modal').classList.remove('show'); if (window.debounceSync) debounceSync(); showToast('多段睡眠文案已保存', 'success'); };
+window.saveSleepTextModal = function() { const role = document.getElementById('cfg-sleep-role').value; const prof = P(); if (!prof.sleepTexts) prof.sleepTexts = {}; prof.sleepTexts[role] = { title: document.getElementById('cfg-sleep-title').value.trim(), desc: document.getElementById('cfg-sleep-desc').value.trim(), sub: document.getElementById('cfg-sleep-sub').value.trim(), cross: document.getElementById('cfg-sleep-cross').value.trim(), overwrite: document.getElementById('cfg-sleep-overwrite').value.trim(), cancel: document.getElementById('cfg-sleep-cancel').value.trim() }; try { localStorage.setItem('dawn-duo-configs', JSON.stringify(configs)); } catch (e) {} document.getElementById('sleep-text-modal').classList.remove('show'); if (window.debounceSync) window.debounceSync(); showToast('多段睡眠文案已保存', 'success'); };
 
 let parsedImportLines = [];
 window.readLibraryFile = function(event) { 
@@ -326,6 +345,7 @@ window.readLibraryFile = function(event) {
                 overtime_sleep: '⏳ 通用-熬夜警告', overtime_wake: '⏳ 通用-赖床警告',
                 partner_master_sleep: '📡 对方-主人休息', partner_master_wake: '📡 对方-主人起床',
                 partner_doggy_sleep: '📡 对方-小狗休息', partner_doggy_wake: '📡 对方-小狗起床',
+                partner_master_heat: '📡 对方-主人发情', partner_doggy_heat: '📡 对方-小狗发情',
                 status_master_sleep: '📱 主人-状态栏休息中', status_master_wake: '📱 主人-状态栏已醒',
                 status_doggy_sleep: '📱 小狗-状态栏休息中', status_doggy_wake: '📱 小狗-状态栏已醒'
             };

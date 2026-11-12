@@ -19,6 +19,7 @@ function isObjectEqual(a, b) { if (a === b) return true; if (typeof a !== 'objec
 function calculateDiff(localData, remoteData, isUpload) {
     const dbDiff = [], cfgDiff = [], t = P().texts || DEFAULT_TEXTS_DAILY;
     const lDb = localData.db || {}, rDb = remoteData.db || {};
+    const lHeat = localData.heatDb || {}, rHeat = remoteData.heatDb || {};
     
     // 打卡记录比对
     ['master', 'doggy'].forEach(user => {
@@ -33,6 +34,20 @@ function calculateDiff(localData, remoteData, isUpload) {
                 else if (lRec && !rRec) dbDiff.push({ id, path: ['db', user, date, type], type: isUpload ? 'add' : 'remove', local: lRec, remote: rRec, text: `📅 <b>${date}</b> ${uName} ${tName}：${isUpload ? '将新增到云端' : '将删除本地记录'} (${lRec.time || '已打卡'})` });
                 else if (lRec && rRec) { if (lRec.time !== rRec.time || lRec.done !== rRec.done) { const targetTime = isUpload ? (lRec.time || '') : (rRec.time || ''); dbDiff.push({ id, path: ['db', user, date, type], type: 'modify', local: lRec, remote: rRec, text: `📅 <b>${date}</b> ${uName} ${tName}：修改时间为 ${targetTime}` }); } }
             });
+        });
+    });
+
+    // 发情记录比对
+    ['master', 'doggy'].forEach(user => {
+        const lUser = lHeat[user] || {}, rUser = rHeat[user] || {}, allDates = new Set([...Object.keys(lUser), ...Object.keys(rUser)]);
+        const uName = user === 'master' ? (getPureName(t.masterName) || '主人') : (getPureName(t.doggyName) || '小狗');
+        Array.from(allDates).sort().forEach(date => {
+            const lRec = lUser[date], rRec = rUser[date];
+            const id = `heat_${user}_${date}`;
+            const getHeatStr = (r) => `${r.time}${r.feeling ? ` (${r.feeling})` : ''}`;
+            if (!lRec && rRec) dbDiff.push({ id, path: ['heatDb', user, date], type: isUpload ? 'remove' : 'add', local: lRec, remote: rRec, text: `🔥 <b>${date}</b> ${uName} 发情：${isUpload ? '将删除云端记录' : '将新增本地记录'} (${getHeatStr(rRec)})` });
+            else if (lRec && !rRec) dbDiff.push({ id, path: ['heatDb', user, date], type: isUpload ? 'add' : 'remove', local: lRec, remote: rRec, text: `🔥 <b>${date}</b> ${uName} 发情：${isUpload ? '将新增到云端' : '将删除本地记录'} (${getHeatStr(lRec)})` });
+            else if (lRec && rRec) { if (lRec.time !== rRec.time || lRec.feeling !== rRec.feeling) { const targetStr = isUpload ? getHeatStr(lRec) : getHeatStr(rRec); dbDiff.push({ id, path: ['heatDb', user, date], type: 'modify', local: lRec, remote: rRec, text: `🔥 <b>${date}</b> ${uName} 发情：修改为 ${targetStr}` }); } }
         });
     });
 
@@ -133,7 +148,7 @@ let pendingSyncData = null;
 function toggleAllDiff(checked) { document.querySelectorAll('.diff-chk').forEach(chk => { chk.checked = checked; }); const master = document.getElementById('diff-select-all'); if (master) master.checked = checked; }
 window.toggleAllDiff = toggleAllDiff;
 
-function renderDiffModal(diff, isUpload, remoteDb = null, remoteCfg = null) {
+function renderDiffModal(diff, isUpload, remoteDb = null, remoteCfg = null, remoteHeatDb = null) {
     if (!diff || typeof diff !== 'object') diff = { dbDiff: [], cfgDiff: [] };
     if (!Array.isArray(diff.dbDiff)) diff.dbDiff = [];
     if (!Array.isArray(diff.cfgDiff)) diff.cfgDiff = [];
@@ -155,31 +170,34 @@ function renderDiffModal(diff, isUpload, remoteDb = null, remoteCfg = null) {
         html += '</div></details>';
         return html;
     };
-    content.innerHTML += renderList(diff.dbDiff, '📅 打卡记录变动');
+    content.innerHTML += renderList(diff.dbDiff, '📅 记录变动');
     content.innerHTML += renderList(diff.cfgDiff, '⚙️ 配置/文案变动');
-    pendingSyncData = { isUpload, localData: getSyncableData(), remoteDb, remoteCfg }; document.getElementById('diff-modal').classList.add('show');
+    pendingSyncData = { isUpload, localData: getSyncableData(), remoteDb, remoteCfg, remoteHeatDb }; document.getElementById('diff-modal').classList.add('show');
 }
 
 window.closeDiffModal = function() { document.getElementById('diff-modal').classList.remove('show'); const modalBox = document.querySelector('#diff-modal .diff-modal-box'); if (modalBox) { modalBox.classList.remove('upload-mode', 'pull-mode'); } pendingSyncData = null; };
 function setDeepValue(obj, pathArr, value) { if (!obj || !Array.isArray(pathArr)) return; let cur = obj; for (let i = 1; i < pathArr.length - 1; i++) { const k = pathArr[i]; if (!cur[k]) cur[k] = {}; cur = cur[k]; } cur[pathArr[pathArr.length - 1]] = value; }
 
 window.confirmSyncDiff = async function() {
-    if (!pendingSyncData) return; const { isUpload, localData, remoteDb, remoteCfg } = pendingSyncData; closeDiffModal();
+    if (!pendingSyncData) return; const { isUpload, localData, remoteDb, remoteCfg, remoteHeatDb } = pendingSyncData; closeDiffModal();
     const checkedIds = Array.from(document.querySelectorAll('.diff-chk:checked')).map(chk => chk.dataset.id);
     if (checkedIds.length === 0) return showToast('未选择任何差异', 'late');
     
     showBar('sync', 'sync', 30);
     
     let finalDb = isUpload ? JSON.parse(JSON.stringify(localData.db)) : JSON.parse(JSON.stringify(remoteDb || { master: {}, doggy: {} }));
+    let finalHeatDb = isUpload ? JSON.parse(JSON.stringify(localData.heatDb)) : JSON.parse(JSON.stringify(remoteHeatDb || { master: {}, doggy: {} }));
     let finalCfg = isUpload ? JSON.parse(JSON.stringify(localData.config)) : JSON.parse(JSON.stringify(remoteCfg ? deepMerge(DEFAULT_CONFIGS, remoteCfg) : DEFAULT_CONFIGS));
     
     if (!isUpload) {
         if (!finalDb.master) finalDb.master = {}; if (!finalDb.doggy) finalDb.doggy = {};
+        if (!finalHeatDb.master) finalHeatDb.master = {}; if (!finalHeatDb.doggy) finalHeatDb.doggy = {};
         finalDb = JSON.parse(JSON.stringify(localData.db));
+        finalHeatDb = JSON.parse(JSON.stringify(localData.heatDb));
         finalCfg = JSON.parse(JSON.stringify(localData.config));
     }
     
-    const diffData = calculateDiff(localData, { db: remoteDb || { master: {}, doggy: {} }, config: remoteCfg ? deepMerge(DEFAULT_CONFIGS, remoteCfg) : null }, isUpload);
+    const diffData = calculateDiff(localData, { db: remoteDb || { master: {}, doggy: {} }, heatDb: remoteHeatDb || { master: {}, doggy: {} }, config: remoteCfg ? deepMerge(DEFAULT_CONFIGS, remoteCfg) : null }, isUpload);
     const allDiffs = [...(diffData.dbDiff || []), ...(diffData.cfgDiff || [])];
     
     allDiffs.forEach(item => {
@@ -191,6 +209,11 @@ window.confirmSyncDiff = async function() {
                 if (!finalDb[user][date]) finalDb[user][date] = {};
                 if (valToSet) { finalDb[user][date][type] = valToSet; }
                 else { if (finalDb[user] && finalDb[user][date]) delete finalDb[user][date][type]; if (finalDb[user] && finalDb[user][date] && Object.keys(finalDb[user][date]).length === 0) delete finalDb[user][date]; }
+            } else if (item.id.startsWith('heat_')) {
+                const [, user, date] = item.path;
+                if (!finalHeatDb[user]) finalHeatDb[user] = {};
+                if (valToSet) { finalHeatDb[user][date] = valToSet; }
+                else { if (finalHeatDb[user]) delete finalHeatDb[user][date]; }
             } else {
                 setDeepValue(finalCfg, item.path, valToSet);
             }
@@ -201,21 +224,27 @@ window.confirmSyncDiff = async function() {
         updateBar('sync', 'sync', 60);
         const dbStrM = JSON.stringify(finalDb.master || {}, null, 2);
         const dbStrD = JSON.stringify(finalDb.doggy || {}, null, 2);
+        const heatStrM = JSON.stringify(finalHeatDb.master || {}, null, 2);
+        const heatStrD = JSON.stringify(finalHeatDb.doggy || {}, null, 2);
         const cfgStr = JSON.stringify(finalCfg || {}, null, 2);
         
         const mRemote = await fetchGHFile('master_records.json');
         const dRemote = await fetchGHFile('doggy_records.json');
+        const mhRemote = await fetchGHFile('master_heat.json');
+        const dhRemote = await fetchGHFile('doggy_heat.json');
         const cfgRemote = await fetchGHFile(ghConfig.configPath);
         
         const currentIdentity = identity || 'master';
-        let ok1 = true, ok2 = true;
+        let ok1 = true, ok2 = true, ok3 = true;
         if (currentIdentity === 'master' || currentIdentity === 'both') {
             ok1 = await pushGHFile('master_records.json', dbStrM, mRemote?.sha);
+            ok2 = await pushGHFile('master_heat.json', heatStrM, mhRemote?.sha);
         }
         if (currentIdentity === 'doggy' || currentIdentity === 'both') {
-            ok2 = await pushGHFile('doggy_records.json', dbStrD, dRemote?.sha);
+            ok1 = await pushGHFile('doggy_records.json', dbStrD, dRemote?.sha);
+            ok2 = await pushGHFile('doggy_heat.json', heatStrD, dhRemote?.sha);
         }
-        const ok3 = await pushGHFile(ghConfig.configPath, cfgStr, cfgRemote?.sha);
+        ok3 = await pushGHFile(ghConfig.configPath, cfgStr, cfgRemote?.sha);
         
         if (ok1 && ok2 && ok3) { 
             updateBar('sync', getProgressText('success') || '✅', 100); 
@@ -230,7 +259,7 @@ window.confirmSyncDiff = async function() {
         updateBar('sync', 'sync', 80);
         setTimeout(() => { 
             updateBar('sync', getProgressText('success') || '✅', 100); 
-            applySyncData(finalDb, finalCfg, true); 
+            applySyncData(finalDb, finalCfg, finalHeatDb, true); 
             setTimeout(() => { 
                 hideBar('sync'); 
                 showToast('⬇️ 数据更新成功', 'success'); 

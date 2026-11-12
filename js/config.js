@@ -40,7 +40,6 @@ function migrateConfigs(raw) {
       }
       if (ns.master_on_time_before === undefined) { ns.master_on_time_before = 15; ns.master_on_time_after = 15; ns.doggy_on_time_before = 15; ns.doggy_on_time_after = 15; }
       
-      // 迁移免打扰
       if (ns.global_dnd !== undefined) {
           ns.master_dnd = ns.global_dnd;
           ns.doggy_dnd = ns.global_dnd;
@@ -55,7 +54,6 @@ function P() { return configs.profiles[configs.mode] || configs.profiles.daily; 
 function modeLabel() { return configs.mode === 'service' ? '主仆' : '日常'; }
 const IDENTITY_KEY = 'dawn-duo-identity'; let identity = ''; try { identity = localStorage.getItem(IDENTITY_KEY) || ''; } catch (e) { identity = ''; } if (['master', 'doggy', 'both'].indexOf(identity) === -1) identity = '';
 const CONFIG_KEY = 'dawn-duo-gh-config'; 
-// 修改了这里：将 apiProxy 的默认值设为你专属的 Worker 地址
 let ghConfig = { user: 'luo029', repo: 'dawn_duo_data', path: 'records.json', configPath: 'config.json', token: '', autoSync: true, syncInterval: 5, syncPrompt: true, apiProxy: 'https://gh-proxy.luo029.workers.dev', autoFallback: true }; 
 try { 
     const savedGh = JSON.parse(localStorage.getItem(CONFIG_KEY)) || {}; 
@@ -63,9 +61,12 @@ try {
     ghConfig.autoSync = savedGh.autoSync !== false; 
     ghConfig.syncInterval = savedGh.syncInterval !== undefined ? Number(savedGh.syncInterval) : 5; 
     ghConfig.syncPrompt = savedGh.syncPrompt !== false; 
-    // 智能覆盖：如果本地没有存过这个值，就用默认的；如果存过（哪怕是用户手动清空），就按存的来
     ghConfig.apiProxy = savedGh.apiProxy !== undefined ? savedGh.apiProxy : 'https://gh-proxy.luo029.workers.dev';
     ghConfig.autoFallback = savedGh.autoFallback !== false;
 } catch (e) { }
 let db = { master: {}, doggy: {} }; try { const local = localStorage.getItem('dawn-duo-data'); if (local) { const parsed = JSON.parse(local); db.master = parsed.master || {}; db.doggy = parsed.doggy || parsed.dog || {}; } } catch (e) { db = { master: {}, doggy: {} }; }
+
+let heatDb = { master: {}, doggy: {} }; 
+try { const localHeat = localStorage.getItem('dawn-duo-heat-data'); if (localHeat) { const parsed = JSON.parse(localHeat); heatDb.master = parsed.master || {}; heatDb.doggy = parsed.doggy || {}; } } catch (e) { heatDb = { master: {}, doggy: {} }; }
+
 let notifyLog = JSON.parse(localStorage.getItem('dawn-duo-notify-log') || '{}'); let lastLogicalDate = getLogicalDateStr();

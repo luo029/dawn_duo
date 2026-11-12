@@ -82,6 +82,12 @@ function checkPushText(notifyTexts, key, replacements) {
     if (fs.existsSync('doggy_records.json')) remoteDb.doggy = JSON.parse(fs.readFileSync('doggy_records.json', 'utf8'));
   } catch (e) { console.warn('Failed to read records:', e.message); }
 
+  let remoteHeatDb = { master: {}, doggy: {} };
+  try {
+    if (fs.existsSync('master_heat.json')) remoteHeatDb.master = JSON.parse(fs.readFileSync('master_heat.json', 'utf8'));
+    if (fs.existsSync('doggy_heat.json')) remoteHeatDb.doggy = JSON.parse(fs.readFileSync('doggy_heat.json', 'utf8'));
+  } catch (e) { console.warn('Failed to read heat records:', e.message); }
+
   let pushLog = {};
   if (fs.existsSync(LOG_FILE)) { try { pushLog = JSON.parse(fs.readFileSync(LOG_FILE, 'utf8')); } catch (e) {} }
 
@@ -144,6 +150,60 @@ function checkPushText(notifyTexts, key, replacements) {
 
     let targetUser = '', textKey = '', replacements = {}, sendType = '';
 
+    // 发情推送
+    if (TRIGGER_FROM.startsWith('heat_')) {
+        const sourceUser = TRIGGER_FROM.split('_')[1];
+        
+        // 如果我是主人，对方发情了
+        if (sendMaster && sourceUser === 'doggy') {
+            const isDND = notifySettings.master_dnd === true;
+            if (!isDND && notifyItems['partner_doggy_heat'] !== false) {
+                const dateStr = dDateStr;
+                const rec = remoteHeatDb.doggy[dateStr];
+                if (rec) {
+                    textKey = 'partner_doggy_heat';
+                    const textObj = notifyTexts[textKey] || {};
+                    if (textObj.channel === 'both' || textObj.channel === 'push') {
+                        title = textObj.title || '🔥 小狗发情了';
+                        const bodyTpl = textObj.texts?.length ? textObj.texts[Math.floor(Math.random() * textObj.texts.length)] : '{name} 在 {time} 忍不住发情了...';
+                        let finalBody = bodyTpl.replace(/{name}/g, dName).replace(/{time}/g, rec.time);
+                        // 如果勾选附带感受且有感受，不用文案池，直接用感受
+                        if (notifySettings.heatNotifyWithFeeling !== false && rec.feeling) {
+                            finalBody = rec.feeling;
+                        }
+                        try { await webpush.sendNotification(sub, JSON.stringify({ title, body: finalBody, icon })); } catch(err) { if(err.statusCode===404||err.statusCode===410) failedEndpoints.push(sub.endpoint); }
+                    }
+                }
+            }
+            continue;
+        }
+        
+        // 如果我是小狗，主人发情了
+        if (sendDoggy && sourceUser === 'master') {
+            const isDND = notifySettings.doggy_dnd === true;
+            if (!isDND && notifyItems['partner_master_heat'] !== false) {
+                const dateStr = mDateStr;
+                const rec = remoteHeatDb.master[dateStr];
+                if (rec) {
+                    textKey = 'partner_master_heat';
+                    const textObj = notifyTexts[textKey] || {};
+                    if (textObj.channel === 'both' || textObj.channel === 'push') {
+                        title = textObj.title || '🔥 主人发情了';
+                        const bodyTpl = textObj.texts?.length ? textObj.texts[Math.floor(Math.random() * textObj.texts.length)] : '{name} 在 {time} 发情了，小狗速来伺候...';
+                        let finalBody = bodyTpl.replace(/{name}/g, mName).replace(/{time}/g, rec.time);
+                        // 如果勾选附带感受且有感受，不用文案池，直接用感受
+                        if (notifySettings.heatNotifyWithFeeling !== false && rec.feeling) {
+                            finalBody = rec.feeling;
+                        }
+                        try { await webpush.sendNotification(sub, JSON.stringify({ title, body: finalBody, icon })); } catch(err) { if(err.statusCode===404||err.statusCode===410) failedEndpoints.push(sub.endpoint); }
+                    }
+                }
+            }
+            continue;
+        }
+        continue;
+    }
+
     if (TRIGGER_FROM === 'partner') {
       if (sendMaster) {
         const isDND = notifySettings.master_dnd === true;
@@ -155,7 +215,6 @@ function checkPushText(notifyTexts, key, replacements) {
         replacements = { name: dName, time: rTime, time_s: rTime, shichen: '', shichen_organ: '', shichen_time: '', weekday: '', date: '', duration: '', mins: '' };
         if (notifyItems[textKey] === false) continue;
         
-        // 【修复点1】：读取自定义标题，如果没有再用默认
         const textObj = notifyTexts[textKey] || {};
         body = checkPushText(notifyTexts, textKey, replacements);
         title = textObj.title || '📡 对方动态';
@@ -169,7 +228,6 @@ function checkPushText(notifyTexts, key, replacements) {
         replacements = { name: mName, time: rTime, time_s: rTime, shichen: '', shichen_organ: '', shichen_time: '', weekday: '', date: '', duration: '', mins: '' };
         if (notifyItems[textKey] === false) continue;
         
-        // 【修复点2】：读取自定义标题，如果没有再用默认
         const textObj = notifyTexts[textKey] || {};
         body = checkPushText(notifyTexts, textKey, replacements);
         title = textObj.title || '📡 对方动态';

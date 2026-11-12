@@ -154,8 +154,11 @@ function checkPushText(notifyTexts, key, replacements) {
         const rTime = remoteDb.doggy[dDateStr]?.[sendType]?.time || '';
         replacements = { name: dName, time: rTime, time_s: rTime, shichen: '', shichen_organ: '', shichen_time: '', weekday: '', date: '', duration: '', mins: '' };
         if (notifyItems[textKey] === false) continue;
+        
+        // 【修复点1】：读取自定义标题，如果没有再用默认
+        const textObj = notifyTexts[textKey] || {};
         body = checkPushText(notifyTexts, textKey, replacements);
-        title = '📡 对方动态';
+        title = textObj.title || '📡 对方动态';
       } else if (sendDoggy) {
         const isDND = notifySettings.doggy_dnd === true;
         if (isDND) continue;
@@ -165,8 +168,11 @@ function checkPushText(notifyTexts, key, replacements) {
         const rTime = remoteDb.master[mDateStr]?.[sendType]?.time || '';
         replacements = { name: mName, time: rTime, time_s: rTime, shichen: '', shichen_organ: '', shichen_time: '', weekday: '', date: '', duration: '', mins: '' };
         if (notifyItems[textKey] === false) continue;
+        
+        // 【修复点2】：读取自定义标题，如果没有再用默认
+        const textObj = notifyTexts[textKey] || {};
         body = checkPushText(notifyTexts, textKey, replacements);
-        title = '📡 对方动态';
+        title = textObj.title || '📡 对方动态';
       }
       
       if (body) {

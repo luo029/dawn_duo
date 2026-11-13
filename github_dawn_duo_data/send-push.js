@@ -1,3 +1,8 @@
+// ... 保持原有头部不变 ...
+// 请在日志区留意是否输出了 [跳过] 或者 没有时间窗匹配。
+// 如果你在测试时发现 Actions 没跑，去 GitHub 仓库的 Actions 页面点击 "Send Scheduled Web Push" 手动 Run 一次。
+
+// 以下是完整代码：
 const fs = require('fs');
 const webpush = require('web-push');
 
@@ -150,11 +155,9 @@ function checkPushText(notifyTexts, key, replacements) {
 
     let targetUser = '', textKey = '', replacements = {}, sendType = '';
 
-    // 发情推送
     if (TRIGGER_FROM.startsWith('heat_')) {
         const sourceUser = TRIGGER_FROM.split('_')[1];
         
-        // 如果我是主人，对方发情了
         if (sendMaster && sourceUser === 'doggy') {
             const isDND = notifySettings.master_dnd === true;
             if (!isDND && notifyItems['partner_doggy_heat'] !== false) {
@@ -167,9 +170,8 @@ function checkPushText(notifyTexts, key, replacements) {
                         title = textObj.title || '🔥 小狗发情了';
                         const bodyTpl = textObj.texts?.length ? textObj.texts[Math.floor(Math.random() * textObj.texts.length)] : '{name} 在 {time} 忍不住发情了...';
                         let finalBody = bodyTpl.replace(/{name}/g, dName).replace(/{time}/g, rec.time);
-                        // 如果勾选附带感受且有感受，不用文案池，直接用感受
                         if (notifySettings.heatNotifyWithFeeling !== false && rec.feeling) {
-                            finalBody = rec.feeling;
+                            finalBody += `\n感受："${rec.feeling}"`;
                         }
                         try { await webpush.sendNotification(sub, JSON.stringify({ title, body: finalBody, icon })); } catch(err) { if(err.statusCode===404||err.statusCode===410) failedEndpoints.push(sub.endpoint); }
                     }
@@ -178,7 +180,6 @@ function checkPushText(notifyTexts, key, replacements) {
             continue;
         }
         
-        // 如果我是小狗，主人发情了
         if (sendDoggy && sourceUser === 'master') {
             const isDND = notifySettings.doggy_dnd === true;
             if (!isDND && notifyItems['partner_master_heat'] !== false) {
@@ -191,9 +192,8 @@ function checkPushText(notifyTexts, key, replacements) {
                         title = textObj.title || '🔥 主人发情了';
                         const bodyTpl = textObj.texts?.length ? textObj.texts[Math.floor(Math.random() * textObj.texts.length)] : '{name} 在 {time} 发情了，小狗速来伺候...';
                         let finalBody = bodyTpl.replace(/{name}/g, mName).replace(/{time}/g, rec.time);
-                        // 如果勾选附带感受且有感受，不用文案池，直接用感受
                         if (notifySettings.heatNotifyWithFeeling !== false && rec.feeling) {
-                            finalBody = rec.feeling;
+                            finalBody += `\n感受："${rec.feeling}"`;
                         }
                         try { await webpush.sendNotification(sub, JSON.stringify({ title, body: finalBody, icon })); } catch(err) { if(err.statusCode===404||err.statusCode===410) failedEndpoints.push(sub.endpoint); }
                     }
@@ -207,26 +207,26 @@ function checkPushText(notifyTexts, key, replacements) {
     if (TRIGGER_FROM === 'partner') {
       if (sendMaster) {
         const isDND = notifySettings.master_dnd === true;
-        if (isDND) continue;
+        if (isDND) { console.log(`[跳过] 主人开启了免打扰。`); continue; }
         if (remoteDb.doggy[dDateStr]?.wake?.done) { textKey = 'partner_doggy_wake'; sendType = 'wake'; }
         else if (remoteDb.doggy[dDateStr]?.sleep?.done) { textKey = 'partner_doggy_sleep'; sendType = 'sleep'; }
-        else continue;
+        else { console.log(`[跳过] 未找到小狗今日打卡记录。`); continue; }
         const rTime = remoteDb.doggy[dDateStr]?.[sendType]?.time || '';
         replacements = { name: dName, time: rTime, time_s: rTime, shichen: '', shichen_organ: '', shichen_time: '', weekday: '', date: '', duration: '', mins: '' };
-        if (notifyItems[textKey] === false) continue;
+        if (notifyItems[textKey] === false) { console.log(`[跳过] 提醒项 ${textKey} 已关闭。`); continue; }
         
         const textObj = notifyTexts[textKey] || {};
         body = checkPushText(notifyTexts, textKey, replacements);
         title = textObj.title || '📡 对方动态';
       } else if (sendDoggy) {
         const isDND = notifySettings.doggy_dnd === true;
-        if (isDND) continue;
+        if (isDND) { console.log(`[跳过] 小狗开启了免打扰。`); continue; }
         if (remoteDb.master[mDateStr]?.wake?.done) { textKey = 'partner_master_wake'; sendType = 'wake'; }
         else if (remoteDb.master[mDateStr]?.sleep?.done) { textKey = 'partner_master_sleep'; sendType = 'sleep'; }
-        else continue;
+        else { console.log(`[跳过] 未找到主人今日打卡记录。`); continue; }
         const rTime = remoteDb.master[mDateStr]?.[sendType]?.time || '';
         replacements = { name: mName, time: rTime, time_s: rTime, shichen: '', shichen_organ: '', shichen_time: '', weekday: '', date: '', duration: '', mins: '' };
-        if (notifyItems[textKey] === false) continue;
+        if (notifyItems[textKey] === false) { console.log(`[跳过] 提醒项 ${textKey} 已关闭。`); continue; }
         
         const textObj = notifyTexts[textKey] || {};
         body = checkPushText(notifyTexts, textKey, replacements);
@@ -245,11 +245,11 @@ function checkPushText(notifyTexts, key, replacements) {
 
     if (sendMaster) {
       targetUser = 'master';
-      if (notifySettings.master_dnd === true) continue;
+      if (notifySettings.master_dnd === true) { console.log(`[跳过] 主人开启了免打扰。`); continue; }
       if (Math.abs(mMins - mSleepGoal) < Math.abs(mMins - mWakeGoal)) { sendType = 'sleep'; } else { sendType = 'wake'; }
     } else if (sendDoggy) {
       targetUser = 'doggy';
-      if (notifySettings.doggy_dnd === true) continue;
+      if (notifySettings.doggy_dnd === true) { console.log(`[跳过] 小狗开启了免打扰。`); continue; }
       if (Math.abs(dMins - dSleepGoal) < Math.abs(dMins - dWakeGoal)) { sendType = 'sleep'; } else { sendType = 'wake'; }
     } else { continue; }
 
@@ -263,7 +263,7 @@ function checkPushText(notifyTexts, key, replacements) {
     if (sendType === 'sleep') { if (diff > 720) diff -= 1440; if (diff < -720) diff += 1440; }
 
     const isDone = sendType === 'sleep' ? (isMaster ? remoteDb.master[mDateStr]?.sleep?.done : remoteDb.doggy[dDateStr]?.sleep?.done) : (isMaster ? remoteDb.master[mDateStr]?.wake?.done : remoteDb.doggy[dDateStr]?.wake?.done);
-    if (isDone && !TEST_MODE) continue;
+    if (isDone && !TEST_MODE) { console.log(`[跳过] ${targetUser} 已经完成 ${sendType} 打卡。`); continue; }
 
     const beforeMins = isMaster ? (notifySettings.master_on_time_before !== undefined ? notifySettings.master_on_time_before : 15) : (notifySettings.doggy_on_time_before !== undefined ? notifySettings.doggy_on_time_before : 15);
     const afterMins = isMaster ? (notifySettings.master_on_time_after !== undefined ? notifySettings.master_on_time_after : 15) : (notifySettings.doggy_on_time_after !== undefined ? notifySettings.doggy_on_time_after : 15);
@@ -299,17 +299,17 @@ function checkPushText(notifyTexts, key, replacements) {
     }
 
     if (diff >= -beforeMins && diff <= afterMins) {
-        if (notifyItems[`${targetUser}_${sendType}`] === false && !TEST_MODE) continue;
-        if (!inWindow && !TEST_MODE) continue;
+        if (notifyItems[`${targetUser}_${sendType}`] === false && !TEST_MODE) { console.log(`[跳过] 准时提醒开关已关闭。`); continue; }
+        if (!inWindow && !TEST_MODE) { console.log(`[跳过] 当前不在防轰炸时间窗内。`); continue; }
         textKey = `${targetUser}_${sendType}`;
         replacements = commonReplacements;
     } else if (diff > afterMins) {
-        if (notifyItems[`${targetUser}_${sendType}_overtime`] === false && !TEST_MODE) continue;
-        if (!inWindow && !TEST_MODE) continue;
+        if (notifyItems[`${targetUser}_${sendType}_overtime`] === false && !TEST_MODE) { console.log(`[跳过] 超时提醒开关已关闭。`); continue; }
+        if (!inWindow && !TEST_MODE) { console.log(`[跳过] 当前不在超时允许时间窗内。`); continue; }
         
         if (tMaxTimes > 0 && !TEST_MODE) {
             const logKey = `${isMaster ? mDateStr : dDateStr}_${targetUser}_${sendType}_overtime`;
-            if ((pushLog[logKey] || 0) >= tMaxTimes) continue;
+            if ((pushLog[logKey] || 0) >= tMaxTimes) { console.log(`[跳过] 已达到今日最大超时提醒次数 (${tMaxTimes})。`); continue; }
             pushLog[logKey] = (pushLog[logKey] || 0) + 1; logUpdated = true;
         }
         
@@ -323,6 +323,7 @@ function checkPushText(notifyTexts, key, replacements) {
         
         replacements = Object.assign({}, commonReplacements, { duration: durStr, mins: diff });
     } else {
+        console.log(`[跳过] 当前时间差为 ${diff} 分钟，不在触发区间内。`);
         continue;
     }
 
@@ -334,11 +335,12 @@ function checkPushText(notifyTexts, key, replacements) {
       icon = textObj.icon || '/icon-512.png';
     }
 
-    if (!body) continue;
+    if (!body) { console.log(`[跳过] 未获取到有效的推送文案。`); continue; }
     const payload = JSON.stringify({ title, body, icon });
 
     try {
       await webpush.sendNotification(sub, payload);
+      console.log(`[成功] 已向 ${targetUser} 发送通知: ${title}`);
     } catch (err) {
       if (err.statusCode === 404 || err.statusCode === 410) { failedEndpoints.push(sub.endpoint); }
     }

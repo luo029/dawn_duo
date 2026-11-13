@@ -3,6 +3,7 @@ function notificationSupported() { return typeof Notification !== 'undefined'; }
 function sendNotify(key, title, body) { try { const n = new Notification(title, { body: body, tag: 'dawn-' + key, requireInteraction: true, silent: false }); } catch (e) { console.warn('通知发送失败', e); } }
 function saveNotifyLog() { try { localStorage.setItem('dawn-duo-notify-log', JSON.stringify(notifyLog)); } catch (e) {} }
 function getRandomText(textArr) { if (Array.isArray(textArr)) { if (textArr.length === 0) return ''; return textArr[Math.floor(Math.random() * textArr.length)]; } return textArr || ''; }
+
 function checkNotifications() {
     if (!configs.notifications || !notificationSupported() || Notification.permission !== 'granted') return;
     const nowTs = Date.now(); if (nowTs - lastNotifyCheck < 15000) return; lastNotifyCheck = nowTs;
@@ -16,17 +17,20 @@ function checkNotifications() {
     items.forEach(it => {
         const isDND = it.user === 'master' ? nSettings.master_dnd === true : nSettings.doggy_dnd === true;
         if (isDND) return;
-
         if (nItems[it.key] === false) return;
+
         const done = db[it.user]?.[today]?.[it.type]?.done; if (done) return;
         const nowTimeStr = getTimeInTZ(it.tz, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
         const nowMins = toMins(nowTimeStr); const goalMins = toMins(configs.goals?.[it.user]?.[it.type]); if (!Number.isFinite(nowMins) || !Number.isFinite(goalMins)) return;
-        let offset = nowMins - goalMins; if (offset < -720) offset += 1440; else if (offset > 720) offset -= 1440;
+        
+        let offset = nowMins - goalMins; 
+        if (offset < -720) offset += 1440; else if (offset > 720) offset -= 1440;
         
         const isMaster = it.user === 'master';
         const beforeMins = isMaster ? (nSettings.master_on_time_before !== undefined ? nSettings.master_on_time_before : 15) : (nSettings.doggy_on_time_before !== undefined ? nSettings.doggy_on_time_before : 15);
         const afterMins = isMaster ? (nSettings.master_on_time_after !== undefined ? nSettings.master_on_time_after : 15) : (nSettings.doggy_on_time_after !== undefined ? nSettings.doggy_on_time_after : 15);
         
+        // 1. 准时提醒
         if (offset >= -beforeMins && offset <= afterMins) { 
             if (!notifyLog[it.key]) { 
                 const obj = nTexts[it.key] || { channel: 'both', texts: [] };
@@ -42,9 +46,11 @@ function checkNotifications() {
                     sendNotify(it.key, titleObj, body); 
                 }
                 notifyLog[it.key] = true; saveNotifyLog(); 
-            } return; 
+            } 
+            return; 
         }
         
+        // 2. 超时提醒
         const oKey = `${it.user}_${it.type}_overtime`;
         if (nItems[oKey] === false) return; 
         
@@ -55,7 +61,9 @@ function checkNotifications() {
         const tWakeEnd = toMins(isMaster ? (nSettings.master_wake_end || '12:00') : (nSettings.doggy_wake_end || '12:00'));
         const tMaxTimes = isMaster ? (nSettings.master_max_times !== undefined ? nSettings.master_max_times : 3) : (nSettings.doggy_max_times !== undefined ? nSettings.doggy_max_times : 3);
         
-        let isOvertime = false, overtimeMins = 0; if (it.type === 'sleep' && offset > afterMins) { isOvertime = true; overtimeMins = offset; } else if (it.type === 'wake' && offset > afterMins) { isOvertime = true; overtimeMins = offset; }
+        let isOvertime = false, overtimeMins = 0; 
+        if (it.type === 'sleep' && offset > afterMins) { isOvertime = true; overtimeMins = offset; } 
+        else if (it.type === 'wake' && offset > afterMins) { isOvertime = true; overtimeMins = offset; }
         
         if (isOvertime) { 
             if (targetWindowEnabled) {
@@ -131,11 +139,9 @@ window.testNotification = async function() {
     if (!notificationSupported()) return showToast('不支持通知', 'late'); if (!window.isSecureContext) return showToast('⚠️ 必须在 HTTPS 下', 'late');
     let perm = Notification.permission; if (perm === 'default') { try { perm = await Notification.requestPermission(); } catch (e) { perm = 'denied'; } } updateNotifyStatus(); if (perm !== 'granted') return showToast('未获权限', 'late');
     const nTexts = P().notifyTexts || {}; const mName = getPureName(P().texts.masterName) || '先生'; const dName = getPureName(P().texts.doggyName) || '小狗';
-    const testKey = identity === 'master' ? 'master_sleep' : (identity === 'doggy' ? 'doggy_sleep' : 'master_wake'); 
-    const obj = nTexts[testKey] || { texts: ['测试通知'] };
-    const titleObj = obj.title || '🔔 测试通知';
+    const testKey = identity === 'master' ? 'master_sleep' : (identity === 'doggy' ? 'doggy_sleep' : 'master_wake'); const obj = nTexts[testKey] || { texts: ['测试通知'] };
     let testBody = getRandomText(obj.texts)?.replace(/{name}/g, identity === 'master' ? mName : dName) || '测试通知';
-    try { new Notification(titleObj, { body: testBody, tag: 'dawn-test-' + Date.now(), requireInteraction: true }); showToast('测试已发送', 'success'); } catch (e) { showToast('发送失败：' + e.message, 'late'); }
+    try { new Notification('🔔 测试通知', { body: testBody, tag: 'dawn-test-' + Date.now(), requireInteraction: true }); showToast('测试已发送', 'success'); } catch (e) { showToast('发送失败：' + e.message, 'late'); }
 };
 function updateNotifyStatus() {
     const el = document.getElementById('notify-status'); if (!el) return;

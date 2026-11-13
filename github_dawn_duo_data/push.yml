@@ -2,7 +2,8 @@ name: Send Scheduled Web Push
 
 on:
   schedule:
-    - cron: '*/30 * * * *'
+    # 改为 15 分钟执行一次，防止 GitHub 排队延迟错过时间窗
+    - cron: '*/15 * * * *'
   workflow_dispatch:
     inputs:
       test_mode:
@@ -22,7 +23,7 @@ on:
         required: false
         default: 'all'
       trigger_from:
-        description: '触发来源 (partner = 打卡触发)'
+        description: '触发来源 (partner = 打卡触发, heat = 发情触发)'
         required: false
         default: ''
 

@@ -31,10 +31,15 @@ window.editSubSleepRecord = function(user, dateStr, index) {
     if (!rec) return;
     currentFixTarget = { user, type: 'sleep_sub', label: '小睡', dateStr, index };
     const titleEl = document.getElementById('custom-time-title');
-    if (titleEl) titleEl.textContent = `修改小睡时间`;
+    if (titleEl) titleEl.textContent = `修改小睡记录`;
+    
+    // 小睡修改弹窗需要特殊处理时间输入
+    const formGroup = document.getElementById('custom-time-input').parentNode;
+    // 这里只是复用，实际逻辑在 submit 里判断
     const inputEl = document.getElementById('custom-time-input');
     if (inputEl) {
         inputEl.value = rec.time || '12:00';
+        // 给用户提示（简单起见，这里就只改开始时间，如果需要改结束时间，可以后续扩展）
     }
     const modal = document.getElementById('custom-time-modal');
     if (modal) modal.classList.add('show');
@@ -44,12 +49,10 @@ window.deleteSubSleepRecord = function(user, dateStr, index) {
     window.showCustomConfirm('🗑️ 删除小睡记录', '确定要删除这条小睡记录吗？', () => {
         if (!db[user]?.[dateStr]?.sleep?.records) return;
         db[user][dateStr].sleep.records.splice(index, 1);
-        // 如果删空了，清理整个睡眠记录
         if (db[user][dateStr].sleep.records.length === 0) {
             delete db[user][dateStr].sleep;
             if (Object.keys(db[user][dateStr]).length === 0) delete db[user][dateStr];
         } else {
-            // 重新计算主记录时间
             const mainRec = db[user][dateStr].sleep.records.find(r => r.type === 'main') || db[user][dateStr].sleep.records[0];
             db[user][dateStr].sleep.time = mainRec.time;
             db[user][dateStr].sleep.ontime = mainRec.ontime;
@@ -94,7 +97,6 @@ window.submitCustomTime = function(action) {
         const ontime = checkGoal(user, type === 'sleep_sub' ? 'sleep' : type, timeFormatted); 
         
         if (type === 'sleep_sub') {
-            // 修改现有的小睡记录
             const rec = db[user][dateStr].sleep.records[index];
             if (rec) {
                 rec.time = timeFormatted;
@@ -102,7 +104,6 @@ window.submitCustomTime = function(action) {
                 rec.timestamp = new Date(`${dateStr}T${timeFormatted}:00`).getTime();
             }
         } else {
-            // 如果是整体睡眠，直接覆盖主记录
             db[user][dateStr][type] = { done: true, time: timeFormatted, ontime: ontime, records: [{ time: timeFormatted, ontime: ontime, timestamp: Date.now(), type: 'main' }] }; 
         }
         showToast('时间修正成功！', 'success'); 
@@ -156,17 +157,19 @@ window.renderFixPanel = function() {
         let mainTime = isDone ? (rec.time || '手动') : '--:--';
         let subSleepsHtml = '';
         
-        // 如果是睡眠，且存在多条记录，展示详细列表
         if (type === 'sleep' && isDone && rec.records && rec.records.length > 1) {
             const subs = rec.records.filter(r => r.type === 'sub');
             if (subs.length > 0) {
                 subSleepsHtml = `<div style="width:100%; margin-top: 8px; background: var(--settings-bg); border-radius: 8px; padding: 8px; display:flex; flex-direction:column; gap:6px; border: 1px dashed var(--border);">
                     <div style="font-size:0.75rem; font-weight:bold; color:var(--text-muted);">包含以下小睡：</div>
                     ${subs.map((r, i) => {
-                        // 找到在原数组中的真实索引
                         const realIndex = rec.records.indexOf(r);
+                        let timeText = r.time;
+                        if (r.endTime) timeText += ` - ${r.endTime}`;
+                        else timeText += ` (未记录醒来)`;
+                        
                         return `<div style="display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; padding: 4px 8px; background:var(--card-bg); border-radius:6px;">
-                            <span style="color:var(--text);">💤 ${r.time}</span>
+                            <span style="color:var(--text);">💤 ${timeText}</span>
                             <div>
                                 <button class="fix-action-btn edit" style="padding:2px 6px;" onclick="event.stopPropagation(); window.editSubSleepRecord('${user}', '${dateStr}', ${realIndex})">改</button>
                                 <button class="fix-action-btn delete" style="padding:2px 6px;" onclick="event.stopPropagation(); window.deleteSubSleepRecord('${user}', '${dateStr}', ${realIndex})">删</button>

@@ -34,7 +34,6 @@ function calculateDiff(localData, remoteData, isUpload) {
                 if (!lRec && rRec) dbDiff.push({ id, path: ['db', user, date, type], type: isUpload ? 'remove' : 'add', local: lRec, remote: rRec, text: `📅 <b>${date}</b> ${uName} ${tName}：${isUpload ? '将删除云端记录' : '将新增本地记录'} (${rRec.time || '已打卡'})` });
                 else if (lRec && !rRec) dbDiff.push({ id, path: ['db', user, date, type], type: isUpload ? 'add' : 'remove', local: lRec, remote: rRec, text: `📅 <b>${date}</b> ${uName} ${tName}：${isUpload ? '将新增到云端' : '将删除本地记录'} (${lRec.time || '已打卡'})` });
                 else if (lRec && rRec) { 
-                    // 深度比对主次时间
                     let timeChanged = false;
                     if (lRec.time !== rRec.time || lRec.done !== rRec.done) timeChanged = true;
                     if (JSON.stringify(lRec.records || []) !== JSON.stringify(rRec.records || [])) timeChanged = true;

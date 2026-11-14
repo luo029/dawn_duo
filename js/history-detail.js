@@ -132,7 +132,12 @@ document.addEventListener('DOMContentLoaded', () => {
       if (sleep.records && sleep.records.length > 1) {
           const subs = sleep.records.filter(r => r.type === 'sub');
           if (subs.length > 0) {
-              subSleepsHtml = `<div class="hd-sub-records"><div style="font-weight:800; margin-bottom:4px; color:var(--text);">💤 包含小睡记录：</div>` + subs.map(r => `<div class="hd-sub-item"><span>时间: ${r.time}</span><span>${r.ontime ? '达标' : '晚睡'}</span></div>`).join('') + `</div>`;
+              subSleepsHtml = `<div class="hd-sub-records"><div style="font-weight:800; margin-bottom:4px; color:var(--text);">💤 包含小睡记录：</div>` + subs.map(r => {
+                  let timeRange = `${r.time}`;
+                  if (r.endTime) timeRange += ` - ${r.endTime}`;
+                  let durText = r.duration ? ` (${Math.floor(r.duration/3600)}h${Math.floor((r.duration%3600)/60)}m)` : (r.endTime ? '' : ' (未记录醒来)');
+                  return `<div class="hd-sub-item"><span>时间: ${timeRange}${durText}</span><span>${r.ontime ? '达标' : '晚睡'}</span></div>`;
+              }).join('') + `</div>`;
           }
       }
 

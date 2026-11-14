@@ -6,7 +6,23 @@ window.closeWakeModal = function() { document.getElementById('wake-action-modal'
 window.handleWakeAction = async function(action) {
   if (!currentWakeActionCtx) return;
   const { user, today, record } = currentWakeActionCtx; closeWakeModal();
-  if (action === 'overwrite') { record.records = []; await doCheckin(user, 'wake', today, record, 'main'); }
+  if (action === 'overwrite') { 
+      record.records = []; 
+      await doCheckin(user, 'wake', today, record, 'main'); 
+  } else if (action === 'end_sub') {
+      // 结束当前未完成的小睡
+      const sleep = db[user][today].sleep;
+      if (sleep && sleep.records) {
+          const lastSub = [...sleep.records].reverse().find(r => r.type === 'sub' && !r.endTime);
+          if (lastSub) {
+              const timeStr = formatCheckinTime(configs.timeZones[user]);
+              lastSub.endTime = timeStr;
+              lastSub.duration = Math.floor((Date.now() - lastSub.timestamp) / 1000);
+              saveLocalData();
+              showToast('已记录小睡醒来时间', 'success');
+          }
+      }
+  }
 };
 
 window.handleSleepAction = async function(action) {
@@ -14,7 +30,6 @@ window.handleSleepAction = async function(action) {
   const { user, today, record } = currentSleepActionCtx; const yesterday = getLogicalDateStr(1); closeSleepModal();
   if (action === 'sub') { 
       await doCheckin(user, 'sleep', today, record, 'sub'); 
-      // 【修复】取消了对 wake 记录的强制删除，允许起床后补觉
       saveLocalData(); 
   } 
   else if (action === 'overwrite') { await doCheckin(user, 'sleep', today, record, 'main'); } 
@@ -47,6 +62,7 @@ window.toggle = async function(user, type) {
   if (!db[user]) db[user] = {};
   if (!db[user][today]) db[user][today] = {};
   let record = db[user][today][type];
+  
   if (type === 'sleep' && record && record.done) {
     currentSleepActionCtx = { user, today, record };
     const role = identity === 'both' ? 'both' : (identity || 'master');
@@ -64,17 +80,36 @@ window.toggle = async function(user, type) {
     document.getElementById('sleep-action-modal').classList.add('show');
     return;
   }
+  
   if (type === 'wake' && record && record.done) {
     currentWakeActionCtx = { user, today, record };
-    const role = identity === 'both' ? 'both' : (identity || 'master');
-    const prof = P();
-    const wTexts = prof.wakeTexts?.[role] || (configs.mode === 'service' ? DEFAULT_WAKE_TEXTS_SERVICE[role] : DEFAULT_WAKE_TEXTS_DAILY[role]) || {};
+    // 【核心升级】：判断是否有未结束的小睡
+    const sleep = db[user][today].sleep;
+    const pendingSub = sleep?.records?.find(r => r.type === 'sub' && !r.endTime);
     
-    document.getElementById('wake-modal-title').textContent = wTexts.title || '今日已起床';
-    document.getElementById('wake-modal-desc').innerHTML = (wTexts.desc || '今天已经在 {time} 起过床了，如何记录？').replace(/{time}/g, `<span class="time-highlight">${record.time}</span>`);
+    const titleEl = document.getElementById('wake-modal-title');
+    const descEl = document.getElementById('wake-modal-desc');
+    const btnConfirm = document.getElementById('btn-wake-confirm');
+    const btnCancel = document.getElementById('btn-wake-cancel');
     
-    document.getElementById('btn-wake-confirm').innerHTML = `<span class="icon">✅</span>${wTexts.confirm || '覆盖当前记录'}`;
-    document.getElementById('btn-wake-cancel').innerHTML = `<span class="icon">❌</span>${wTexts.cancel || '保留原记录'}`;
+    if (pendingSub) {
+        titleEl.textContent = '小睡结束';
+        descEl.innerHTML = `你今天已经在 <span class="time-highlight">${record.time}</span> 起过床了。检测到你有一顿在 <span class="time-highlight">${pendingSub.time}</span> 的小睡，要记录醒来时间吗？`;
+        btnConfirm.innerHTML = `<span class="icon">✅</span>结束小睡 (记录醒来)`;
+        btnConfirm.onclick = () => window.handleWakeAction('end_sub');
+        btnCancel.innerHTML = `<span class="icon">❌</span>覆盖早上的起床时间`;
+        btnCancel.onclick = () => window.handleWakeAction('overwrite');
+    } else {
+        const role = identity === 'both' ? 'both' : (identity || 'master');
+        const prof = P();
+        const wTexts = prof.wakeTexts?.[role] || (configs.mode === 'service' ? DEFAULT_WAKE_TEXTS_SERVICE[role] : DEFAULT_WAKE_TEXTS_DAILY[role]) || {};
+        titleEl.textContent = wTexts.title || '今日已起床';
+        descEl.innerHTML = (wTexts.desc || '今天已经在 {time} 起过床了，如何记录？').replace(/{time}/g, `<span class="time-highlight">${record.time}</span>`);
+        btnConfirm.innerHTML = `<span class="icon">✅</span>${wTexts.confirm || '覆盖当前记录'}`;
+        btnConfirm.onclick = () => window.handleWakeAction('overwrite');
+        btnCancel.innerHTML = `<span class="icon">❌</span>${wTexts.cancel || '保留原记录'}`;
+        btnCancel.onclick = () => window.closeWakeModal();
+    }
     
     document.getElementById('wake-action-modal').classList.add('show');
     return;
@@ -92,20 +127,23 @@ async function doCheckin(user, type, dateStr, existingRecord, sleepType = 'main'
   const ontime = checkGoal(user, type, timeStr);
   const meta = { timestamp: Date.now(), timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, device: getDeviceInfo(), location: "获取中..." };
   const newRec = { time: timeStr, ontime: ontime, timestamp: meta.timestamp, meta: meta, type: sleepType };
-  if (type === 'wake') { record.records = [newRec]; record.done = true; record.time = timeStr; record.ontime = ontime; record.meta = meta; }
+  
+  if (type === 'wake') { 
+      record.records = [newRec]; record.done = true; record.time = timeStr; record.ontime = ontime; record.meta = meta; 
+      // 计算睡眠时长
+      let sleepRec = db[user][dateStr].sleep;
+      if (!sleepRec || !sleepRec.done) sleepRec = db[user]?.[getLogicalDateStr(1)]?.sleep;
+      if (sleepRec && sleepRec.done && sleepRec.records) {
+          const validSleeps = sleepRec.records.filter(r => r.timestamp && r.timestamp < newRec.timestamp);
+          if (validSleeps.length > 0) { validSleeps.sort((a, b) => b.timestamp - a.timestamp); const closestSleep = validSleeps[0]; record.meta.sleepDuration = Math.floor((newRec.timestamp - closestSleep.timestamp) / 1000); record.meta.sleepStart = closestSleep.timestamp; }
+      }
+  }
   else {
     if (sleepType === 'main') { record.records = [newRec]; record.done = true; record.time = timeStr; record.ontime = ontime; record.meta = meta; } 
     else { record.records.push(newRec); if (record.records.length === 1) { record.done = true; record.time = timeStr; record.ontime = ontime; record.meta = meta; } }
   }
   getLocation().then(loc => { newRec.meta.location = loc; saveLocalData(true); });
-  if (type === 'wake') {
-    let sleepRec = db[user][dateStr].sleep;
-    if (!sleepRec || !sleepRec.done) sleepRec = db[user]?.[getLogicalDateStr(1)]?.sleep;
-    if (sleepRec && sleepRec.done && sleepRec.records) {
-      const validSleeps = sleepRec.records.filter(r => r.timestamp && r.timestamp < newRec.timestamp);
-      if (validSleeps.length > 0) { validSleeps.sort((a, b) => b.timestamp - a.timestamp); const closestSleep = validSleeps[0]; record.meta.sleepDuration = Math.floor((newRec.timestamp - closestSleep.timestamp) / 1000); record.meta.sleepStart = closestSleep.timestamp; }
-    }
-  }
+  
   const status = record.ontime ? 'success' : 'late'; const pool = P().msgPool || {}; const arr = pool?.[user]?.[type]?.[status] || [];
   const msg = arr.length > 0 ? arr[Math.floor(Math.random() * arr.length)] : (record.ontime ? '打卡成功！' : '打卡完成，但未达标。');
   showToast(msg, status); 
@@ -148,7 +186,6 @@ function render() {
     }
     const elStreak = document.getElementById('stat-streak'); if (elStreak) elStreak.textContent = streak;
     
-    // 【优化】主页显示多段睡眠的次数
     ['master', 'doggy'].forEach(user => {
       ['sleep', 'wake'].forEach(type => {
         const btn = document.getElementById(`btn-${user}-${type}`), timeLabel = document.getElementById(`time-${user}-${type}`);

@@ -15,12 +15,18 @@ window.setQuickTime = function(type) {
 
 window.editFixRecord = function(user, type, label, dateStr, currentTime) {
     currentFixTarget = { user, type, label, dateStr };
+    
     const titleEl = document.getElementById('custom-time-title');
     if (titleEl) titleEl.textContent = `修改 ${label} 打卡时间`;
     const inputEl = document.getElementById('custom-time-input');
     if (inputEl) {
         inputEl.value = currentTime || configs.goals?.[user]?.[type] || '23:00';
     }
+    
+    // 隐藏醒来时间、显示快捷按钮
+    document.getElementById('custom-time-end-group').style.display = 'none';
+    document.getElementById('custom-time-quick-actions').style.display = 'flex';
+    
     const modal = document.getElementById('custom-time-modal');
     if (modal) modal.classList.add('show');
 };
@@ -30,17 +36,25 @@ window.editSubSleepRecord = function(user, dateStr, index) {
     const rec = db[user]?.[dateStr]?.sleep?.records?.[index];
     if (!rec) return;
     currentFixTarget = { user, type: 'sleep_sub', label: '小睡', dateStr, index };
+    
     const titleEl = document.getElementById('custom-time-title');
     if (titleEl) titleEl.textContent = `修改小睡记录`;
     
-    // 小睡修改弹窗需要特殊处理时间输入
-    const formGroup = document.getElementById('custom-time-input').parentNode;
-    // 这里只是复用，实际逻辑在 submit 里判断
     const inputEl = document.getElementById('custom-time-input');
     if (inputEl) {
         inputEl.value = rec.time || '12:00';
-        // 给用户提示（简单起见，这里就只改开始时间，如果需要改结束时间，可以后续扩展）
     }
+    
+    // 显示醒来时间，填入已有的结束时间
+    document.getElementById('custom-time-end-group').style.display = 'block';
+    const endInput = document.getElementById('custom-time-input-end');
+    if (endInput) {
+        endInput.value = rec.endTime || '';
+    }
+    
+    // 隐藏快捷按钮，因为小睡没必要一键改达标
+    document.getElementById('custom-time-quick-actions').style.display = 'none';
+    
     const modal = document.getElementById('custom-time-modal');
     if (modal) modal.classList.add('show');
 };
@@ -102,6 +116,25 @@ window.submitCustomTime = function(action) {
                 rec.time = timeFormatted;
                 rec.ontime = ontime;
                 rec.timestamp = new Date(`${dateStr}T${timeFormatted}:00`).getTime();
+                
+                // 获取醒来时间
+                const endInputEl = document.getElementById('custom-time-input-end');
+                const endTimeVal = endInputEl ? endInputEl.value : '';
+                
+                if (endTimeVal && /^\d{1,2}:\d{2}$/.test(endTimeVal)) {
+                    const endParts = endTimeVal.split(':');
+                    const endTimeFormatted = endParts[0].padStart(2, '0') + ':' + endParts[1];
+                    rec.endTime = endTimeFormatted;
+                    
+                    // 计算时长 (秒)
+                    let startTs = new Date(`${dateStr}T${timeFormatted}:00`).getTime();
+                    let endTs = new Date(`${dateStr}T${endTimeFormatted}:00`).getTime();
+                    if (endTs < startTs) endTs += 24 * 3600 * 1000; // 跨天处理
+                    rec.duration = Math.floor((endTs - startTs) / 1000);
+                } else {
+                    delete rec.endTime;
+                    delete rec.duration;
+                }
             }
         } else {
             db[user][dateStr][type] = { done: true, time: timeFormatted, ontime: ontime, records: [{ time: timeFormatted, ontime: ontime, timestamp: Date.now(), type: 'main' }] }; 
@@ -165,8 +198,12 @@ window.renderFixPanel = function() {
                     ${subs.map((r, i) => {
                         const realIndex = rec.records.indexOf(r);
                         let timeText = r.time;
-                        if (r.endTime) timeText += ` - ${r.endTime}`;
-                        else timeText += ` (未记录醒来)`;
+                        if (r.endTime) {
+                            timeText += ` - ${r.endTime}`;
+                            if (r.duration) timeText += ` (${Math.floor(r.duration/3600)}h${Math.floor((r.duration%3600)/60)}m)`;
+                        } else {
+                            timeText += ` (未记录醒来)`;
+                        }
                         
                         return `<div style="display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; padding: 4px 8px; background:var(--card-bg); border-radius:6px;">
                             <span style="color:var(--text);">💤 ${timeText}</span>

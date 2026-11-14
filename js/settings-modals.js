@@ -16,13 +16,18 @@ window.getSettingsModalsHTML = () => `
       <button class="close-btn" onclick="closeCustomTimeModal()">✕</button>
     </div>
     <div style="padding: 10px 0;">
-      <div style="display:flex; gap:8px; margin-bottom:12px;">
+      <div id="custom-time-quick-actions" style="display:flex; gap:8px; margin-bottom:12px;">
         <button class="btn outline" style="flex:1; padding:8px; font-size:0.8rem; border-color:var(--success); color:var(--success);" onclick="setQuickTime('ontime')">设为达标</button>
         <button class="btn outline" style="flex:1; padding:8px; font-size:0.8rem; border-color:var(--warn); color:var(--warn);" onclick="setQuickTime('late')">设为迟到</button>
       </div>
       <div class="form-group">
-        <label>打卡具体时间 (24小时制)</label>
+        <label id="custom-time-label">打卡具体时间 (24小时制)</label>
         <input type="time" id="custom-time-input" style="font-size:1.2rem; text-align:center; padding:10px;">
+      </div>
+      <!-- 新增：醒来时间输入框，默认隐藏 -->
+      <div class="form-group" id="custom-time-end-group" style="display:none;">
+        <label>醒来时间 (可选)</label>
+        <input type="time" id="custom-time-input-end" style="font-size:1.2rem; text-align:center; padding:10px;">
       </div>
     </div>
     <div class="sub-modal-foot" style="flex-wrap:wrap; gap:8px;">

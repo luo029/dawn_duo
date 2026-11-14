@@ -10,6 +10,7 @@ const CONFIG_KEY_MAP = {
     'notifyTexts.doggy_sleep_overtime': '小狗-熬夜警告', 'notifyTexts.doggy_wake_overtime': '小狗-赖床警告', 
     'notifyTexts.partner_master_sleep': '对方动态-主人休息', 'notifyTexts.partner_master_wake': '对方动态-主人起床', 
     'notifyTexts.partner_doggy_sleep': '对方动态-小狗休息', 'notifyTexts.partner_doggy_wake': '对方动态-小狗起床', 
+    'notifyTexts.partner_master_heat': '对方动态-主人发情', 'notifyTexts.partner_doggy_heat': '对方动态-小狗发情',
     'notifyTexts.status_master_sleep': '主人状态栏-休息中', 'notifyTexts.status_master_wake': '主人状态栏-已醒', 
     'notifyTexts.status_doggy_sleep': '小狗状态栏-休息中', 'notifyTexts.status_doggy_wake': '小狗状态栏-已醒' 
 };
@@ -66,11 +67,23 @@ function calculateDiff(localData, remoteData, isUpload) {
             };
 
             const compareObj = (lObj, rObj, pathArr) => {
-                if (!lObj || typeof lObj !== 'object') return;
-                for (const k in lObj) {
-                    if (typeof lObj[k] === 'object' && lObj[k] !== null && !Array.isArray(lObj[k])) {
-                        compareObj(lObj[k], (rObj && typeof rObj === 'object') ? rObj[k] || {} : {}, [...pathArr, k]);
-                    } else if (JSON.stringify(lObj[k]) !== JSON.stringify(rObj ? rObj[k] : undefined)) {
+                lObj = lObj || {};
+                rObj = rObj || {};
+                // 【核心修复】：合并两边的 Key，确保不会漏掉单边新增的字段
+                const allKeys = new Set([...Object.keys(lObj), ...Object.keys(rObj)]);
+                for (const k of allKeys) {
+                    const lv = lObj[k];
+                    const rv = rObj[k];
+                    
+                    if (typeof lv === 'object' && lv !== null && !Array.isArray(lv) || typeof rv === 'object' && rv !== null && !Array.isArray(rv)) {
+                        if ((typeof lv === 'object' && lv !== null && !Array.isArray(lv)) && (typeof rv === 'object' && rv !== null && !Array.isArray(rv))) {
+                            compareObj(lv, rv, [...pathArr, k]);
+                        } else if (JSON.stringify(lv) !== JSON.stringify(rv)) {
+                             // 结构冲突（一边是对象一边是数组/基本类型）
+                            const pStr = [...pathArr, k].join('.');
+                            cfgDiff.push({ id: `cfg_${mode}_${pStr}`, path: ['config', 'profiles', mode, ...pathArr, k], type: 'modify', local: lv, remote: rv, text: `[${modeName}] ${pStr}：结构类型发生改变` });
+                        }
+                    } else if (JSON.stringify(lv) !== JSON.stringify(rv)) {
                         const pStr = [...pathArr, k].join('.');
                         const cleanKey = pStr.replace(`profiles.${mode}.`, '');
                         
@@ -80,9 +93,6 @@ function calculateDiff(localData, remoteData, isUpload) {
                             else if (cleanKey.endsWith('.texts')) label = (CONFIG_KEY_MAP[cleanKey.replace('.texts','')] || cleanKey) + ' - 随机文案库';
                             else label = pStr;
                         }
-
-                        const lv = lObj[k];
-                        const rv = rObj ? rObj[k] : undefined;
                         
                         let diffHtml = '';
                         if (isUpload) {

@@ -52,7 +52,23 @@ function calculateDiff(localData, remoteData, isUpload) {
         });
     });
 
-    // 配置比对
+    // 根级别配置比对 (契约日、时区)
+    if (localData.config && remoteData.config) {
+        const lCfg = localData.config, rCfg = remoteData.config;
+        if (lCfg.anniversary !== rCfg.anniversary) {
+            cfgDiff.push({ id: `cfg_root_anniversary`, path: ['config', 'anniversary'], type: 'modify', local: lCfg.anniversary, remote: rCfg.anniversary, text: `📅 <b>契约日</b>：修改为 ${isUpload ? lCfg.anniversary : rCfg.anniversary}` });
+        }
+        ['master', 'doggy'].forEach(user => {
+            const lTz = lCfg.timeZones?.[user] || {}, rTz = rCfg.timeZones?.[user] || {};
+            if (JSON.stringify(lTz) !== JSON.stringify(rTz)) {
+                const uName = user === 'master' ? (getPureName(t.masterName) || '主人') : (getPureName(t.doggyName) || '小狗');
+                const tzVal = isUpload ? lTz.value : rTz.value;
+                cfgDiff.push({ id: `cfg_root_tz_${user}`, path: ['config', 'timeZones', user], type: 'modify', local: lTz, remote: rTz, text: `🌍 <b>${uName}时区</b>：修改为 ${tzVal}` });
+            }
+        });
+    }
+
+    // 配置与文案比对
     if (localData.config && localData.config.profiles) {
         ['daily', 'service'].forEach(mode => {
             const modeName = mode === 'daily' ? '日常' : '主仆', lProf = deepMerge(DEFAULT_CONFIGS.profiles[mode], localData.config.profiles?.[mode] || {}), rProf = deepMerge(DEFAULT_CONFIGS.profiles[mode], (remoteData.config && remoteData.config.profiles) ? remoteData.config.profiles[mode] || {} : {});
@@ -69,7 +85,7 @@ function calculateDiff(localData, remoteData, isUpload) {
             const compareObj = (lObj, rObj, pathArr) => {
                 lObj = lObj || {};
                 rObj = rObj || {};
-                // 【核心修复】：合并两边的 Key，确保不会漏掉单边新增的字段
+                // 合并两边的 Key，确保不会漏掉单边新增的字段
                 const allKeys = new Set([...Object.keys(lObj), ...Object.keys(rObj)]);
                 for (const k of allKeys) {
                     const lv = lObj[k];

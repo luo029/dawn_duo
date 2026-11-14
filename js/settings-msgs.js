@@ -85,25 +85,36 @@ window.openNotifyTextModal = function(key) {
     currentNotifyKey = key; const nTexts = P().notifyTexts || {}; let obj = nTexts[key]; 
     if (!obj) obj = { channel: 'both', texts: [] }; 
     if (Array.isArray(obj)) obj = { channel: 'both', texts: obj }; 
+    
+    // 确保 texts 是个数组
+    if (!Array.isArray(obj.texts)) obj.texts = [obj.texts || ''];
+
     const isService = configs.mode === 'service', mTitle = isService ? '主人' : '先生', dTitle = isService ? '小狗' : '宝宝'; 
     const nameMap = { master_sleep: `${mTitle} - 到点休息`, master_wake: `${mTitle} - 到点起床`, doggy_sleep: `${dTitle} - 到点休息`, doggy_wake: `${dTitle} - 到点起床`, overtime_sleep: '熬夜超时警告 (通用)', overtime_wake: '赖床超时警告 (通用)', master_sleep_overtime: `${mTitle} - 熬夜超时警告`, master_wake_overtime: `${mTitle} - 赖床超时警告`, doggy_sleep_overtime: `${dTitle} - 熬夜超时警告`, doggy_wake_overtime: `${dTitle} - 赖床超时警告`, partner_master_sleep: `对方 - ${mTitle}休息`, partner_master_wake: `对方 - ${mTitle}起床`, partner_doggy_sleep: `对方 - ${dTitle}休息`, partner_doggy_wake: `对方 - ${dTitle}起床`, partner_master_heat: `对方 - ${mTitle}发情`, partner_doggy_heat: `对方 - ${dTitle}发情` }; 
     const defaultTitles = { master_sleep: '🌙 休息提醒', master_wake: '☀️ 起床提醒', doggy_sleep: '🌙 休息提醒', doggy_wake: '☀️ 起床提醒', overtime_sleep: '⚠️ 熬夜警告', overtime_wake: '⚠️ 赖床警告', master_sleep_overtime: '⚠️ 熬夜警告', master_wake_overtime: '⚠️ 赖床警告', doggy_sleep_overtime: '⚠️ 熬夜警告', doggy_wake_overtime: '⚠️ 赖床警告', partner_master_sleep: '👑 主人已休息', partner_master_wake: '👑 主人已起床', partner_doggy_sleep: '🎀 小狗已休息', partner_doggy_wake: '🎀 小狗已起床', partner_master_heat: '🔥 主人发情了', partner_doggy_heat: '🔥 小狗发情了' };
+    
     const titleEl = document.getElementById('notify-text-modal-title'); if (titleEl) titleEl.innerHTML = `编辑：${nameMap[key] || key} <span class="help-icon" onclick="openVarsHelpModal()">?</span>`; 
     const tipEl = document.getElementById('notify-text-default-title-tip');
     if (tipEl) tipEl.textContent = `💡 留空时将使用默认标题："${defaultTitles[key] || '🔔 契约提醒'}"`;
+    
     const chkRandom = document.getElementById('notify-text-random'); if (chkRandom) chkRandom.checked = obj.texts.length > 1; 
     document.getElementById('notify-text-random-tip').style.display = chkRandom.checked ? 'none' : 'inline'; 
+    
     const titleInput = document.getElementById('notify-text-title'); 
     if (titleInput) titleInput.value = obj.title || '';
+    
     const chanEl = document.getElementById('notify-text-channel'); 
     if (chanEl) chanEl.value = obj.channel || 'both'; 
+    
     const listEl = document.getElementById('notify-text-list'); if (!listEl) return; 
     listEl.innerHTML = ''; if (obj.texts.length === 0) obj.texts = ['']; 
     obj.texts.forEach(text => addNotifyTextItem(text)); 
+    
     const modal = document.getElementById('notify-text-modal'); if (modal) modal.classList.add('show'); 
 };
 window.closeNotifyTextModal = function() { const modal = document.getElementById('notify-text-modal'); if (modal) modal.classList.remove('show'); };
 window.addNotifyTextItem = function(text = '') { const listEl = document.getElementById('notify-text-list'); if (!listEl) return; const row = document.createElement('div'); row.className = 'msg-item'; const input = document.createElement('input'); input.type = 'text'; input.value = text; input.placeholder = '支持 {name}, {time}, {time_s}, {date}, {weekday}, {shichen}, {duration}, {mins}'; const delBtn = document.createElement('button'); delBtn.className = 'btn-del'; delBtn.type = 'button'; delBtn.textContent = '✕'; delBtn.onclick = () => row.remove(); row.appendChild(input); row.appendChild(delBtn); listEl.appendChild(row); };
+
 window.saveNotifyTextModal = function() { 
     const listEl = document.getElementById('notify-text-list'); if (!listEl) return; 
     const inputs = listEl.querySelectorAll('input[type="text"]'); 
@@ -113,8 +124,14 @@ window.saveNotifyTextModal = function() {
     const channel = document.getElementById('notify-text-channel').value || 'both'; 
     const titleInput = document.getElementById('notify-text-title'); 
     const customTitle = titleInput ? titleInput.value.trim() : '';
+    
     const prof = P(); if (!prof.notifyTexts) prof.notifyTexts = {}; 
-    prof.notifyTexts[currentNotifyKey] = { channel: channel, title: customTitle, texts: newArr.length > 0 ? newArr : [''] }; 
+    // 核心修复：如果输入为空，就不要存 title 字段了，这样在比对时就不会因为空字符串引发混乱
+    const newObj = { channel: channel, texts: newArr.length > 0 ? newArr : [''] };
+    if (customTitle) newObj.title = customTitle;
+    
+    prof.notifyTexts[currentNotifyKey] = newObj; 
+    
     try { localStorage.setItem('dawn-duo-configs', JSON.stringify(configs)); } catch (e) {} 
     closeNotifyTextModal(); if (window.debounceSync) debounceSync(); 
     showToast('文案已保存', 'success'); 
@@ -125,6 +142,8 @@ window.openStatusTextModal = function(key) {
     currentStatusKey = key; const nTexts = P().notifyTexts || {}; let obj = nTexts[key]; 
     if (!obj) obj = { channel: 'page', texts: [] }; 
     if (Array.isArray(obj)) obj = { channel: 'page', texts: obj }; 
+    if (!Array.isArray(obj.texts)) obj.texts = [obj.texts || ''];
+
     const isService = configs.mode === 'service', mTitle = isService ? '主人' : '先生', dTitle = isService ? '小狗' : '宝宝'; 
     const nameMap = { status_master_sleep: `👑 ${mTitle}休息中`, status_master_wake: `👑 ${mTitle}已醒来`, status_doggy_sleep: `🎀 ${dTitle}休息中`, status_doggy_wake: `🎀 ${dTitle}已醒来` }; 
     const titleEl = document.getElementById('status-text-modal-title'); if (titleEl) titleEl.innerHTML = `编辑：${nameMap[key] || key} <span class="help-icon" onclick="openVarsHelpModal()">?</span>`; 
@@ -141,7 +160,7 @@ window.saveStatusTextModal = function() {
     const prof = P(); if (!prof.notifyTexts) prof.notifyTexts = {}; 
     prof.notifyTexts[currentStatusKey] = { channel: 'page', texts: newArr.length > 0 ? newArr : [''] }; 
     try { localStorage.setItem('dawn-duo-configs', JSON.stringify(configs)); } catch (e) {} 
-    document.getElementById('status-text-modal').classList.remove('show'); if (window.debounceSync) window.debounceSync(); 
+    document.getElementById('status-text-modal').classList.remove('show'); if (window.debounceSync) debounceSync(); 
     showToast('状态栏文案已保存', 'success'); 
 };
 
@@ -204,9 +223,7 @@ window.updateTestPreview = function() {
     const mName = getPureName(P().texts.masterName) || (isService ? '主人' : '先生'); 
     const dName = getPureName(P().texts.doggyName) || (isService ? '小狗' : '宝宝'); 
     
-    // 根据测试的类型，选择对应的时区
-    const targetTz = key.includes('doggy') ? configs.timeZones.doggy : configs.timeZones.master;
-    const nowTime = formatCheckinTime(targetTz); 
+    const nowTime = formatCheckinTime(configs.timeZones.master); 
     const nowTimeS = nowTime + ':30';
     const mHour = parseInt(nowTime.split(':')[0], 10);
     const shichenInfo = getShichenInfo(isNaN(mHour) ? 0 : mHour);
@@ -222,31 +239,17 @@ window.updateTestPreview = function() {
         rMins = '150';
     }
 
-    // 针对发情附带感受的特殊处理
-    let testFeeling = '（测试感受）';
-    if (key.includes('heat') && configs.notifySettings?.heatNotifyWithFeeling !== false) {
-        // 尝试读取今天真正的发情记录
-        const today = getLogicalDateStr();
-        const targetUser = key.includes('doggy') ? 'doggy' : 'master';
-        const rec = heatDb[targetUser]?.[today];
-        if (rec && rec.feeling) testFeeling = rec.feeling;
-        
-        // 如果开启了附带感受，直接覆盖正文，不用文案池，且不加额外前缀
-        body = testFeeling;
-    } else {
-        body = body.replace(/{name}/g, rName)
-                   .replace(/{time_s}/g, nowTimeS)
-                   .replace(/{time}/g, nowTime)
-                   .replace(/{date}/g, `${dObj.getMonth()+1}月${dObj.getDate()}日`)
-                   .replace(/{weekday}/g, weekdays[dObj.getDay()])
-                   .replace(/{shichen_time}/g, shichenInfo.time)
-                   .replace(/{shichen}/g, shichenInfo.name)
-                   .replace(/{shichen_organ}/g, shichenInfo.organ)
-                   .replace(/{duration}/g, rDuration)
-                   .replace(/{mins}/g, rMins)
-                   .replace(/{feeling}/g, testFeeling);
-    }
-
+    body = body.replace(/{name}/g, rName)
+               .replace(/{time_s}/g, nowTimeS)
+               .replace(/{time}/g, nowTime)
+               .replace(/{date}/g, `${dObj.getMonth()+1}月${dObj.getDate()}日`)
+               .replace(/{weekday}/g, weekdays[dObj.getDay()])
+               .replace(/{shichen_time}/g, shichenInfo.time)
+               .replace(/{shichen}/g, shichenInfo.name)
+               .replace(/{shichen_organ}/g, shichenInfo.organ)
+               .replace(/{duration}/g, rDuration)
+               .replace(/{mins}/g, rMins)
+               .replace(/{feeling}/g, '（测试感受）');
     document.getElementById('test-notify-title-preview').textContent = title; 
     document.getElementById('test-notify-body-preview').textContent = body; 
 };
@@ -309,10 +312,10 @@ window.updateMsgCounts = function() {
 window.openSubMsg = function(key, title) { currentMsgKey = key; const t = P().texts || DEFAULT_TEXTS_DAILY; const name = key.startsWith('master') ? t.masterName : t.doggyName; const titleEl = document.getElementById('sub-modal-title'); if (titleEl) titleEl.textContent = `${getPureName(name)} - ${title} (${modeLabel()})`; const [user, type, status] = key.split('_'); const arr = (P().msgPool || {})?.[user]?.[type]?.[status] || []; const listEl = document.getElementById('sub-msg-list'); if (!listEl) return; listEl.innerHTML = ''; arr.forEach(text => addSubMsgItem(text)); const modal = document.getElementById('sub-modal'); if (modal) modal.classList.add('show'); };
 window.closeSubMsg = function() { const modal = document.getElementById('sub-modal'); if (modal) modal.classList.remove('show'); };
 window.addSubMsgItem = function(text = '') { const listEl = document.getElementById('sub-msg-list'); if (!listEl) return; const row = document.createElement('div'); row.className = 'msg-item'; const input = document.createElement('input'); input.type = 'text'; input.value = text; input.placeholder = '输入一条新文案...'; const delBtn = document.createElement('button'); delBtn.className = 'btn-del'; delBtn.type = 'button'; delBtn.textContent = '✕'; delBtn.onclick = () => row.remove(); row.appendChild(input); row.appendChild(delBtn); listEl.appendChild(row); };
-window.saveSubMsg = function() { const listEl = document.getElementById('sub-msg-list'); if (!listEl) return; const inputs = listEl.querySelectorAll('input'); const newArr = Array.from(inputs).map(inp => inp.value.trim()).filter(v => v !== ''); const [user, type, status] = currentMsgKey.split('_'); const prof = P(); if (!prof.msgPool) prof.msgPool = {}; if (!prof.msgPool[user]) prof.msgPool[user] = {}; if (!prof.msgPool[user][type]) prof.msgPool[user][type] = {}; prof.msgPool[user][type][status] = newArr; if(window.updateMsgCounts) window.updateMsgCounts(); closeSubMsg(); try { localStorage.setItem('dawn-duo-configs', JSON.stringify(configs)); } catch (e) { } if (window.debounceSync) window.debounceSync(); };
+window.saveSubMsg = function() { const listEl = document.getElementById('sub-msg-list'); if (!listEl) return; const inputs = listEl.querySelectorAll('input'); const newArr = Array.from(inputs).map(inp => inp.value.trim()).filter(v => v !== ''); const [user, type, status] = currentMsgKey.split('_'); const prof = P(); if (!prof.msgPool) prof.msgPool = {}; if (!prof.msgPool[user]) prof.msgPool[user] = {}; if (!prof.msgPool[user][type]) prof.msgPool[user][type] = {}; prof.msgPool[user][type][status] = newArr; if(window.updateMsgCounts) window.updateMsgCounts(); closeSubMsg(); try { localStorage.setItem('dawn-duo-configs', JSON.stringify(configs)); } catch (e) { } if (window.debounceSync) debounceSync(); };
 
 window.openSleepTextModal = function(role) { const sTexts = P().sleepTexts?.[role] || (configs.mode === 'service' ? DEFAULT_SLEEP_TEXTS_SERVICE[role] : DEFAULT_SLEEP_TEXTS_DAILY[role]) || {}; document.getElementById('cfg-sleep-role').value = role; document.getElementById('cfg-sleep-title').value = sTexts.title || ''; document.getElementById('cfg-sleep-desc').value = sTexts.desc || ''; document.getElementById('cfg-sleep-sub').value = sTexts.sub || ''; document.getElementById('cfg-sleep-cross').value = sTexts.cross || ''; document.getElementById('cfg-sleep-overwrite').value = sTexts.overwrite || ''; document.getElementById('cfg-sleep-cancel').value = sTexts.cancel || ''; document.getElementById('sleep-text-modal').classList.add('show'); };
-window.saveSleepTextModal = function() { const role = document.getElementById('cfg-sleep-role').value; const prof = P(); if (!prof.sleepTexts) prof.sleepTexts = {}; prof.sleepTexts[role] = { title: document.getElementById('cfg-sleep-title').value.trim(), desc: document.getElementById('cfg-sleep-desc').value.trim(), sub: document.getElementById('cfg-sleep-sub').value.trim(), cross: document.getElementById('cfg-sleep-cross').value.trim(), overwrite: document.getElementById('cfg-sleep-overwrite').value.trim(), cancel: document.getElementById('cfg-sleep-cancel').value.trim() }; try { localStorage.setItem('dawn-duo-configs', JSON.stringify(configs)); } catch (e) {} document.getElementById('sleep-text-modal').classList.remove('show'); if (window.debounceSync) window.debounceSync(); showToast('多段睡眠文案已保存', 'success'); };
+window.saveSleepTextModal = function() { const role = document.getElementById('cfg-sleep-role').value; const prof = P(); if (!prof.sleepTexts) prof.sleepTexts = {}; prof.sleepTexts[role] = { title: document.getElementById('cfg-sleep-title').value.trim(), desc: document.getElementById('cfg-sleep-desc').value.trim(), sub: document.getElementById('cfg-sleep-sub').value.trim(), cross: document.getElementById('cfg-sleep-cross').value.trim(), overwrite: document.getElementById('cfg-sleep-overwrite').value.trim(), cancel: document.getElementById('cfg-sleep-cancel').value.trim() }; try { localStorage.setItem('dawn-duo-configs', JSON.stringify(configs)); } catch (e) {} document.getElementById('sleep-text-modal').classList.remove('show'); if (window.debounceSync) debounceSync(); showToast('多段睡眠文案已保存', 'success'); };
 
 let parsedImportLines = [];
 window.readLibraryFile = function(event) { 

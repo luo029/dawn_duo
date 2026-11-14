@@ -2,15 +2,21 @@ let currentSleepActionCtx = null;
 let currentWakeActionCtx = null;
 window.closeSleepModal = function() { document.getElementById('sleep-action-modal').classList.remove('show'); currentSleepActionCtx = null; };
 window.closeWakeModal = function() { document.getElementById('wake-action-modal').classList.remove('show'); currentWakeActionCtx = null; };
+
 window.handleWakeAction = async function(action) {
   if (!currentWakeActionCtx) return;
   const { user, today, record } = currentWakeActionCtx; closeWakeModal();
   if (action === 'overwrite') { record.records = []; await doCheckin(user, 'wake', today, record, 'main'); }
 };
+
 window.handleSleepAction = async function(action) {
   if (!currentSleepActionCtx) return;
   const { user, today, record } = currentSleepActionCtx; const yesterday = getLogicalDateStr(1); closeSleepModal();
-  if (action === 'sub') { await doCheckin(user, 'sleep', today, record, 'sub'); if (db[user][today]?.wake) { delete db[user][today].wake; saveLocalData(); } } 
+  if (action === 'sub') { 
+      await doCheckin(user, 'sleep', today, record, 'sub'); 
+      // 【修复】取消了对 wake 记录的强制删除，允许起床后补觉
+      saveLocalData(); 
+  } 
   else if (action === 'overwrite') { await doCheckin(user, 'sleep', today, record, 'main'); } 
   else if (action === 'cancel') {
     delete db[user][today].sleep;
@@ -34,6 +40,7 @@ window.handleSleepAction = async function(action) {
     showToast('已归入昨晚，并重新打卡', 'success');
   }
 };
+
 window.toggle = async function(user, type) {
   if ((identity === 'master' && user === 'doggy') || (identity === 'doggy' && user === 'master')) { showToast('这是对方的打卡，只能查看哦 👀', 'late'); return; }
   const today = getLogicalDateStr();
@@ -74,6 +81,7 @@ window.toggle = async function(user, type) {
   }
   await doCheckin(user, type, today, record, 'main');
 };
+
 async function doCheckin(user, type, dateStr, existingRecord, sleepType = 'main') {
   if (!db[user]) db[user] = {};
   if (!db[user][dateStr]) db[user][dateStr] = {};
@@ -103,35 +111,29 @@ async function doCheckin(user, type, dateStr, existingRecord, sleepType = 'main'
   showToast(msg, status); 
   
   triggerPartnerPush();
-
   saveLocalData();
 }
+
 async function triggerPartnerPush() {
-    if (configs.notifySettings && configs.notifySettings.global_testing) {
-        console.log('测试模式已开启，跳过云端触发');
-        return;
-    }
+    if (configs.notifySettings && configs.notifySettings.global_testing) return;
     if (!ghConfig.user || !ghConfig.repo || !ghConfig.token) return;
     try {
-        if (typeof autoSyncToGitHub === 'function') {
-            await autoSyncToGitHub(true); 
-        }
+        if (typeof autoSyncToGitHub === 'function') await autoSyncToGitHub(true); 
         await ghFetch(`/repos/${ghConfig.user}/${ghConfig.repo}/actions/workflows/push.yml/dispatches`, {
             method: 'POST',
             headers: { 'Authorization': `token ${ghConfig.token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
             body: JSON.stringify({ ref: 'main', inputs: { trigger_from: 'partner', test_mode: 'false' } })
         });
-        console.log('已触发对方打卡通知');
-    } catch(e) {
-        console.warn('触发对方通知失败', e);
-    }
+    } catch(e) {}
 }
+
 let saveTimeout = null;
 function saveLocalData(skipSync) {
   try { localStorage.setItem('dawn-duo-data', JSON.stringify(db)); } catch (e) { showToast('存储失败', 'late'); }
   render();
   if (!skipSync) { if (saveTimeout) clearTimeout(saveTimeout); saveTimeout = setTimeout(() => debounceSync(), 1000); }
 }
+
 function render() {
   try {
     const today = getLogicalDateStr(); let total = 0;
@@ -145,6 +147,8 @@ function render() {
       if (mScore > 0 || dScore > 0) streak++; else if (i > 0) break;
     }
     const elStreak = document.getElementById('stat-streak'); if (elStreak) elStreak.textContent = streak;
+    
+    // 【优化】主页显示多段睡眠的次数
     ['master', 'doggy'].forEach(user => {
       ['sleep', 'wake'].forEach(type => {
         const btn = document.getElementById(`btn-${user}-${type}`), timeLabel = document.getElementById(`time-${user}-${type}`);
@@ -154,14 +158,17 @@ function render() {
         if (record && record.done) {
           btn.classList.add(record.ontime ? 'active' : 'late');
           let timeStr = record.time || '已打卡';
-          if (type === 'sleep' && record.records && record.records.length > 1) timeStr += ` (共${record.records.length}次)`;
+          if (type === 'sleep' && record.records && record.records.length > 1) timeStr = `${record.time} (共${record.records.length}次)`;
           timeLabel.textContent = timeStr;
         } else timeLabel.textContent = '未打卡';
       });
     });
-    updatePartnerStatusPanel(); renderHistory();
+    updatePartnerStatusPanel(); 
+    renderHeatCycle();
+    renderHistory();
   } catch(e) { console.warn('渲染异常', e); }
 }
+
 function updatePartnerStatusPanel() {
   const panel = document.getElementById('partner-status-panel'); if (!panel) return;
   if (configs.showPartnerStatus === false || identity === 'both' || !identity) { panel.style.display = 'none'; return; }
@@ -181,6 +188,7 @@ function updatePartnerStatusPanel() {
     panel.innerHTML = tpl.replace(/{name}/g, pName).replace(/{time}/g, rec.wake.time || '已起床');
   } else panel.style.display = 'none';
 }
+
 function renderHistory() {
   const box = document.getElementById('history-box'), viewDays = document.getElementById('history-view-days'), viewCal = document.getElementById('history-grid-calendar'), emptyState = document.getElementById('history-empty');
   if (!box || !viewDays || !viewCal || !emptyState) return;
@@ -207,6 +215,7 @@ function renderHistory() {
     }
   }
 }
+
 function createDayBox(dateStr, showDateText = false) {
   const mScore = (db['master']?.[dateStr]?.sleep?.done ? 1 : 0) + (db['master']?.[dateStr]?.wake?.done ? 1 : 0);
   const dScore = (db['doggy']?.[dateStr]?.sleep?.done ? 1 : 0) + (db['doggy']?.[dateStr]?.wake?.done ? 1 : 0);

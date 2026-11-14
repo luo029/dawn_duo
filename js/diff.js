@@ -33,7 +33,18 @@ function calculateDiff(localData, remoteData, isUpload) {
                 const id = `db_${user}_${date}_${type}`;
                 if (!lRec && rRec) dbDiff.push({ id, path: ['db', user, date, type], type: isUpload ? 'remove' : 'add', local: lRec, remote: rRec, text: `📅 <b>${date}</b> ${uName} ${tName}：${isUpload ? '将删除云端记录' : '将新增本地记录'} (${rRec.time || '已打卡'})` });
                 else if (lRec && !rRec) dbDiff.push({ id, path: ['db', user, date, type], type: isUpload ? 'add' : 'remove', local: lRec, remote: rRec, text: `📅 <b>${date}</b> ${uName} ${tName}：${isUpload ? '将新增到云端' : '将删除本地记录'} (${lRec.time || '已打卡'})` });
-                else if (lRec && rRec) { if (lRec.time !== rRec.time || lRec.done !== rRec.done) { const targetTime = isUpload ? (lRec.time || '') : (rRec.time || ''); dbDiff.push({ id, path: ['db', user, date, type], type: 'modify', local: lRec, remote: rRec, text: `📅 <b>${date}</b> ${uName} ${tName}：修改时间为 ${targetTime}` }); } }
+                else if (lRec && rRec) { 
+                    // 深度比对主次时间
+                    let timeChanged = false;
+                    if (lRec.time !== rRec.time || lRec.done !== rRec.done) timeChanged = true;
+                    if (JSON.stringify(lRec.records || []) !== JSON.stringify(rRec.records || [])) timeChanged = true;
+
+                    if (timeChanged) { 
+                        const targetTime = isUpload ? (lRec.time || '') : (rRec.time || ''); 
+                        const extra = (lRec.records?.length > 1 || rRec.records?.length > 1) ? ` (包含多段睡眠)` : '';
+                        dbDiff.push({ id, path: ['db', user, date, type], type: 'modify', local: lRec, remote: rRec, text: `📅 <b>${date}</b> ${uName} ${tName}：修改时间为 ${targetTime}${extra}` }); 
+                    } 
+                }
             });
         });
     });
@@ -85,7 +96,6 @@ function calculateDiff(localData, remoteData, isUpload) {
             const compareObj = (lObj, rObj, pathArr) => {
                 lObj = lObj || {};
                 rObj = rObj || {};
-                // 合并两边的 Key，确保不会漏掉单边新增的字段
                 const allKeys = new Set([...Object.keys(lObj), ...Object.keys(rObj)]);
                 for (const k of allKeys) {
                     const lv = lObj[k];
@@ -95,7 +105,6 @@ function calculateDiff(localData, remoteData, isUpload) {
                         if ((typeof lv === 'object' && lv !== null && !Array.isArray(lv)) && (typeof rv === 'object' && rv !== null && !Array.isArray(rv))) {
                             compareObj(lv, rv, [...pathArr, k]);
                         } else if (JSON.stringify(lv) !== JSON.stringify(rv)) {
-                             // 结构冲突（一边是对象一边是数组/基本类型）
                             const pStr = [...pathArr, k].join('.');
                             cfgDiff.push({ id: `cfg_${mode}_${pStr}`, path: ['config', 'profiles', mode, ...pathArr, k], type: 'modify', local: lv, remote: rv, text: `[${modeName}] ${pStr}：结构类型发生改变` });
                         }

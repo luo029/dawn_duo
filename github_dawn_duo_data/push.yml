@@ -51,12 +51,13 @@ jobs:
           TEST_TARGET: ${{ github.event.inputs.test_target }}
           TRIGGER_FROM: ${{ github.event.inputs.trigger_from }}
       
-      - name: Commit and push cleaned subscriptions (if any expired)
+      - name: Commit and push changes (subscriptions & logs)
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          if [[ -n $(git status -s subscriptions.json) ]]; then
-            git add subscriptions.json
-            git commit -m "chore: cleanup expired subscriptions"
+          # 检查是否有文件发生变动（订阅设备清理 或 推送日志更新）
+          if [[ -n $(git status -s subscriptions.json) || -n $(git status -s push_log.json) ]]; then
+            git add subscriptions.json push_log.json
+            git commit -m "chore: auto update subscriptions and push logs"
             git push
           fi

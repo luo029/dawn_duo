@@ -12,24 +12,75 @@
 
 ## 📁 文件存储与架构说明
 本项目分为**两个仓库**：
-1. **前端代码仓**（当前仓库）：包含所有的 HTML/CSS/JS 文件以及 `index.html`。
-2. **数据与后台脚本仓**（`luo029/dawn_duo_data`）：存放打卡记录 JSON 及后台推送脚本。
+1. **前端代码仓**（`dawn_duo`）：包含所有的 HTML/CSS/JS 文件以及 `index.html`。
+2. **数据与后台脚本仓**（`dawn_duo_data`）：存放打卡记录 JSON 及后台推送脚本。
 
-**注意**：为了方便本地一次性编辑和 AI 读取，`send-push.js` 和 `push.yml` 虽然最终运行在 `dawn_duo_data` 仓库，但也同步存放在本地的项目根目录下。在提交时，需将这两个文件上传到云端仓库。云端数据交互逻辑由前端通过 GitHub API 直接读写。
+**注意**：为了方便本地一次性编辑和 AI 读取，`send-push.js` 和 `push.yml` 虽然最终运行在 `dawn_duo_data` 仓库，但也同步存放在本地的 `github_dawn_duo_data` 文件夹下。在提交时，需将这两个文件上传到云端仓库。云端数据交互逻辑由前端通过 GitHub API 直接读写。
+
+### 📂 完整文件结构树
+以下是项目前端仓库（`dawn_duo`）的所有文件及其功能说明：
+
+dawn_duo/
+├── index.html                # 主页面骨架，引入 CSS 与所有 JS，包含基础 DOM 结构
+├── manifest.json             # PWA 配置文件，允许添加到手机主屏幕
+├── sw.js                     # Service Worker 脚本，处理云端推送与点击事件
+├── README.md                 # 项目说明文档
+├── icon.png                  # 网页小图标
+├── icon-512.png              # 高分辨率图标 (PWA 安装、系统推送展示)
+│
+├── css/                      # 样式表目录
+│   ├── variables.css         # 定义暗色/亮色模式的颜色变量
+│   ├── base.css              # 全局基础重置、字体、滚动条、主容器布局
+│   ├── components.css        # 通用 UI 组件（按钮、输入框、开关）
+│   ├── custom-select.css     # 自定义下拉选择器样式
+│   ├── setup.css             # 项圈解锁验证层、身份选择层样式
+│   ├── layout.css            # 顶部栏、时差胶囊、双时钟、养生面板样式
+│   ├── checkin.css           # 打卡卡片、状态栏、统计框、热力图日历样式
+│   ├── modal.css             # 设置面板、子弹窗、全屏遮罩样式
+│   └── responsive.css        # 手机端适配、打印/PDF 排版、Toast 提示样式
+│
+├── github_dawn_duo_data/     # 数据与后台脚本仓（需同步到云端 dawn_duo_data）
+│   ├── push.yml              # GitHub Actions 工作流配置，定时运行推送脚本
+│   └── send-push.js          # 云端 Node.js 推送脚本，由 Actions 定时或触发执行
+│
+└── js/                       # 逻辑脚本目录
+    ├── app.js                # 启动入口，初始化页面、注册 SW、启动时钟定时器
+    ├── data.js               # 静态常量（默认文案库、默认配置、时辰中医数据）
+    ├── config.js             # 全局变量初始化（configs, db, heatDb, ghConfig）与合并迁移
+    ├── utils.js              # 通用工具函数（时区计算、Toast、相似度、Base64 等）
+    ├── api.js                # GitHub API 封装（读写文件、防超时与代理降级）
+    ├── auth.js               # 身份初始化逻辑、输入 Token 验证和解锁逻辑
+    ├── clock.js              # 时钟渲染、时差计算、时段自动切换主题
+    ├── progress.js           # 进度条显示与更新（用于网络请求、同步等场景）
+    ├── notify.js             # 本地页面通知逻辑（权限申请、定时检测）
+    ├── push.js               # Web Push 云端推送订阅与设备管理逻辑
+    ├── custom-select.js      # 接管并美化原生 <select> 下拉框
+    ├── pickers.js            # 接管并美化原生 <input type="time/date"> 滚轮与日历
+    ├── checkin.js            # 主界面打卡逻辑、数据渲染（日历、统计、打卡按钮）
+    ├── history-detail.js     # 点击日历弹出的历史记录详情弹窗
+    ├── heat-mode.js          # 发情卡片 UI 逻辑、禁欲天数计算、触发发情通知
+    ├── heat-fix.js           # 发情记录修正面板（支持补录、修改、删除）
+    ├── export.js             # 导出功能（JSON/CSV 导出、Canvas 生成图片、PDF 打印）
+    ├── checkin-mode.js       # 全屏极简打卡模式（纯净模式）
+    ├── sync.js               # 云端同步核心逻辑（自动拉取、推送、防覆盖保护）
+    ├── diff.js               # 云端数据差异对比弹窗逻辑（拉取/上传前对比）
+    │
+    ├── settings-render.js    # 设置面板外壳生成、Tab 注入、Tooltip 悬浮逻辑
+    ├── settings.js           # 设置面板核心交互逻辑（保存配置、读取配置）
+    ├── settings-general.js   # 设置-外观：身份、模式、纪念日、卡片开关
+    ├── settings-profiles.js  # 设置-角色：双人名字、标签、主题色、按钮文字
+    ├── settings-rules.js     # 设置-作息：目标时间、时区、时钟排版、日历
+    ├── settings-notify.js    # 设置-提醒：通知开关、免打扰、防轰炸时间窗
+    ├── settings-msgs.js      # 设置-文案：弹窗/通知文案、文案库导入、测试中心
+    ├── settings-data.js      # 设置-数据：全段测试模式、推送设备管理、数据导入导出
+    ├── settings-fix.js       # 设置-打卡记录修正（快捷切换状态、修改具体时间）
+    └── settings-modals.js    # 设置面板关联的所有子弹窗 HTML 模板集合
+
 
 ### 🛠️ 设置面板架构重构（重要规范）
 为了防止由于 `settings.js` 过大导致的代码难以维护以及白屏崩溃，设置面板已进行彻底解耦拆分。**所有拆分文件必须平铺在 `js/` 目录下（绝对禁止放入子文件夹，防止路径错误导致白屏）**。
-拆分的文件结构如下：
-- `js/settings-general.js`：外观、身份、模式、纪念日等。
-- `js/settings-profiles.js`：双人名字、标签、颜色、按钮文字。
-- `js/settings-rules.js`：作息时间、时区、时钟排版、日历等。
-- `js/settings-notify.js`：通知渠道、后台推送开关、提醒项。
-- `js/settings-msgs.js`：弹窗文案、通知文案、随机文案库、导入库、变量说明、推送测试中心。
-- `js/settings-data.js`：测试模式、推送设备管理、云端同步、本地导入导出。
-- `js/settings-fix.js`：打卡记录修正、点击快速切换状态。
-- `js/settings-modals.js`：设置面板关联的所有子弹窗 HTML 模板。
+拆分的文件结构如上目录树所示。其中：
 - `js/settings-render.js`：负责拼装 DOM 并注入页面，内部包含防崩溃保护（使用 `safeCall` 包裹），即使某个 Tab 加载失败，也不会影响整体页面白屏。
-- `js/settings.js`：核心交互逻辑（保存、读取、开关联动等）。
 - `js/pickers.js`：全局接管并美化了原生 `input[type="time"]` 和 `input[type="date"]`，实现了自定义滚轮时间和日历弹窗。
 
 ## 📝 文案变量占位符大全
@@ -80,3 +131,18 @@
   - 实时状态同步：保存发情后，主界面UI、设置面板的修正列表会同步刷新。
 - **主仆分离文案**：在“主仆”模式下，“熬夜警告”与“赖床警告”支持为“主人”和“小狗”分别定制；打卡修正界面中，小狗的状态会自动显示为“服从/抗命”。
 - **性能优化**：移除了多余的 `transform: translateZ(0)` 硬件加速层，抛弃了 `setInterval`，改用 `requestAnimationFrame` 驱动主时钟，大幅提升滑动手感。统一采用基于 CSS 渲染的高性能滚轮和日历。
+
+## 📝 本次更新日志（Bug 修复与体验优化）
+
+在近期的代码审查中，修复了以下隐藏问题并进行了性能优化：
+
+1. **主界面日历不渲染 Bug（修复）**：`checkin.js` 中的 `render()` 函数调用了一个未定义的 `renderHeatCycle()` 导致控制台报错并阻断了后续 `renderHistory()`。已移除该废弃调用，改为 `if (window.updateHeatUI) window.updateHeatUI();`。
+2. **手机切后台耗电优化（优化）**：`app.js` 的时钟定时器加入了 `document.hidden` 判断，网页切到后台或锁屏时暂停主时钟更新，大幅降低手机耗电。
+3. **云端日志无限膨胀与超时限制失效（致命修复）**：
+   - `send-push.js` 新增了每天自动清理过期 `push_log.json` 记录的机制，防止文件无限膨胀。
+   - `push.yml` 修复了漏传 `push_log.json` 的致命 Bug。之前因为没有提交日志，导致云端每次运行都“失忆”，**“每天最大超时提醒次数”设置完全失效**。现已改为与 `subscriptions.json` 一起提交。
+4. **动态下拉框不刷新（修复）**：`custom-select.js` 和 `settings-msgs.js` 修复了动态刷新 `<select>` 的 `<option>` 时，自定义下拉框 UI 不更新的问题。现在测试推送面板的设备列表能正常刷新了。
+5. **只读状态不够明显（优化）**：`checkin.css` 给对方“只读”卡片增加了置灰和降低透明度的样式，现在一眼就能看出对方的打卡按钮不能点。
+6. **重复函数定义覆盖隐患（修复）**：`settings.js` 和 `settings-general.js` 中重复定义了 `applyIdentityFilter()`。已删除 `settings.js` 中多余的代码，保留 `settings-general.js` 中的定义。
+7. **全局 DOM 监听卡顿优化（优化）**：`pickers.js` 用于监听时间/日期输入框的 `MutationObserver` 加入了 `100ms` 防抖，避免频繁弹窗或切换时引起页面滚动卡顿。
+8. **旧版 iOS 导出图片崩溃（兼容性修复）**：`export.js` 新增了 `CanvasRenderingContext2D.prototype.roundRect` 的兼容补丁，防止在 iOS Safari 16 以下版本导出图片时报错崩溃。

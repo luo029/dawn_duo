@@ -116,7 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
         wBadge = wake.done ? `<span class="hd-badge ${wake.ontime ? 'success' : 'late'}">${wake.ontime ? '达标' : '赖床'}</span>` : `<span class="hd-badge none">未打卡</span>`;
       }
       
-      let sleepSec = wake.meta?.sleepDuration;
+      let sleepSec = sleep.meta?.sleepDuration;
       if (!sleepSec && sleep.done && wake.done) sleepSec = calcDuration(sleep.time, wake.time);
       
       let durationHtml = '';
@@ -193,4 +193,195 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>
     `;
   }
+
+  // 新增：导出历史详情为图片 (Canvas 绘制)
+  window.exportHistoryImage = function(dateStr) {
+    const todayRec = { master: db.master?.[dateStr] || {}, doggy: db.doggy?.[dateStr] || {} };
+    const t = P().texts || DEFAULT_TEXTS_DAILY;
+    const isService = configs.mode === 'service';
+    const mName = getPureName(t.masterName) || '先生';
+    const dName = getPureName(t.doggyName) || '宝宝';
+    
+    let showM = false, showD = false;
+    if (currentHdView === 'both') { showM = true; showD = true; }
+    else if (currentHdView === 'master') { showM = true; }
+    else if (currentHdView === 'doggy') { showD = true; }
+
+    const mColor = P().colors?.master || '#a855f7';
+    const dColor = P().colors?.doggy || '#fb7185';
+
+    const cards = [];
+    if (showM) cards.push({ user: 'master', data: todayRec.master, color: mColor, name: mName, icon: '👑' });
+    if (showD) cards.push({ user: 'doggy', data: todayRec.doggy, color: dColor, name: dName, icon: isService ? '⛓️' : '🎀' });
+
+    let totalH = 90; 
+    cards.forEach(c => {
+        let cH = 160; 
+        const sleep = c.data.sleep || {};
+        const sleepSec = sleep.meta?.sleepDuration || (sleep.done && c.data.wake?.done ? calcDuration(sleep.time, c.data.wake.time) : 0);
+        if (sleepSec > 0) cH += 50;
+        if (sleep.records && sleep.records.length > 1) {
+            const subs = sleep.records.filter(r => r.type === 'sub');
+            if (subs.length > 0) cH += (subs.length * 24) + 30;
+        }
+        c.h = cH;
+        totalH += cH + 20;
+    });
+    totalH += 40; 
+
+    const W = 600;
+    const scale = 2;
+    const canvas = document.createElement('canvas');
+    canvas.width = W * scale; canvas.height = totalH * scale;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(scale, scale);
+
+    // 背景
+    ctx.fillStyle = '#f8fafc';
+    ctx.beginPath(); ctx.roundRect(0, 0, W, totalH, 24); ctx.fill();
+
+    // 标题
+    const dObj = new Date(dateStr);
+    const dateTitle = `${dObj.getFullYear()}年${dObj.getMonth()+1}月${dObj.getDate()}日`;
+    ctx.fillStyle = '#1e293b';
+    ctx.font = 'bold 20px "PingFang SC", "Microsoft YaHei", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`📅 ${isService ? '调教日志 · ' : ''}${dateTitle}`, W/2, 45);
+
+    let y = 80;
+
+    cards.forEach(c => {
+        const isDoggy = c.user === 'doggy';
+        const sleep = c.data.sleep || {};
+        const wake = c.data.wake || {};
+        
+        // 卡片阴影与背景
+        ctx.fillStyle = '#ffffff';
+        ctx.shadowColor = 'rgba(0,0,0,0.06)';
+        ctx.shadowBlur = 12; ctx.shadowOffsetY = 4;
+        ctx.beginPath(); ctx.roundRect(30, y, W - 60, c.h, 16); ctx.fill();
+        ctx.shadowColor = 'transparent';
+
+        // 左侧色条
+        ctx.fillStyle = c.color;
+        ctx.beginPath(); 
+        ctx.roundRect(30, y, 6, c.h, 3); 
+        ctx.fill();
+
+        // 名字
+        ctx.fillStyle = c.color;
+        ctx.font = 'bold 18px "PingFang SC", "Microsoft YaHei", sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText(`${c.icon} ${c.name}`, 60, y + 32);
+
+        // 两列
+        const colW = (W - 100) / 2;
+        const c1X = 60 + colW / 2;
+        const c2X = 60 + colW + colW / 2;
+        const rowY = y + 65;
+
+        let sLabel = isService ? (isDoggy ? '⛓️ 拘束' : '👑 安寝') : '🌙 休息';
+        let wLabel = isService ? (isDoggy ? '🔔 侍奉' : '☀️ 苏醒') : '☀️ 起床';
+
+        ctx.font = '13px "PingFang SC", "Microsoft YaHei", sans-serif';
+        ctx.fillStyle = '#64748B';
+        ctx.textAlign = 'center';
+        ctx.fillText(sLabel, c1X, rowY);
+        ctx.fillText(wLabel, c2X, rowY);
+
+        // 时间
+        ctx.font = 'bold 32px "DIN Alternate", "Helvetica Neue", sans-serif';
+        ctx.fillStyle = '#1e293b';
+        ctx.fillText(sleep.done ? sleep.time : '--:--', c1X, rowY + 36);
+        ctx.fillText(wake.done ? wake.time : '--:--', c2X, rowY + 36);
+
+        // 状态角标
+        const drawBadge = (text, isOntime, cx, cy) => {
+            ctx.font = 'bold 12px "PingFang SC", "Microsoft YaHei", sans-serif';
+            const tw = ctx.measureText(text).width;
+            const bw = tw + 20, bh = 22;
+            ctx.fillStyle = isOntime ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)';
+            ctx.beginPath(); ctx.roundRect(cx - bw/2, cy - 11, bw, bh, 11); ctx.fill();
+            ctx.fillStyle = isOntime ? '#10b981' : '#ef4444';
+            ctx.fillText(text, cx, cy + 4);
+        };
+
+        if (sleep.done) {
+            let txt = isService && isDoggy ? (sleep.ontime ? '服从' : '抗命') : (sleep.ontime ? '达标' : '晚睡');
+            drawBadge(txt, sleep.ontime, c1X, rowY + 65);
+        }
+        if (wake.done) {
+            let txt = isService && isDoggy ? (wake.ontime ? '服从' : '抗命') : (wake.ontime ? '达标' : '赖床');
+            drawBadge(txt, wake.ontime, c2X, rowY + 65);
+        }
+
+        // 中间竖分割线
+        ctx.strokeStyle = '#e2e8f0';
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(W/2, rowY + 10); ctx.lineTo(W/2, rowY + 70); ctx.stroke();
+
+        let infoY = rowY + 100;
+
+        // 小睡记录
+        if (sleep.records && sleep.records.length > 1) {
+            const subs = sleep.records.filter(r => r.type === 'sub');
+            if (subs.length > 0) {
+                ctx.fillStyle = '#64748B';
+                ctx.font = '12px "PingFang SC", "Microsoft YaHei", sans-serif';
+                ctx.textAlign = 'left';
+                ctx.fillText('💤 包含小睡记录：', 60, infoY);
+                infoY += 22;
+                subs.forEach(r => {
+                    let timeRange = r.time;
+                    if (r.endTime) timeRange += ` - ${r.endTime}`;
+                    let dur = r.duration ? ` (${Math.floor(r.duration/3600)}h${Math.floor((r.duration%3600)/60)}m)` : (r.endTime ? '' : ' (未醒)');
+                    ctx.fillStyle = '#475569';
+                    ctx.fillText(`• ${timeRange}${dur}`, 70, infoY);
+                    infoY += 22;
+                });
+                infoY += 10;
+            }
+        }
+
+        // 底部时长条
+        let sleepSec = sleep.meta?.sleepDuration;
+        if (!sleepSec && sleep.done && wake.done) sleepSec = calcDuration(sleep.time, wake.time);
+        
+        if (sleepSec > 0) {
+            const h = Math.floor(sleepSec / 3600);
+            const m = Math.floor((sleepSec % 3600) / 60);
+            const isEx = h >= 8;
+            
+            ctx.fillStyle = isEx ? 'rgba(234, 179, 8, 0.1)' : 'rgba(241, 245, 249, 1)';
+            ctx.beginPath(); ctx.roundRect(60, infoY - 15, W - 120, 36, 8); ctx.fill();
+            
+            ctx.fillStyle = isEx ? '#eab308' : '#64748B';
+            ctx.textAlign = 'center';
+            ctx.font = 'bold 14px "PingFang SC", "Microsoft YaHei", sans-serif';
+            ctx.fillText(`${isEx ? '✨' : '💤'} ${isEx ? '优质安睡' : '睡眠时长'} ${h}h${m}m ${isEx ? '✨' : ''}`, W/2, infoY + 8);
+        }
+
+        y += c.h + 20;
+    });
+
+    // 底部水印
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '12px "PingFang SC", "Microsoft YaHei", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('💗 由「契约」生成 · 记录我们的每一天', W/2, totalH - 20);
+
+    // 导出
+    canvas.toBlob(blob => {
+        if (!blob) return showToast('图片生成失败', 'late');
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `契约日志-${dateStr}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('图片已保存 🖼️', 'success');
+    }, 'image/png');
+  };
 });

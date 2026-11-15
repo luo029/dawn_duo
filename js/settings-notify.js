@@ -5,6 +5,7 @@ window.getTabNotifyHTML = () => `
     
     <div class="switch-row" id="row-notifications"><label>开启页面内通知<span class="help-icon" data-tip="网页开着的时候，到达目标时间会弹出浏览器通知">i</span></label><label class="toggle-switch"><input type="checkbox" id="cfg-notifications"><span class="slider"></span></label></div>
     <div id="notify-status" class="tip-text" style="margin-bottom: 8px;"></div>
+    <button class="btn outline" onclick="testNotification()" style="width: 100%; font-size: 0.8rem; padding: 8px;">🔔 测试页面通知</button>
     
     <div class="card-divider"></div>
     
@@ -44,10 +45,10 @@ window.getTabNotifyHTML = () => `
           <div class="switch-row"><label>熬夜超时警告<span class="help-icon" data-tip="超过目标休息时间后，按间隔持续发送警告。">i</span></label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="master_sleep_overtime"><span class="slider"></span></label></div>
           <div class="switch-row"><label>赖床超时警告<span class="help-icon" data-tip="超过目标起床时间后，按间隔持续发送警告。">i</span></label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="master_wake_overtime"><span class="slider"></span></label></div>
           
-          <div class="section-label" style="margin-top: 16px;">🛡️ 防轰炸与时间窗<span class="help-icon" data-tip="提前/延后：在目标时间前后多久内允许发送准时提醒。超出后延时间才开始发超时警告。">i</span></div>
+          <div class="section-label" style="margin-top: 16px;">🛡️ 防轰炸与时间窗</div>
           <div class="flex-row">
-              <div class="form-group"><label>提前 (分)<span class="help-icon" data-tip="目标时间前多少分钟开始发提醒。">i</span></label><input type="number" id="cfg-on-time-before-master" value="15" min="0" max="60"></div>
-              <div class="form-group"><label>延后 (分)<span class="help-icon" data-tip="目标时间后多少分钟内依然只发准时提醒，超过后判定迟到。">i</span></label><input type="number" id="cfg-on-time-after-master" value="15" min="0" max="60"></div>
+              <div class="form-group"><label>提前 (分)<span class="help-icon" data-tip="目标时间前多少分钟开始发提醒。比如目标23:00，提前15，就是22:45发。">i</span></label><input type="number" id="cfg-on-time-before-master" value="15" min="0" max="60"></div>
+              <div class="form-group"><label>延后 (分)<span class="help-icon" data-tip="目标时间后多少分钟内依然只发准时提醒。超过这个时间没打卡，才开始发超时警告。">i</span></label><input type="number" id="cfg-on-time-after-master" value="15" min="0" max="60"></div>
           </div>
           <div class="switch-row"><label>开启超时时间窗<span class="help-icon" data-tip="只在特定时间段内发送超时提醒。关闭后，全天任何时间都发。">i</span></label><label class="toggle-switch"><input type="checkbox" id="cfg-overtime-window-master" onchange="document.getElementById('overtime-window-details-master').style.display = this.checked ? 'block' : 'none';"><span class="slider"></span></label></div>
           <div id="overtime-window-details-master" style="margin-top: 8px;">
@@ -79,10 +80,10 @@ window.getTabNotifyHTML = () => `
           <div class="switch-row"><label>熬夜超时警告<span class="help-icon" data-tip="超过目标休息时间后，按间隔持续发送警告。">i</span></label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="doggy_sleep_overtime"><span class="slider"></span></label></div>
           <div class="switch-row"><label>赖床超时警告<span class="help-icon" data-tip="超过目标起床时间后，按间隔持续发送警告。">i</span></label><label class="toggle-switch"><input type="checkbox" class="notify-item-chk" data-key="doggy_wake_overtime"><span class="slider"></span></label></div>
     
-          <div class="section-label" style="margin-top: 16px;">🛡️ 防轰炸与时间窗<span class="help-icon" data-tip="提前/延后：在目标时间前后多久内允许发送准时提醒。超出后延时间才开始发超时警告。">i</span></div>
+          <div class="section-label" style="margin-top: 16px;">🛡️ 防轰炸与时间窗</div>
           <div class="flex-row">
-              <div class="form-group"><label>提前 (分)<span class="help-icon" data-tip="目标时间前多少分钟开始发提醒。">i</span></label><input type="number" id="cfg-on-time-before-doggy" value="15" min="0" max="60"></div>
-              <div class="form-group"><label>延后 (分)<span class="help-icon" data-tip="目标时间后多少分钟内依然只发准时提醒，超过后判定迟到。">i</span></label><input type="number" id="cfg-on-time-after-doggy" value="15" min="0" max="60"></div>
+              <div class="form-group"><label>提前 (分)<span class="help-icon" data-tip="目标时间前多少分钟开始发提醒。比如目标23:00，提前15，就是22:45发。">i</span></label><input type="number" id="cfg-on-time-before-doggy" value="15" min="0" max="60"></div>
+              <div class="form-group"><label>延后 (分)<span class="help-icon" data-tip="目标时间后多少分钟内依然只发准时提醒。超过这个时间没打卡，才开始发超时警告。">i</span></label><input type="number" id="cfg-on-time-after-doggy" value="15" min="0" max="60"></div>
           </div>
           <div class="switch-row"><label>开启超时时间窗<span class="help-icon" data-tip="只在特定时间段内发送超时提醒。关闭后，全天任何时间都发。">i</span></label><label class="toggle-switch"><input type="checkbox" id="cfg-overtime-window-doggy" onchange="document.getElementById('overtime-window-details-doggy').style.display = this.checked ? 'block' : 'none';"><span class="slider"></span></label></div>
           <div id="overtime-window-details-doggy" style="margin-top: 8px;">
@@ -100,12 +101,6 @@ window.getTabNotifyHTML = () => `
     </div>
     
     <div class="card-divider"></div>
-    
-    <div class="switch-row" style="margin-bottom: 12px;">
-        <label>发情推送附带感受<span class="help-icon" data-tip="开启后，若填写了感受，发情通知将直接使用感受内容作为正文，不再使用随机文案库。">i</span></label>
-        <label class="toggle-switch"><input type="checkbox" id="cfg-heat-notify-feeling"><span class="slider"></span></label>
-    </div>
-    
     <div class="switch-row">
       <label>超时提醒重复间隔 (分钟)<span class="help-icon" data-tip="如果一直未打卡，每隔多少分钟发一次警告。">i</span></label>
       <input type="number" id="cfg-notify-interval" value="30" min="10" step="10" style="width: 80px; padding: 6px; text-align: center;">

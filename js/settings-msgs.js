@@ -85,8 +85,6 @@ window.openNotifyTextModal = function(key) {
     currentNotifyKey = key; const nTexts = P().notifyTexts || {}; let obj = nTexts[key]; 
     if (!obj) obj = { channel: 'both', texts: [] }; 
     if (Array.isArray(obj)) obj = { channel: 'both', texts: obj }; 
-    
-    // 确保 texts 是个数组
     if (!Array.isArray(obj.texts)) obj.texts = [obj.texts || ''];
 
     const isService = configs.mode === 'service', mTitle = isService ? '主人' : '先生', dTitle = isService ? '小狗' : '宝宝'; 
@@ -126,7 +124,6 @@ window.saveNotifyTextModal = function() {
     const customTitle = titleInput ? titleInput.value.trim() : '';
     
     const prof = P(); if (!prof.notifyTexts) prof.notifyTexts = {}; 
-    // 核心修复：如果输入为空，就不要存 title 字段了，这样在比对时就不会因为空字符串引发混乱
     const newObj = { channel: channel, texts: newArr.length > 0 ? newArr : [''] };
     if (customTitle) newObj.title = customTitle;
     
@@ -160,7 +157,7 @@ window.saveStatusTextModal = function() {
     const prof = P(); if (!prof.notifyTexts) prof.notifyTexts = {}; 
     prof.notifyTexts[currentStatusKey] = { channel: 'page', texts: newArr.length > 0 ? newArr : [''] }; 
     try { localStorage.setItem('dawn-duo-configs', JSON.stringify(configs)); } catch (e) {} 
-    document.getElementById('status-text-modal').classList.remove('show'); if (window.debounceSync) debounceSync(); 
+    document.getElementById('status-text-modal').classList.remove('show'); if (window.debounceSync) window.debounceSync(); 
     showToast('状态栏文案已保存', 'success'); 
 };
 

@@ -95,6 +95,17 @@ function checkPushText(notifyTexts, key, replacements) {
 
   let pushLog = {};
   if (fs.existsSync(LOG_FILE)) { try { pushLog = JSON.parse(fs.readFileSync(LOG_FILE, 'utf8')); } catch (e) {} }
+  
+  // 优化：每天清理一次旧日志，防止文件无限膨胀导致 Actions 卡死
+  const todayStr = new Date().toISOString().split('T')[0];
+  let logCleaned = false;
+  for (const key in pushLog) {
+      if (!key.startsWith(todayStr)) {
+          delete pushLog[key];
+          logCleaned = true;
+      }
+  }
+  let logUpdated = logCleaned;
 
   const mode = configs.mode || 'service';
   const prof = (configs.profiles && configs.profiles[mode]) || {};
@@ -110,7 +121,6 @@ function checkPushText(notifyTexts, key, replacements) {
   const dName = (texts.doggyName || (isService ? '小狗' : '宝宝')).replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, '').trim();
 
   const failedEndpoints = [];
-  let logUpdated = false;
 
   for (const sub of subscriptions) {
     if (sub.blocked === true) continue;

@@ -224,6 +224,7 @@ document.addEventListener('DOMContentLoaded', () => {
     dpOverlay.onclick = (e) => { if (e.target === dpOverlay) dpOverlay.classList.remove('show'); };
     tpOverlay.onclick = (e) => { if (e.target === tpOverlay) tpOverlay.classList.remove('show'); };
 
+    let bindTimeout;
     function bindInputs() {
         document.querySelectorAll('input[type="time"]').forEach(input => {
             if (input.dataset.tpBound) return;
@@ -253,7 +254,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    const observer = new MutationObserver(() => bindInputs());
+    // 优化：监听 DOM 变化时加防抖，避免频繁绑定造成卡顿
+    const observer = new MutationObserver(() => {
+        clearTimeout(bindTimeout);
+        bindTimeout = setTimeout(bindInputs, 100);
+    });
     observer.observe(document.body, { childList: true, subtree: true });
     bindInputs();
 });

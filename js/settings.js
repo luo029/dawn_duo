@@ -144,6 +144,7 @@ window.saveSettings = function(skipSync) {
         ghConfig.apiProxy = getVal('cfg-gh-proxy', '');
         ghConfig.autoFallback = getChk('cfg-gh-auto-fallback', true);
         try { localStorage.setItem(CONFIG_KEY, JSON.stringify(ghConfig)); } catch (e) { } 
+        
         applyConfigsToPage(); 
         updateClocks(); 
         render(); 
@@ -157,26 +158,4 @@ window.saveSettings = function(skipSync) {
         showToast('保存时发生错误: ' + e.message, 'late'); 
     } 
 };
-
-function applyIdentityFilter() { 
-    const role = identity || 'both'; 
-    // 修复：严格限制作用域在设置面板内，防止误伤主界面的发情卡片
-    document.querySelectorAll('#settings-modal .config-card').forEach(card => {
-        const group = card.querySelector('.dual-user-group');
-        if (group) {
-            const active = group.dataset.active || 'master';
-            group.querySelectorAll('[data-user]').forEach(el => {
-                if (role === 'both') { el.style.display = (el.dataset.user === active) ? '' : 'none'; }
-                else { el.style.display = (el.dataset.user === role) ? '' : 'none'; }
-            });
-            const tabs = card.querySelector('.dual-tabs');
-            if (tabs) tabs.style.display = role === 'both' ? 'flex' : 'none';
-        }
-    });
-    
-    document.querySelectorAll('#settings-modal [data-user]').forEach(el => {
-        if (el.closest('.dual-user-group')) return; 
-        if (role === 'both') el.style.display = '';
-        else el.style.display = (el.dataset.user === role) ? '' : 'none';
-    });
-}
+// 已删除重复的 applyIdentityFilter() 函数，保留 settings-general.js 中的定义

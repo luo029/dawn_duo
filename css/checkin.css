@@ -16,7 +16,8 @@
 
 .user-card.read-only { opacity: 0.88; }
 .user-card.read-only::after { content: '👀 只读'; position: absolute; top: 10px; right: 12px; font-size: 0.65rem; background: var(--btn-bg); color: var(--text-muted); padding: 2px 8px; border-radius: 10px; border: 1px solid var(--border); font-weight: 600; pointer-events: none; }
-.user-card.read-only .checkin-btn { cursor: not-allowed; }
+/* 优化：让只读打卡按钮明显变灰、半透明 */
+.user-card.read-only .checkin-btn { cursor: not-allowed; opacity: 0.5; filter: grayscale(1); }
 .user-card.read-only .checkin-btn:hover { border-color: var(--border); }
 
 .user-header { text-align: center; margin-bottom: 16px; }

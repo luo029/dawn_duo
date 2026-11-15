@@ -10,7 +10,6 @@ window.handleWakeAction = async function(action) {
       record.records = []; 
       await doCheckin(user, 'wake', today, record, 'main'); 
   } else if (action === 'end_sub') {
-      // 结束当前未完成的小睡
       const sleep = db[user][today].sleep;
       if (sleep && sleep.records) {
           const lastSub = [...sleep.records].reverse().find(r => r.type === 'sub' && !r.endTime);
@@ -83,7 +82,6 @@ window.toggle = async function(user, type) {
   
   if (type === 'wake' && record && record.done) {
     currentWakeActionCtx = { user, today, record };
-    // 【核心升级】：判断是否有未结束的小睡
     const sleep = db[user][today].sleep;
     const pendingSub = sleep?.records?.find(r => r.type === 'sub' && !r.endTime);
     
@@ -130,7 +128,6 @@ async function doCheckin(user, type, dateStr, existingRecord, sleepType = 'main'
   
   if (type === 'wake') { 
       record.records = [newRec]; record.done = true; record.time = timeStr; record.ontime = ontime; record.meta = meta; 
-      // 计算睡眠时长
       let sleepRec = db[user][dateStr].sleep;
       if (!sleepRec || !sleepRec.done) sleepRec = db[user]?.[getLogicalDateStr(1)]?.sleep;
       if (sleepRec && sleepRec.done && sleepRec.records) {
@@ -201,7 +198,8 @@ function render() {
       });
     });
     updatePartnerStatusPanel(); 
-    renderHeatCycle();
+    // 修复：移除未定义的 renderHeatCycle() 调用，防止阻断后续日历渲染
+    if (window.updateHeatUI) window.updateHeatUI();
     renderHistory();
   } catch(e) { console.warn('渲染异常', e); }
 }
@@ -229,10 +227,14 @@ function updatePartnerStatusPanel() {
 function renderHistory() {
   const box = document.getElementById('history-box'), viewDays = document.getElementById('history-view-days'), viewCal = document.getElementById('history-grid-calendar'), emptyState = document.getElementById('history-empty');
   if (!box || !viewDays || !viewCal || !emptyState) return;
-  if (!configs.showHistory) { box.style.display = 'none'; return; }
-  box.style.display = 'block'; let hasData = false;
+  // 如果明确设置为关闭，才隐藏
+  if (configs.showHistory === false) { box.style.display = 'none'; return; }
+  
+  box.style.display = 'block'; 
+  let hasData = false;
   for (const u of ['master', 'doggy']) { if (!db[u]) continue; for (const d in db[u]) { if (db[u][d]?.wake?.done || db[u][d]?.sleep?.done) { hasData = true; break; } } if (hasData) break; }
   emptyState.style.display = hasData ? 'none' : 'block';
+  
   if (configs.historyType === 'days') {
     viewDays.style.display = 'flex'; viewCal.style.display = 'none'; const days = Number(configs.historyDays) || 30;
     const titleEl = document.getElementById('history-title-text'); if (titleEl) titleEl.textContent = `最近 ${days} 天打卡回顾`;

@@ -1,5 +1,21 @@
 let currentExportType = 'image';
 
+// 兼容不支持 ctx.roundRect 的旧版浏览器 (如 iOS Safari < 16)
+if (!CanvasRenderingContext2D.prototype.roundRect) {
+    CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+        if (w < 2 * r) r = w / 2;
+        if (h < 2 * r) r = h / 2;
+        this.beginPath();
+        this.moveTo(x + r, y);
+        this.arcTo(x + w, y, x + w, y + h, r);
+        this.arcTo(x + w, y + h, x, y + h, r);
+        this.arcTo(x, y + h, x, y, r);
+        this.arcTo(x, y, x + w, y, r);
+        this.closePath();
+        return this;
+    };
+}
+
 function getStatusLabel(ontime, isDoggy) {
     if (configs.mode === 'service' && isDoggy) return ontime ? '服从' : '抗命';
     return ontime ? '达标' : '迟到';
@@ -279,7 +295,6 @@ window.generateExportPDF = function(user, days) {
                     <td>${wake?.done ? wake.time : '--:--'}</td><td style="color:${wake?.done?wc:'#999'}">${wake?.done?getStatusLabel(wake.ontime, isDoggy):'-'}</td>`;
         };
 
-        // 【核心修复】：使用 rowspan="2" 合并日期单元格，解决错位和留白问题
         if (user === 'both') {
             simpleRows += `<tr><td rowspan="2" style="font-weight:bold; background:#f8fafc; vertical-align:middle;">${ds}</td><td style="color:#0284c7; font-weight:bold;">${mName}</td>${makeCells(mRec.sleep, mRec.wake, false)}</tr>`;
             simpleRows += `<tr><td style="color:#ec4899; font-weight:bold;">${dName}</td>${makeCells(dRec.sleep, dRec.wake, true)}</tr>`;
@@ -299,7 +314,6 @@ window.generateExportPDF = function(user, days) {
         table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: center; }
         th, td { border: 1px solid #e5e7eb; padding: 12px 8px; }
         th { background: #f3f4f6; color: #4b5563; font-weight: bold; }
-        /* 取消了奇偶行变色，改用更好的结构区分 */
         tr:nth-child(even) { background: #ffffff; }
         .footer { text-align: center; color: #9ca3af; font-size: 12px; margin-top: 30px; }
         @media print { body { padding: 0; } }

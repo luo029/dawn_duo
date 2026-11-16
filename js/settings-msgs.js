@@ -220,7 +220,9 @@ window.updateTestPreview = function() {
     const mName = getPureName(P().texts.masterName) || (isService ? '主人' : '先生'); 
     const dName = getPureName(P().texts.doggyName) || (isService ? '小狗' : '宝宝'); 
     
-    const nowTime = formatCheckinTime(configs.timeZones.master); 
+    let nowTZ = configs.timeZones.master;
+    if (key.includes('doggy')) nowTZ = configs.timeZones.doggy;
+    const nowTime = formatCheckinTime(nowTZ); 
     const nowTimeS = nowTime + ':30';
     const mHour = parseInt(nowTime.split(':')[0], 10);
     const shichenInfo = getShichenInfo(isNaN(mHour) ? 0 : mHour);
@@ -236,6 +238,22 @@ window.updateTestPreview = function() {
         rMins = '150';
     }
 
+    // 动态读取真实的“感受”
+    let feelingText = '（非常想要...）'; // 默认占位符
+    if (key.includes('heat')) {
+        const user = key.includes('doggy') ? 'doggy' : 'master';
+        if (typeof heatDb !== 'undefined' && heatDb[user]) {
+            let latestTs = 0, latestFeeling = '';
+            for (const date in heatDb[user]) {
+                if (heatDb[user][date].ts > latestTs) {
+                    latestTs = heatDb[user][date].ts;
+                    latestFeeling = heatDb[user][date].feeling || '';
+                }
+            }
+            if (latestFeeling) feelingText = latestFeeling;
+        }
+    }
+
     body = body.replace(/{name}/g, rName)
                .replace(/{time_s}/g, nowTimeS)
                .replace(/{time}/g, nowTime)
@@ -246,7 +264,12 @@ window.updateTestPreview = function() {
                .replace(/{shichen_organ}/g, shichenInfo.organ)
                .replace(/{duration}/g, rDuration)
                .replace(/{mins}/g, rMins)
-               .replace(/{feeling}/g, '（测试感受）');
+               .replace(/{feeling}/g, feelingText);
+
+    if (key.includes('heat') && configs.notifySettings?.heatNotifyWithFeeling !== false) {
+        body += `\n"${feelingText}"`;
+    }
+
     document.getElementById('test-notify-title-preview').textContent = title; 
     document.getElementById('test-notify-body-preview').textContent = body; 
 };

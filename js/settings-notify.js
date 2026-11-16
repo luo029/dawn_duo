@@ -18,6 +18,9 @@ window.getTabNotifyHTML = () => `
     
     <div id="backend-push-status" class="tip-text" style="margin-bottom: 12px;">正在检查订阅状态...</div>
     <div class="progress-area" id="push-progress" style="display: none; margin-bottom: 12px;"><div class="progress-bar-wrap"><div class="progress-bar" id="push-progress-bar" style="width: 0%;"></div></div><div class="progress-text" id="push-progress-text">正在处理...</div></div>
+
+    <!-- 新增：PWA 后台真实测试 -->
+    <button class="btn outline" onclick="triggerBackgroundTest()" style="width: 100%; font-size: 0.8rem; padding: 8px; margin-top: 8px; border-color: var(--tab-active); color: var(--tab-active);">🚀 触发真实后台测试 (需切出页面)</button>
   </div>
   
   <div class="config-card" id="notify-switches-card">

@@ -21,7 +21,6 @@ window.updateBackendPushStatus = async function() {
             toggleEl.checked = true; 
             if (muteEl) muteEl.disabled = false;
 
-            // 同步静音状态
             try {
                 const res = await fetchGHFile('subscriptions.json');
                 if (res) {
@@ -125,3 +124,76 @@ window.toggleDeviceMute = async function(isMuted) {
     }
 };
 function urlBase64ToUint8Array(base64String) { const padding = '='.repeat((4 - (base64String.length % 4)) % 4); const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/'); const rawData = atob(base64); return new Uint8Array([...rawData].map(char => char.charCodeAt(0))); }
+
+// ================= 新增：真实后台测试逻辑 =================
+
+window.isPWAStandalone = function() {
+  if (window.matchMedia('(display-mode: standalone)').matches) return true;
+  if ('standalone' in window.navigator && window.navigator.standalone === true) return true;
+  return false;
+};
+
+window.triggerBackgroundTest = async function() {
+    if (!ghConfig.user || !ghConfig.repo || !ghConfig.token) return showToast('请先配置 GitHub Token', 'late');
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return showToast('当前浏览器不支持后台推送', 'late');
+    
+    // 1. 检测 PWA
+    const isPWA = window.isPWAStandalone();
+    if (!isPWA) {
+        return window.showCustomConfirm('⚠️ 非 PWA 独立模式', '检测到您当前在浏览器标签页中运行。<br><br>iOS 仅在将网页添加到主屏幕并以独立 App 启动时，才允许接收后台推送。<br><br>确定仍要强行测试吗？', () => {
+            startCountdownTest();
+        });
+    } else {
+        startCountdownTest();
+    }
+};
+
+async function startCountdownTest() {
+    // 2. 检查订阅
+    const registration = await navigator.serviceWorker.ready;
+    const subscription = await registration.pushManager.getSubscription();
+    if (!subscription) return showToast('未开启后台推送，请先在上方打开开关', 'late');
+    
+    // 获取当前设备最后20位（用于定向测试）
+    const targetSuffix = subscription.endpoint.slice(-20);
+    
+    let count = 5;
+    showToast(`🚀 将在 ${count} 秒后发送...请立即切出页面！`, 'success');
+    
+    const timer = setInterval(async () => {
+        count--;
+        if (count > 0) {
+            showToast(`🚀 将在 ${count} 秒后发送...请立即锁屏或切到后台！`, 'success');
+        } else {
+            clearInterval(timer);
+            
+            // 倒计时结束，触发云端
+            try {
+                const title = '📡 云端后台测试';
+                const body = '如果你在切出页面后看到了这条通知，说明你的 iOS 后台推送是正常的！';
+                
+                const res = await ghFetch(`/repos/${ghConfig.user}/${ghConfig.repo}/actions/workflows/push.yml/dispatches`, { 
+                    method: 'POST', 
+                    headers: { 'Authorization': `token ${ghConfig.token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify({ 
+                        ref: 'main', 
+                        inputs: { 
+                            test_mode: 'true',
+                            custom_title: title,
+                            custom_body: body,
+                            test_target: targetSuffix
+                        } 
+                    }) 
+                }); 
+                if (res.ok) {
+                    // 注意：因为用户此时可能已经切出页面，Toast 用户可能看不到，但发出去就行了。
+                    console.log('后台测试已触发');
+                } else {
+                    console.warn('后台测试触发失败');
+                }
+            } catch(e) {
+                console.error('请求出错', e);
+            }
+        }
+    }, 1000);
+}

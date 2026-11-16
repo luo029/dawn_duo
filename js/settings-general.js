@@ -82,9 +82,75 @@ function applyIdentity() {
         else grid.classList.remove('single'); 
     } 
     updateClocks(); render(); 
+    if (window.applyIdentityFilter) window.applyIdentityFilter();
 }
-function applyIdentityFilter() { const role = identity || 'both'; document.querySelectorAll('#settings-modal [data-user]').forEach(el => { if (el.closest('.dual-user-group')) return; if (role === 'both') el.style.display = ''; else el.style.display = (el.dataset.user === role) ? '' : 'none'; }); }
-window.chooseIdentity = function(id) { if (['master', 'doggy', 'both'].indexOf(id) === -1) return; identity = id; try { localStorage.setItem(IDENTITY_KEY, id); } catch (e) {} if (id === 'doggy') configs.showMasterClock = true; else if (id === 'master') configs.showDoggyClock = true; else if (id === 'both') { configs.showMasterClock = true; configs.showDoggyClock = true; } try { localStorage.setItem('dawn-duo-configs', JSON.stringify(configs)); } catch(e) {} document.documentElement.classList.remove('no-identity'); const modal = document.getElementById('identity-modal'); if (modal) modal.classList.remove('show'); document.body.style.overflow = ''; document.getElementById('main-wrap').style.display = 'block'; applyIdentity(); updateIdentityCards(); let msg = '身份已选择 💗'; if (id === 'master') msg = '已切换为 ' + (getPureName(P().texts.masterName) || '先生') + ' 👑（对方卡片只读）'; else if (id === 'doggy') msg = '已切换为 ' + (getPureName(P().texts.doggyName) || '宝宝') + ' 🎀（对方卡片只读）'; else msg = '已切换为 滴滴 🍉 两个页面都能操作'; showToast(msg, 'success'); autoPullOnLoad(false); if (window.updateHeatUI) window.updateHeatUI(); };
+
+// 核心修复：这里增加了对 .dual-user-group 内卡片的强制隐藏和显示
+function applyIdentityFilter() { 
+    const role = identity || 'both'; 
+    
+    // 1. 遍历所有配置卡片，处理包含双人切换的模块
+    document.querySelectorAll('.config-card').forEach(card => {
+        const group = card.querySelector('.dual-user-group');
+        if (group) {
+            // 如果当前不是滴滴（both），强制把活动 Tab 设为当前身份
+            if (role !== 'both' && group.dataset.active !== role) {
+                group.dataset.active = role;
+                card.querySelectorAll('.dual-tab-btn').forEach(b => {
+                    b.classList.toggle('active', b.dataset.target === role);
+                });
+            }
+            const active = group.dataset.active || 'master';
+            
+            group.querySelectorAll('[data-user]').forEach(el => {
+                if (role === 'both') { 
+                    el.style.display = (el.dataset.user === active) ? '' : 'none'; 
+                } else { 
+                    el.style.display = (el.dataset.user === role) ? '' : 'none'; 
+                }
+            });
+            const tabs = card.querySelector('.dual-tabs');
+            if (tabs) tabs.style.display = role === 'both' ? 'flex' : 'none';
+        }
+    });
+    
+    // 2. 处理所有普通的 [data-user] 元素
+    document.querySelectorAll('#settings-modal [data-user]').forEach(el => { 
+        if (el.closest('.dual-user-group')) return; 
+        if (role === 'both') el.style.display = ''; 
+        else el.style.display = (el.dataset.user === role) ? '' : 'none'; 
+    }); 
+}
+
+window.chooseIdentity = function(id) { 
+    if (['master', 'doggy', 'both'].indexOf(id) === -1) return; 
+    identity = id; 
+    try { localStorage.setItem(IDENTITY_KEY, id); } catch (e) {} 
+    
+    if (id === 'doggy') configs.showMasterClock = true; 
+    else if (id === 'master') configs.showDoggyClock = true; 
+    else if (id === 'both') { configs.showMasterClock = true; configs.showDoggyClock = true; } 
+    
+    try { localStorage.setItem('dawn-duo-configs', JSON.stringify(configs)); } catch(e) {} 
+    
+    document.documentElement.classList.remove('no-identity'); 
+    const modal = document.getElementById('identity-modal'); 
+    if (modal) modal.classList.remove('show'); 
+    document.body.style.overflow = ''; 
+    document.getElementById('main-wrap').style.display = 'block'; 
+    
+    applyIdentity(); 
+    updateIdentityCards(); 
+    
+    let msg = '身份已选择 💗'; 
+    if (id === 'master') msg = '已切换为 ' + (getPureName(P().texts.masterName) || '先生') + ' 👑（对方卡片只读）'; 
+    else if (id === 'doggy') msg = '已切换为 ' + (getPureName(P().texts.doggyName) || '宝宝') + ' 🎀（对方卡片只读）'; 
+    else msg = '已切换为 滴滴 🍉 两个页面都能操作'; 
+    
+    showToast(msg, 'success'); 
+    autoPullOnLoad(false); 
+    if (window.updateHeatUI) window.updateHeatUI(); 
+};
 
 function updateModeCards() { const d = document.getElementById('mode-card-daily'), s = document.getElementById('mode-card-service'); if (d) d.classList.toggle('active', configs.mode === 'daily'); if (s) s.classList.toggle('active', configs.mode === 'service'); const isService = configs.mode === 'service', masterTitle = isService ? '主人' : '先生', doggyTitle = isService ? '小狗' : '宝宝'; const idsToUpdate = { 'cfg-title-master': masterTitle, 'cfg-title-doggy': doggyTitle, 'label-tz-master-type': `${masterTitle} 时区设置`, 'label-tz-doggy-type': `${doggyTitle} 时区设置`, 'label-tz-master-iana': `${masterTitle} 所在时区`, 'label-tz-doggy-iana': `${doggyTitle} 所在时区`, 'label-tz-master-offset': `${masterTitle} 时差`, 'label-tz-doggy-offset': `${doggyTitle} 时差`, 'label-goal-master-sleep': `${masterTitle}休息目标`, 'label-goal-master-wake': `${masterTitle}起床目标`, 'label-goal-doggy-sleep': `${doggyTitle}睡觉目标`, 'label-goal-doggy-wake': `${doggyTitle}起床目标` }; for (const [id, text] of Object.entries(idsToUpdate)) { const el = document.getElementById(id); if (el) el.textContent = text; } 
     const t = P().texts || DEFAULT_TEXTS_DAILY; const mName = getPureName(t.masterName) || (configs.mode === 'service' ? '主人' : '先生'); const dName = getPureName(t.doggyName) || (configs.mode === 'service' ? '小狗' : '宝宝'); 
